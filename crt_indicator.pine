@@ -1,0 +1,133 @@
+//@version=6
+// ─────────────────────────────────────────────────────────────────────────────
+// CRT Indicator — Phase 1: CRT Core
+//
+// Scope of this phase (intentionally limited):
+//   - CRT reference range (last confirmed source candle)
+//   - CRT high / CRT low
+//   - Sweep above CRT high / sweep below CRT low
+//   - Reclaim (close back inside the range) after a sweep
+//   - Configurable CRT settings + clean visualization
+//
+// Deliberately NOT included yet (future phases):
+//   liquidity (SSL/BSL), market structure (CHoCH/BOS), long/short signals,
+//   entries, SL/TP, FVG, session/other filters, scoring/dashboard.
+//
+// Design rules honored:
+//   - indicator() only, never strategy(); no orders / broker execution.
+//   - No future data: HTF values are read from the PREVIOUS closed HTF bar via
+//     the `expr[1]` + lookahead_on idiom (never reads the developing HTF bar).
+//   - Minimize repaint: sweep/reclaim evaluated on confirmed bars by default.
+//   - Historical events stay fixed: per-range state latches and only the active
+//     box is mutated; older boxes are frozen once a new range starts.
+// ─────────────────────────────────────────────────────────────────────────────
+indicator("CRT Indicator — Core", shorttitle = "CRT Core", overlay = true, max_boxes_count = 500, max_bars_back = 500)
+
+// ── Inputs: CRT range ────────────────────────────────────────────────────────
+string GRP_CRT   = "CRT range"
+string crtTfInput     = input.timeframe("", "CRT timeframe", group = GRP_CRT, tooltip = "Blank = chart timeframe (2-candle CRT). Set a higher timeframe (e.g. 60, 240, D) to use the last closed HTF candle as the range. Lower-than-chart timeframes are ignored.")
+bool   confirmOnClose = input.bool(true, "Confirm on bar close", group = GRP_CRT, tooltip = "On: sweep/reclaim only register on closed bars (no live-bar repaint). Off: the forming bar can preview events and may repaint.")
+bool   wickSweep      = input.bool(true, "Sweep uses wick", group = GRP_CRT, tooltip = "On: the wick (high/low) must pierce the CRT boundary. Off: the bar must CLOSE beyond the boundary.")
+int    maxRanges      = input.int(15, "Max CRT ranges kept", minval = 1, maxval = 100, group = GRP_CRT, tooltip = "How many recent CRT boxes stay on the chart (older ones are removed to respect object limits).")
+
+// ── Inputs: visualization ────────────────────────────────────────────────────
+string GRP_VIS = "Visualization"
+bool  showBox             = input.bool(true, "Show CRT box", group = GRP_VIS)
+bool  showLevels          = input.bool(true, "Show CRT high/low lines", group = GRP_VIS)
+bool  showSweepMarkers    = input.bool(true, "Show sweep markers", group = GRP_VIS)
+bool  showReclaimMarkers  = input.bool(true, "Show reclaim markers", group = GRP_VIS)
+color rangeColor          = input.color(#4c8bf5, "Range color", group = GRP_VIS)
+color sweepColor          = input.color(#ff9800, "Sweep color", group = GRP_VIS)
+color reclaimColor        = input.color(#26a69a, "Reclaim color", group = GRP_VIS)
+int   boxTransp           = input.int(88, "Box fill transparency", minval = 0, maxval = 100, group = GRP_VIS)
+
+// ── Resolve CRT source timeframe (ignore anything below the chart TF) ─────────
+string crtTfRaw = crtTfInput == "" ? timeframe.period : crtTfInput
+bool   crtTfTooLow = timeframe.in_seconds(crtTfRaw) < timeframe.in_seconds()
+string crtTf = crtTfTooLow ? timeframe.period : crtTfRaw
+
+// Previous CLOSED source candle -> the CRT reference range.
+// `expr[1]` + lookahead_on returns the last closed HTF bar with no lag and no
+// future leak (we never touch the currently developing HTF bar).
+[srcHigh, srcLow, srcTime] = request.security(syminfo.tickerid, crtTf, [high[1], low[1], time[1]], lookahead = barmerge.lookahead_on)
+
+// New source candle detected (safe every-bar comparison, no ta.* in conditionals).
+bool isNewSrc = not na(srcTime) and (na(srcTime[1]) or srcTime != srcTime[1])
+
+// Process live bar or only confirmed bars, per setting.
+bool processBar = confirmOnClose ? barstate.isconfirmed : true
+
+// ── Active CRT range state (latched per range) ───────────────────────────────
+var float crtHigh       = na
+var float crtLow        = na
+var int   crtStartTime  = na
+var bool  sweptHigh     = false
+var bool  sweptLow      = false
+var bool  reclaimedHigh = false
+var bool  reclaimedLow  = false
+var box   activeBox     = na
+var array<box> crtBoxes = array.new_box()
+
+// True when the bar closes back within [crtLow, crtHigh].
+isInside(float c, float hi, float lo) =>
+    not na(c) and not na(hi) and not na(lo) and c <= hi and c >= lo
+
+// Probe used to detect a sweep: wick (high/low) or close, per setting.
+float probeHigh = wickSweep ? high : close
+float probeLow  = wickSweep ? low  : close
+
+// Per-bar events (reset each bar so plotshape marks only the triggering bar).
+bool sweepHighEvent   = false
+bool sweepLowEvent    = false
+bool reclaimHighEvent = false
+bool reclaimLowEvent  = false
+
+if processBar and not na(srcHigh) and not na(srcLow) and not na(srcTime)
+    // Establish / roll the CRT range on a new source candle.
+    if na(crtHigh) or isNewSrc
+        crtHigh       := srcHigh
+        crtLow        := srcLow
+        crtStartTime  := srcTime
+        sweptHigh     := false
+        sweptLow      := false
+        reclaimedHigh := false
+        reclaimedLow  := false
+        if showBox
+            activeBox := box.new(crtStartTime, crtHigh, time, crtLow, xloc = xloc.bar_time, border_color = rangeColor, bgcolor = color.new(rangeColor, boxTransp))
+            array.push(crtBoxes, activeBox)
+            if array.size(crtBoxes) > maxRanges
+                box.delete(array.shift(crtBoxes))
+
+    // Detect sweep, then reclaim, against the active range.
+    if not na(crtHigh) and not na(crtLow)
+        sweepHighEvent := probeHigh > crtHigh and not sweptHigh
+        sweepLowEvent  := probeLow  < crtLow  and not sweptLow
+        if sweepHighEvent
+            sweptHigh := true
+        if sweepLowEvent
+            sweptLow := true
+
+        bool inside = isInside(close, crtHigh, crtLow)
+        reclaimHighEvent := sweptHigh and inside and not reclaimedHigh
+        reclaimLowEvent  := sweptLow  and inside and not reclaimedLow
+        if reclaimHighEvent
+            reclaimedHigh := true
+        if reclaimLowEvent
+            reclaimedLow := true
+
+        // Only the active box is mutated; older boxes stay frozen.
+        if showBox and not na(activeBox)
+            color stateColor = (reclaimedHigh or reclaimedLow) ? reclaimColor : (sweptHigh or sweptLow) ? sweepColor : rangeColor
+            box.set_right(activeBox, time)
+            box.set_border_color(activeBox, stateColor)
+            box.set_bgcolor(activeBox, color.new(stateColor, boxTransp))
+
+// ── Levels: step lines that hold each range's high/low while it is active ─────
+plot(showLevels ? crtHigh : na, "CRT high", color = rangeColor, style = plot.style_stepline, linewidth = 1)
+plot(showLevels ? crtLow  : na, "CRT low",  color = rangeColor, style = plot.style_stepline, linewidth = 1)
+
+// ── Event markers (events, not trade signals) ────────────────────────────────
+plotshape(showSweepMarkers and sweepHighEvent, title = "Sweep above CRT high", style = shape.circle, location = location.abovebar, color = sweepColor, size = size.tiny)
+plotshape(showSweepMarkers and sweepLowEvent,  title = "Sweep below CRT low",  style = shape.circle, location = location.belowbar, color = sweepColor, size = size.tiny)
+plotshape(showReclaimMarkers and reclaimHighEvent, title = "Reclaim after high sweep", style = shape.diamond, location = location.abovebar, color = reclaimColor, size = size.tiny)
+plotshape(showReclaimMarkers and reclaimLowEvent,  title = "Reclaim after low sweep",  style = shape.diamond, location = location.belowbar, color = reclaimColor, size = size.tiny)

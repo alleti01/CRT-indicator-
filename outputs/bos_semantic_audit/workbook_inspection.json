@@ -1,0 +1,62 @@
+[
+  {
+    "sheetName": "Overview",
+    "preview": "{\"kind\":\"notice\",\"message\":\"Truncated: omitted 4 lines. Increase maxChars, narrow range, or use tableMaxRows/tableMaxCols/tableMaxCellChars.\"}"
+  },
+  {
+    "sheetName": "Comparison",
+    "preview": "{\"kind\":\"region\",\"sheet\":\"Comparison\",\"address\":\"A6:L18\",\"rows\":13,\"cols\":12,\"nonEmpty\":156,\"text\":156,\"maxTextLength\":34,\"preview\":[[\"Model\",\"Scope\",\"N\",\"Retention\",\"Wins\",\"Losses\"],[\"Current BOS 5/5 (same-bar allowed)\",\"All\",\"705\",\"1\",\"28"
+  },
+  {
+    "sheetName": "Data Trades",
+    "preview": "{\"kind\":\"region\",\"sheet\":\"Data Trades\",\"address\":\"A1:J25\",\"rows\":25,\"cols\":10,\"nonEmpty\":250,\"text\":250,\"maxTextLength\":34,\"preview\":[[\"Model\",\"Direction\",\"Entry Timestamp\",\"Exit Timestamp\",\"Gross R\",\"Cost R\"],[\"Current BOS 5/5 (same-bar al"
+  },
+  {
+    "sheetName": "Time Stability",
+    "preview": "{\"kind\":\"region\",\"sheet\":\"Time Stability\",\"address\":\"A1:I21\",\"rows\":21,\"cols\":9,\"nonEmpty\":189,\"text\":189,\"maxTextLength\":34,\"preview\":[[\"model\",\"period_type\",\"period\",\"N\",\"net_win_rate_pct\",\"net_AvgR\"],[\"Current BOS 5/5 (same-bar allowed)\""
+  },
+  {
+    "sheetName": "Swing Quality",
+    "preview": "{\"kind\":\"region\",\"sheet\":\"Swing Quality\",\"address\":\"A1:K19\",\"rows\":19,\"cols\":11,\"nonEmpty\":209,\"text\":209,\"maxTextLength\":21,\"preview\":[[\"timing\",\"swing_model\",\"diagnostic_state\",\"N\",\"net_win_rate_pct\",\"net_AvgR\"],[\"All\",\"2/2\",\"Break\",\"533\""
+  },
+  {
+    "sheetName": "Event Order",
+    "preview": "{\"kind\":\"region\",\"sheet\":\"Event Order\",\"address\":\"A1:D25\",\"rows\":25,\"cols\":4,\"nonEmpty\":100,\"text\":100,\"maxTextLength\":19,\"preview\":[[\"sequence_gap\",\"bars\",\"N\",\"pct_trades\"],[\"Setup→BOS\",\"0\",\"664\",\"94.18439716312056\"],[\"Setup→BOS\",\"1\",\"5\",\""
+  },
+  {
+    "sheetName": "Setup Redundancy",
+    "preview": "{\"kind\":\"region\",\"sheet\":\"Setup Redundancy\",\"address\":\"A1:H25\",\"rows\":25,\"cols\":8,\"nonEmpty\":171,\"blank\":29,\"text\":171,\"maxTextLength\":25,\"preview\":[[\"setup_id\",\"setup_timestamp\",\"direction\",\"score\",\"status\",\"bos_timestamp\"],[\"S00001\",\"2024"
+  },
+  {
+    "sheetName": "BOS Events",
+    "preview": "{\"kind\":\"region\",\"sheet\":\"BOS Events\",\"address\":\"A1:L25\",\"rows\":25,\"cols\":12,\"nonEmpty\":300,\"text\":300,\"maxTextLength\":38,\"preview\":[[\"trade_id\",\"direction\",\"setup_timestamp\",\"bos_timestamp\",\"same_bar_setup_bos\",\"bos_break_type\"],[\"A0001\",\""
+  },
+  {
+    "sheetName": "Case Data",
+    "preview": "{\"kind\":\"region\",\"sheet\":\"Case Data\",\"address\":\"A1:L25\",\"rows\":25,\"cols\":12,\"nonEmpty\":300,\"text\":300,\"maxTextLength\":32,\"preview\":[[\"case_category\",\"case_number\",\"trade_id\",\"direction\",\"setup_timestamp\",\"bos_timestamp\"],[\"Same-bar winners\""
+  },
+  {
+    "sheetName": "Methodology",
+    "preview": "{\"kind\":\"notice\",\"message\":\"Truncated: omitted 2 lines. Increase maxChars, narrow range, or use tableMaxRows/tableMaxCols/tableMaxCellChars.\"}"
+  },
+  {
+    "sheetName": "Cases Same Winners",
+    "preview": "{\"kind\":\"region\",\"sheet\":\"Cases Same Winners\",\"address\":\"A1:L4\",\"rows\":4,\"cols\":12,\"nonEmpty\":48,\"text\":48,\"maxTextLength\":149,\"preview\":[[\"10 deterministic same-bar winners\",\"10 deterministic same-bar winners\",\"10 deterministic same-bar wi"
+  },
+  {
+    "sheetName": "Cases Same Losers",
+    "preview": "{\"kind\":\"region\",\"sheet\":\"Cases Same Losers\",\"address\":\"A1:L4\",\"rows\":4,\"cols\":12,\"nonEmpty\":48,\"text\":48,\"maxTextLength\":149,\"preview\":[[\"10 deterministic same-bar losers\",\"10 deterministic same-bar losers\",\"10 deterministic same-bar loser"
+  },
+  {
+    "sheetName": "Cases Delayed",
+    "preview": "{\"kind\":\"region\",\"sheet\":\"Cases Delayed\",\"address\":\"A1:L4\",\"rows\":4,\"cols\":12,\"nonEmpty\":48,\"text\":48,\"maxTextLength\":149,\"preview\":[[\"10 deterministic delayed-BOS trades\",\"10 deterministic delayed-BOS trades\",\"10 deterministic delayed-BOS "
+  },
+  {
+    "sheetName": "Cases No 3-3",
+    "preview": "{\"kind\":\"region\",\"sheet\":\"Cases No 3-3\",\"address\":\"A1:L4\",\"rows\":4,\"cols\":12,\"nonEmpty\":48,\"text\":48,\"maxTextLength\":149,\"preview\":[[\"10 trades without a simultaneous 3/3 break\",\"10 trades without a simultaneous 3/3 break\",\"10 trades withou"
+  },
+  {
+    "sheetName": "Cases Did 3-3",
+    "preview": "{\"kind\":\"region\",\"sheet\":\"Cases Did 3-3\",\"address\":\"A1:L4\",\"rows\":4,\"cols\":12,\"nonEmpty\":48,\"text\":48,\"maxTextLength\":149,\"preview\":[[\"10 trades with a simultaneous 3/3 break\",\"10 trades with a simultaneous 3/3 break\",\"10 trades with a simu"
+  }
+]

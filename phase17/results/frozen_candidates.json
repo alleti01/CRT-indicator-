@@ -1,0 +1,55 @@
+{
+  "candidates": [
+    {
+      "candidate_id": "C1",
+      "conditions": [
+        {
+          "feature": "session_name",
+          "value": "Premarket"
+        },
+        {
+          "feature": "direction_name",
+          "value": "Short"
+        }
+      ],
+      "model": "Control",
+      "research_N": 204,
+      "research_avg_R": 0.20048898982901012,
+      "research_bootstrap_probability_positive": 0.982,
+      "research_evidence_label": "STATISTICALLY INTERESTING",
+      "research_fdr_q": 0.9927819330416757,
+      "research_hypothesis_id": "H0077",
+      "research_max_drawdown_R": 11.099337704883204,
+      "research_profit_factor": 1.3866382863253865,
+      "research_total_R": 40.89975392511806
+    },
+    {
+      "candidate_id": "C2",
+      "conditions": [
+        {
+          "feature": "direction_name",
+          "value": "Short"
+        },
+        {
+          "feature": "score_band",
+          "value": "90-94"
+        }
+      ],
+      "model": "BOS",
+      "research_N": 229,
+      "research_avg_R": 0.16739621584134481,
+      "research_bootstrap_probability_positive": 0.968,
+      "research_evidence_label": "STATISTICALLY INTERESTING",
+      "research_fdr_q": 0.9927819330416757,
+      "research_hypothesis_id": "H0281",
+      "research_max_drawdown_R": 11.137215004638012,
+      "research_profit_factor": 1.3174977693898506,
+      "research_total_R": 38.333733427667966
+    }
+  ],
+  "hypotheses_with_adequate_samples": 260,
+  "research_window": "2024-01-01 through 2025-06-30 inclusive",
+  "selection_basis": "uncorrected statistically interesting candidates; none passed FDR",
+  "validation_examined": false,
+  "validation_window": "2025-07-01 through 2026-06-26 inclusive"
+}

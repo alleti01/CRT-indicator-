@@ -1,0 +1,5 @@
+model,N,wins,losses,win_pct,avg_R,total_R,profit_factor,max_drawdown_R
+Control,133,54,79,41,0.02,2.48,1.0,9.00
+BOS,97,38,59,39,-0.02,-2.00,1.0,11.92
+Retest,59,27,32,46,0.10,5.68,1.2,7.16
+Confirm,42,17,25,40,0.01,0.46,1.0,8.04

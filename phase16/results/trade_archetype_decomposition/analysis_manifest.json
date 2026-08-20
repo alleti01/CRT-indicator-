@@ -1,0 +1,56 @@
+{
+  "baseline_reproduced": true,
+  "trades_verified": 705,
+  "archived_field_mismatches": 0,
+  "development_only": true,
+  "new_data_downloaded": false,
+  "unseen_oos_accessed": false,
+  "pine_modified": false,
+  "window": {
+    "start": "2024-01-01",
+    "end": "2026-06-26"
+  },
+  "bars_in_window": 176022,
+  "baseline": {
+    "N": 705,
+    "pct_all_trades": 100.0,
+    "gross_wins": 289,
+    "gross_losses": 415,
+    "gross_flats": 1,
+    "gross_win_rate_pct": 40.99290780141844,
+    "gross_AvgR": -0.03634126434069508,
+    "gross_median_R": -0.6087169597707835,
+    "gross_TotalR": -25.620591360190033,
+    "gross_PF": 0.9304045369352899,
+    "gross_MaxDD_R": 42.43787130874263,
+    "net_wins": 284,
+    "net_losses": 421,
+    "net_flats": 0,
+    "net_win_rate_pct": 40.283687943262414,
+    "net_AvgR": -0.06957314333917415,
+    "net_median_R": -0.661561303094527,
+    "net_TotalR": -49.04906605411777,
+    "net_PF": 0.8717849563156026,
+    "net_MaxDD_R": 60.29673416610867,
+    "avg_MFE_R": 1.0192036899220243,
+    "avg_MAE_R": 0.9002764811316044
+  },
+  "adequate_N_family_tests": 5,
+  "FDR_survivors": 0,
+  "robust_positive_families": 0,
+  "robust_negative_families": 0,
+  "best_family_id": "F::Short::Same-bar Setup+BOS::Penetration without same-bar reclaim",
+  "worst_family_id": "F::Long::Same-bar Setup+BOS::Penetration + same-bar reclaim",
+  "classification": "D \u2014 STRATEGY HAS NO ROBUST EDGE",
+  "cost_assumption": {
+    "round_turn_USD": 14.5,
+    "NQ_USD_per_point": 20.0
+  },
+  "frozen_sha256": {
+    "phase16/config.py": "b2fcd566f422e3ee5ede923ed6fc3a78a209a72eac214d038145a7eba3f344a3",
+    "phase16/entry_models.py": "656b4cf14e913d7df888389dc165e81d59c3e46cf0a862d52d8281b549ac7b90",
+    "phase16/setup_engine.py": "cdf73226e09f31838d738fa6ed59c70752e132801d68480099bdcc1e68a7c4cc",
+    "phase16/trade_engine.py": "58a99cdcf526bf9f1c8eac0483c3d30040210d91947f6498e8ac6af4715f25b3",
+    "outputs/CRT_Core_RETEST_GATED_LIVE.pine": "95b7d25a708251ebb7f3e56a8f3e64e7d023c40d5453ab82f61e07ed39c47973"
+  }
+}

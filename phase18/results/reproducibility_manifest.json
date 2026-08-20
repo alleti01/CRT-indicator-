@@ -1,0 +1,43 @@
+{
+  "baseline_exact": true,
+  "candidate_filtering_method": "Exact Phase 17 completed-trade subset conditions",
+  "cost_scenarios": {
+    "Extreme": {
+      "round_turn_commission_usd": 12.0,
+      "slippage_ticks_per_side": 4.0
+    },
+    "Ideal/current": {
+      "round_turn_commission_usd": 0.0,
+      "slippage_ticks_per_side": 0.0
+    },
+    "Modest": {
+      "round_turn_commission_usd": 4.5,
+      "slippage_ticks_per_side": 1.0
+    },
+    "Severe": {
+      "round_turn_commission_usd": 10.0,
+      "slippage_ticks_per_side": 3.0
+    },
+    "Standard conservative": {
+      "round_turn_commission_usd": 8.0,
+      "slippage_ticks_per_side": 2.0
+    }
+  },
+  "databento_estimated_cost_usd": 3.9816,
+  "dataset": "GLBX.MDP3",
+  "evaluation_end_exclusive": "2023-12-29 00:00:00-06:00",
+  "evaluation_start": "2021-01-01 00:00:00-06:00",
+  "monte_carlo_simulations": 10000,
+  "phase16_reference_summary_sha256": "dce26cdb69f19b9dcc99d352b4770ecbc029aac2011c9bfbeba9af817fa46e85",
+  "phase16_reference_trades_sha256": "41fb57758d017d3fbdd4cdf19677aed9ef823e9eb883e906f4e57339adcfbaf5",
+  "phase17_frozen_candidates_sha256": "79e0fc05a74e47ed2ae69a69c1e40085d53b1db465ff1cba3a687377dbfc869a",
+  "phase18_baseline_summary_sha256": "dce26cdb69f19b9dcc99d352b4770ecbc029aac2011c9bfbeba9af817fa46e85",
+  "phase18_baseline_trades_sha256": "41fb57758d017d3fbdd4cdf19677aed9ef823e9eb883e906f4e57339adcfbaf5",
+  "processed_sha256": "1aa483e632341dcad4a9157a693c9a99b45d7597db45dfcf20fb96b3b462355a",
+  "raw_acquisition_end_exclusive_utc": "2024-01-01T06:00:00Z",
+  "raw_acquisition_start_utc": "2020-12-01T00:00:00Z",
+  "raw_sha256": "94da5567fb307c16b1e3232f5e933da42ebd6842fb3eeea2482f505a1069e3fd",
+  "robust_tail_rule": "terminal_R_p05 >= -0.50 * observed positive Total R",
+  "schema": "ohlcv-1m",
+  "symbol": "NQ.v.0"
+}

@@ -1,0 +1,20 @@
+{
+  "baseline_reproduction": "PASS",
+  "data_hash": "5dad4dd2b6f32fcb034e8fc42bb2f6782f797cfdec814bd95c94dff632a769a3",
+  "entry_feature_missing": {
+    "atr": 0,
+    "distance_from_crt_atr": 0,
+    "stop_distance_points": 0,
+    "trend_regime": 0,
+    "volatility_regime": 0
+  },
+  "market_rows": 181614,
+  "outside_trades": 0,
+  "phase16_trades_hash": "41fb57758d017d3fbdd4cdf19677aed9ef823e9eb883e906f4e57339adcfbaf5",
+  "phase17_trades_hash": "41fb57758d017d3fbdd4cdf19677aed9ef823e9eb883e906f4e57339adcfbaf5",
+  "reference_hash": "dce26cdb69f19b9dcc99d352b4770ecbc029aac2011c9bfbeba9af817fa46e85",
+  "reproduced_hash": "dce26cdb69f19b9dcc99d352b4770ecbc029aac2011c9bfbeba9af817fa46e85",
+  "research_trades": 3865,
+  "trade_rows": 6363,
+  "validation_trades": 2498
+}

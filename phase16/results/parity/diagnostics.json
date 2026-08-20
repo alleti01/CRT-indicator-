@@ -1,0 +1,20 @@
+{
+  "BOS Accepted": "97",
+  "BOS Attempts": "104",
+  "Bars In Window": "10164",
+  "Canonical Raw Setups": "160",
+  "Confirm Accepted": "42",
+  "Confirm Attempts": "42",
+  "Control Accepted": "133",
+  "Control Attempts": "160",
+  "Coverage": "FULL DATA",
+  "End Exclusive": "2026-08-19 00:00:00-05:00",
+  "First Loaded Bar": "2026-05-31 19:00:00-05:00",
+  "Last Loaded Bar End": "2026-08-19 00:00:00-05:00",
+  "Raw Long Setups": "136",
+  "Raw Setup Total": "256",
+  "Raw Short Setups": "120",
+  "Retest Accepted": "59",
+  "Retest Attempts": "60",
+  "Start Timestamp": "2026-06-29 00:00:00-05:00"
+}

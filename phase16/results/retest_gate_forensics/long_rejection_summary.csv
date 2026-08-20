@@ -1,0 +1,14 @@
+rejection_reason,count,percent_of_long_setups
+regime restriction,43,31.61764705882353
+retest touched but rejected,17,12.5
+opposite BOS invalidation,16,11.764705882352942
+confirmation condition rejected,12,8.823529411764707
+setup rejected,9,6.617647058823529
+retest expired,8,5.882352941176471
+BOS expired,7,5.147058823529412
+session restriction,3,2.2058823529411766
+confirmation never occurred,0,0.0
+invalid risk,0,0.0
+no matching BOS,0,0.0
+other,0,0.0
+retest never touched,0,0.0

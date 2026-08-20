@@ -1,0 +1,8 @@
+feature,feature_label,bucket_method,bucket_count,min_bucket_N,spearman_bucket_order_vs_AvgR,pattern
+bos_displacement_atr,BOS close displacement / ATR,quantile,4,10,0.39999999999999997,NON-MONOTONIC
+confirm_body_atr,Confirmation body / ATR,quantile,4,10,-0.39999999999999997,NON-MONOTONIC
+retest_max_penetration_atr,Max pre-accept penetration / ATR,quantile,4,10,-0.19999999999999998,NON-MONOTONIC
+entry_atr_percentile_100,Entry ATR percentile vs prior 100 bars,fixed percentile quarters,4,7,0.19999999999999998,NON-MONOTONIC
+bos_to_retest_bars,Bars BOS to retest,fixed delay,4,2,-0.19999999999999998,NON-MONOTONIC
+retest_to_confirm_bars,Bars retest to confirmation,fixed delay,3,3,0.5,NON-MONOTONIC
+setup_score,Original setup score,frozen score bands,4,2,0.39999999999999997,NON-MONOTONIC

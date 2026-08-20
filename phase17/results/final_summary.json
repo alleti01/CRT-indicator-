@@ -1,0 +1,35 @@
+{
+  "baseline_reproduction": "PASS",
+  "classification": "C \u2014 PROMISING EDGE REQUIRES NEW OOS TEST",
+  "conservative_cost_pass": true,
+  "fdr_survivors": 0,
+  "hypotheses_enumerated": 564,
+  "hypotheses_tested_adequate_n": 260,
+  "monte_carlo_p05_positive": false,
+  "strongest_condition": "Control + Short + Premarket",
+  "strongest_model": "Control (conditional); BOS (aggregate)",
+  "validation_manifest": {
+    "candidate_count": 2,
+    "cost_assumptions": {
+      "Conservative": {
+        "round_turn_commission_usd": 8.0,
+        "slippage_ticks_per_side": 2.0
+      },
+      "Ideal/current": {
+        "round_turn_commission_usd": 0.0,
+        "slippage_ticks_per_side": 0.0
+      },
+      "Modest": {
+        "round_turn_commission_usd": 4.5,
+        "slippage_ticks_per_side": 1.0
+      }
+    },
+    "frozen_candidates_sha256": "79e0fc05a74e47ed2ae69a69c1e40085d53b1db465ff1cba3a687377dbfc869a",
+    "status": "COMPLETE",
+    "survivor_count": 2,
+    "validation_end_exclusive": "2026-06-27 00:00:00-05:00",
+    "validation_start": "2025-07-01 00:00:00-05:00",
+    "validation_was_run_once": true
+  },
+  "validation_pass": true
+}

@@ -1,0 +1,2 @@
+model,N,wins,losses,win_pct,avg_R,total_R,profit_factor,max_drawdown_R,largest_win_R,largest_loss_R,max_consecutive_wins,max_consecutive_losses
+Retest,1061,429,629,40.433553251649386,-0.03000160778502951,-31.83170585991631,0.9419130896856236,39.51823392333088,2.0,-1.0,7,10

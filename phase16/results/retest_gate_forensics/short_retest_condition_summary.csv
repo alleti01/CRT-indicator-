@@ -1,0 +1,4 @@
+condition,true_count,false_count
+touch_condition,40,51
+invalid_condition,14,77
+opposite_bos,1,90

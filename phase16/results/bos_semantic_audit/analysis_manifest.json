@@ -1,0 +1,27 @@
+{
+  "baseline_reproduced": true,
+  "trades_verified": 705,
+  "archived_field_mismatches": 0,
+  "window": {
+    "start": "2024-01-01",
+    "end": "2026-06-26"
+  },
+  "bars_in_window": 176022,
+  "development_only": true,
+  "new_data_downloaded": false,
+  "unseen_data_accessed": false,
+  "pine_modified": false,
+  "frozen_engine_modified": false,
+  "lookahead_check": "PASS",
+  "same_bar_setup_bos": 664,
+  "delayed_bos": 41,
+  "classification": "B \u2014 CURRENT BOS IS PARTIALLY REDUNDANT",
+  "frozen_sha256": {
+    "phase16/config.py": "b2fcd566f422e3ee5ede923ed6fc3a78a209a72eac214d038145a7eba3f344a3",
+    "phase16/entry_models.py": "656b4cf14e913d7df888389dc165e81d59c3e46cf0a862d52d8281b549ac7b90",
+    "phase16/setup_engine.py": "cdf73226e09f31838d738fa6ed59c70752e132801d68480099bdcc1e68a7c4cc",
+    "phase16/structure.py": "978420b6906645608fdb53e878167f01bbebea340641380dc7bf2025e2496c06",
+    "phase16/trade_engine.py": "58a99cdcf526bf9f1c8eac0483c3d30040210d91947f6498e8ac6af4715f25b3",
+    "outputs/CRT_Core_RETEST_GATED_LIVE.pine": "95b7d25a708251ebb7f3e56a8f3e64e7d023c40d5453ab82f61e07ed39c47973"
+  }
+}

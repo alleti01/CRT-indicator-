@@ -1,0 +1,2 @@
+hypothesis_id,varied_feature,base_value,neighbor_value,N,avg_R,total_R,profit_factor,realistic_total_R,neighbor_survives,note
+NONE,N/A,N/A,N/A,0,,,,,False,No hypothesis reached the predeclared preliminary candidate screen.

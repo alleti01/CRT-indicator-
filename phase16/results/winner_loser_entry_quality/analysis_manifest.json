@@ -1,0 +1,40 @@
+{
+  "development_only": true,
+  "unseen_oos_accessed": false,
+  "window": {
+    "start": "2026-06-29 00:00:00-05:00",
+    "end_exclusive": "2026-08-19 00:00:00-05:00"
+  },
+  "bars_in_window": 10164,
+  "trade_count": 42,
+  "winner_count": 17,
+  "loser_count": 25,
+  "current_net_metrics": {
+    "N": 42,
+    "wins": 17,
+    "losses": 25,
+    "win_pct": 40.476190476190474,
+    "avg_R": -0.008455272926675073,
+    "total_R": -0.35512146292035307,
+    "profit_factor": 0.9836932374533185,
+    "max_drawdown_R": 8.37128128797455,
+    "largest_win_R": 1.9927957671063168,
+    "largest_loss_R": -1.0461806034103125,
+    "max_consecutive_wins": 5,
+    "max_consecutive_losses": 5
+  },
+  "evidence": "WEAK",
+  "feature_count": 52,
+  "interaction_count": 10,
+  "cost_assumption": {
+    "round_turn_usd": 14.5,
+    "nq_usd_per_point": 20.0
+  },
+  "frozen_file_sha1": {
+    "phase16/config.py": "42e3d833653b17355b4a4a642ebb06756783c7bd",
+    "phase16/entry_models.py": "b92c7d156175a54fd19a1cd49699be96d02086a1",
+    "phase16/setup_engine.py": "e3998100fab7f385d079b8423e462df8c34141a5",
+    "phase16/trade_engine.py": "135f0d8bee33e6649dd41c1319dff9e83741d2f4",
+    "outputs/CRT_Core_RETEST_GATED_LIVE.pine": "25c1408e949a2f6d15a5b4f9855dc658010c5550"
+  }
+}

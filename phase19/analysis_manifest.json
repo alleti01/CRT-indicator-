@@ -1,0 +1,15 @@
+{
+  "adequate_hypotheses": 111,
+  "baseline_gate": "PASS",
+  "combined_bos_trades": 4150,
+  "early_data_sha256": "1aa483e632341dcad4a9157a693c9a99b45d7597db45dfcf20fb96b3b462355a",
+  "early_reference_trades_sha256": "63a0605fbe1520f47d56ccae9137cb7cb144caab1bb18f929c68b2833a2122d8",
+  "engine_modified": false,
+  "fdr_survivors": 0,
+  "frozen_candidates": 0,
+  "late_data_sha256": "5dad4dd2b6f32fcb034e8fc42bb2f6782f797cfdec814bd95c94dff632a769a3",
+  "late_reference_trades_sha256": "41fb57758d017d3fbdd4cdf19677aed9ef823e9eb883e906f4e57339adcfbaf5",
+  "paid_downloads": false,
+  "phase": 19,
+  "registered_hypotheses": 155
+}

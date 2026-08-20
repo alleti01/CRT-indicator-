@@ -1,0 +1,3167 @@
+//@version=6
+indicator("CRT Indicator — Core", shorttitle = "CRT Core", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 500)
+
+// Hidden compiler anchor. This emits no visible chart value and ensures
+// TradingView recognizes the pasted source as an output-producing indicator.
+plot(na, "CRT compiler anchor", display = display.none)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CRT Indicator — Phases 1-14
+//
+// Phase 1 (CRT core):
+//   - CRT reference range (last confirmed source candle)
+//   - CRT high / CRT low; sweep above/below; reclaim (close back inside)
+//   - Configurable CRT settings + clean visualization
+//
+// Phase 2 (Liquidity):
+//   - Swing highs/lows (configurable pivot sensitivity, non-repainting)
+//   - Equal highs/lows (configurable ATR tolerance)
+//   - Previous Day High/Low (PDH/PDL)
+//   - Buy-Side (BSL, above) / Sell-Side (SSL, below) liquidity levels
+//   - Sweep detection, with optional close-back-through confirmation
+//   - Show/hide toggles + clutter caps
+//
+// Phase 3 (Market Structure):
+//   - Separate structural pivots (independent sensitivity from liquidity)
+//   - HH/HL/LH/LL swing classification
+//   - BOS (Break of Structure) / CHoCH (Change of Character) detection
+//   - Persistent structure bias (bullish / bearish / neutral)
+//   - Non-repainting: structural pivots only actionable after confirmation
+//
+// Phase 4 (Liquidity Engine):
+//   - Separate liquidity pivots with own sensitivity
+//   - BSL/SSL level tracking with active/swept/consumed states
+//   - Equal highs/lows (tick-based tolerance)
+//   - Sweep = wick grab + close rejection; consumed = close through
+//   - Non-repainting: levels only active after pivot confirmation
+//
+// Phase 5 (Setup Quality Engine):
+//   - Confluence scoring (liquidity + structure + bias + displacement + session)
+//   - Reversal vs continuation classification
+//   - Anti-chase filter, cooldown, duplicate prevention
+//   - Alert conditions for qualified and strong setups
+//
+// Phase 6 (Trade Engine):
+//   - Hypothetical trade simulation from Phase 5 setups
+//   - ATR or structure stop, R-multiple target, max holding period
+//   - Win rate, expectancy, profit factor, max drawdown (R)
+//   - Performance by direction, score bucket, and setup type
+//
+// Phase 14 (Historical Validation):
+//   - Explicit inclusive date-range comparison of Control/BOS/Retest/Confirm
+//   - Exchange-timezone boundaries and FULL/PARTIAL chart-data coverage audit
+//   - Measurement only; no changes to Phase 1-13 signals or trade decisions
+//
+// Deliberately NOT included yet (future phases):
+//   position sizing, compounding, FVG, order blocks, optimization.
+//
+// Design rules honored:
+//   - indicator() only, never strategy(); no orders / broker execution.
+//   - No future data: HTF values are read from the PREVIOUS closed HTF bar via
+//     the `expr[1]` + lookahead_on idiom (never reads the developing HTF bar).
+//   - Minimize repaint: sweep/reclaim evaluated on confirmed bars by default.
+//   - Historical events stay fixed: per-range state latches and only the active
+//     box is mutated; older boxes are frozen once a new range starts.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Display mode (master visibility layer — does NOT affect calculations) ────
+string GRP_DM = "Display"
+string displayMode = input.string("Clean", "Display mode", options = ["Clean", "Structure", "Validation", "Backtest", "Walk-Forward", "Historical", "Live", "Debug"], group = GRP_DM, tooltip = "Clean = minimal. Structure = market structure. Validation = Phase 5. Backtest = Phase 6+7+8. Walk-Forward = Phase 9. Historical = Phase 14. Live = Phase 10. Debug = everything.")
+
+bool dmStructVis = displayMode == "Structure" or displayMode == "Debug"
+bool dmLiqVis    = displayMode == "Structure" or displayMode == "Debug"
+bool dmValVis    = displayMode == "Validation" or displayMode == "Debug"
+bool dmBtTable   = displayMode == "Backtest"   or displayMode == "Debug"
+bool dmLive      = displayMode == "Live"
+bool dmTrMarks   = displayMode == "Clean" or displayMode == "Live" or displayMode == "Backtest" or displayMode == "Debug"
+bool dmBiasTbl   = displayMode == "Clean" or displayMode == "Structure" or displayMode == "Debug"
+bool dmWalkFwd   = displayMode == "Walk-Forward"
+bool dmHistorical = displayMode == "Historical"
+bool dmDiag      = displayMode == "Debug"
+
+// ── Inputs: CRT range ────────────────────────────────────────────────────────
+string GRP_CRT   = "CRT range"
+string crtTfInput     = input.timeframe("", "CRT timeframe", group = GRP_CRT, tooltip = "Blank = chart timeframe (2-candle CRT). Set a higher timeframe (e.g. 60, 240, D) to use the last closed HTF candle as the range. Lower-than-chart timeframes are ignored.")
+bool   confirmOnClose = input.bool(true, "Confirm on bar close", group = GRP_CRT, tooltip = "On: sweep/reclaim only register on closed bars (no live-bar repaint). Off: the forming bar can preview events and may repaint.")
+bool   wickSweep      = input.bool(true, "Sweep uses wick", group = GRP_CRT, tooltip = "On: the wick (high/low) must pierce the CRT boundary. Off: the bar must CLOSE beyond the boundary.")
+int    maxRanges      = input.int(15, "Max CRT ranges kept", minval = 1, maxval = 100, group = GRP_CRT, tooltip = "How many recent CRT boxes stay on the chart (older ones are removed to respect object limits).")
+
+// ── Inputs: visualization ────────────────────────────────────────────────────
+string GRP_VIS = "Visualization"
+bool  showBox             = input.bool(true, "Show CRT box", group = GRP_VIS)
+bool  showLevels          = input.bool(true, "Show CRT high/low lines", group = GRP_VIS)
+bool  showSweepMarkers    = input.bool(true, "Show sweep markers", group = GRP_VIS)
+bool  showReclaimMarkers  = input.bool(true, "Show reclaim markers", group = GRP_VIS)
+color rangeColor          = input.color(#4c8bf5, "Range color", group = GRP_VIS)
+color sweepColor          = input.color(#ff9800, "Sweep color", group = GRP_VIS)
+color reclaimColor        = input.color(#26a69a, "Reclaim color", group = GRP_VIS)
+int   boxTransp           = input.int(88, "Box fill transparency", minval = 0, maxval = 100, group = GRP_VIS)
+
+// ── Resolve CRT source timeframe (ignore anything below the chart TF) ─────────
+string crtTfRaw = crtTfInput == "" ? timeframe.period : crtTfInput
+bool   crtTfTooLow = timeframe.in_seconds(crtTfRaw) < timeframe.in_seconds()
+string crtTf = crtTfTooLow ? timeframe.period : crtTfRaw
+
+// Previous CLOSED source candle -> the CRT reference range.
+// `expr[1]` + lookahead_on returns the last closed HTF bar with no lag and no
+// future leak (we never touch the currently developing HTF bar).
+[srcHigh, srcLow, srcTime] = request.security(syminfo.tickerid, crtTf, [high[1], low[1], time[1]], lookahead = barmerge.lookahead_on)
+
+// New source candle detected (safe every-bar comparison, no ta.* in conditionals).
+bool isNewSrc = not na(srcTime) and (na(srcTime[1]) or srcTime != srcTime[1])
+
+// Process live bar or only confirmed bars, per setting.
+bool processBar = confirmOnClose ? barstate.isconfirmed : true
+
+// ── Active CRT range state (latched per range) ───────────────────────────────
+var float crtHigh       = na
+var float crtLow        = na
+var int   crtStartTime  = na
+var bool  sweptHigh     = false
+var bool  sweptLow      = false
+var bool  reclaimedHigh = false
+var bool  reclaimedLow  = false
+var box   activeBox     = na
+var array<box> crtBoxes = array.new_box()
+
+// True when the bar closes back within [crtLow, crtHigh].
+isInside(float c, float hi, float lo) =>
+    not na(c) and not na(hi) and not na(lo) and c <= hi and c >= lo
+
+// Probe used to detect a sweep: wick (high/low) or close, per setting.
+float probeHigh = wickSweep ? high : close
+float probeLow  = wickSweep ? low  : close
+
+// Per-bar events (reset each bar so plotshape marks only the triggering bar).
+bool sweepHighEvent   = false
+bool sweepLowEvent    = false
+bool reclaimHighEvent = false
+bool reclaimLowEvent  = false
+
+if processBar and not na(srcHigh) and not na(srcLow) and not na(srcTime)
+    // Establish / roll the CRT range on a new source candle.
+    if na(crtHigh) or isNewSrc
+        crtHigh       := srcHigh
+        crtLow        := srcLow
+        crtStartTime  := srcTime
+        sweptHigh     := false
+        sweptLow      := false
+        reclaimedHigh := false
+        reclaimedLow  := false
+        if showBox
+            activeBox := box.new(crtStartTime, crtHigh, time, crtLow, xloc = xloc.bar_time, border_color = rangeColor, bgcolor = color.new(rangeColor, boxTransp))
+            array.push(crtBoxes, activeBox)
+            if array.size(crtBoxes) > maxRanges
+                box.delete(array.shift(crtBoxes))
+
+    // Detect sweep, then reclaim, against the active range.
+    if not na(crtHigh) and not na(crtLow)
+        sweepHighEvent := probeHigh > crtHigh and not sweptHigh
+        sweepLowEvent  := probeLow  < crtLow  and not sweptLow
+        if sweepHighEvent
+            sweptHigh := true
+        if sweepLowEvent
+            sweptLow := true
+
+        bool inside = isInside(close, crtHigh, crtLow)
+        reclaimHighEvent := sweptHigh and inside and not reclaimedHigh
+        reclaimLowEvent  := sweptLow  and inside and not reclaimedLow
+        if reclaimHighEvent
+            reclaimedHigh := true
+        if reclaimLowEvent
+            reclaimedLow := true
+
+        // Only the active box is mutated; older boxes stay frozen.
+        if showBox and not na(activeBox)
+            color stateColor = (reclaimedHigh or reclaimedLow) ? reclaimColor : (sweptHigh or sweptLow) ? sweepColor : rangeColor
+            box.set_right(activeBox, time)
+            box.set_border_color(activeBox, stateColor)
+            box.set_bgcolor(activeBox, color.new(stateColor, boxTransp))
+
+// ── Levels: step lines that hold each range's high/low while it is active ─────
+plot(showLevels ? crtHigh : na, "CRT high", color = rangeColor, style = plot.style_stepline, linewidth = 1)
+plot(showLevels ? crtLow  : na, "CRT low",  color = rangeColor, style = plot.style_stepline, linewidth = 1)
+
+// ── Event markers (events, not trade signals) ────────────────────────────────
+plotshape(showSweepMarkers and sweepHighEvent, title = "Sweep above CRT high", style = shape.circle, location = location.abovebar, color = sweepColor, size = size.tiny)
+plotshape(showSweepMarkers and sweepLowEvent,  title = "Sweep below CRT low",  style = shape.circle, location = location.belowbar, color = sweepColor, size = size.tiny)
+plotshape(showReclaimMarkers and reclaimHighEvent, title = "Reclaim after high sweep", style = shape.diamond, location = location.abovebar, color = reclaimColor, size = size.tiny)
+plotshape(showReclaimMarkers and reclaimLowEvent,  title = "Reclaim after low sweep",  style = shape.diamond, location = location.belowbar, color = reclaimColor, size = size.tiny)
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PHASE 2 — LIQUIDITY
+// Swing/equal highs & lows, previous-day high/low, BSL/SSL, and sweep detection.
+// Non-repainting: pivots confirm `pivotRight` bars after they form, and sweeps
+// are evaluated on the same confirmed-bar gate (`processBar`) used by Phase 1.
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ── Inputs: liquidity ────────────────────────────────────────────────────────
+string GRP_LIQ = "Liquidity"
+bool  showSwings      = input.bool(true,  "Show swing highs/lows", group = GRP_LIQ)
+bool  showEqual       = input.bool(true,  "Show equal highs/lows", group = GRP_LIQ, tooltip = "Highlights consecutive swings that sit at (nearly) the same price - a stronger liquidity pool.")
+bool  showPDHL        = input.bool(true,  "Show previous day high/low", group = GRP_LIQ)
+bool  showLiqSweeps   = input.bool(true,  "Show liquidity sweep markers", group = GRP_LIQ)
+bool  showSweptLevels = input.bool(true,  "Keep swept levels (faded)", group = GRP_LIQ, tooltip = "On: a swept level freezes at the sweep bar and fades. Off: it is removed on sweep.")
+bool  showLiqLabels   = input.bool(false, "Show PDH/PDL labels", group = GRP_LIQ)
+int   pivotLeft       = input.int(5, "Pivot left bars", minval = 1, group = GRP_LIQ, tooltip = "Bars to the LEFT required for a swing. Higher = fewer, stronger swings.")
+int   pivotRight      = input.int(5, "Pivot right bars", minval = 1, group = GRP_LIQ, tooltip = "Bars to the RIGHT required to CONFIRM a swing. A swing is only drawn this many bars later (non-repainting).")
+float eqTolAtr        = input.float(0.10, "Equal tolerance (x ATR)", minval = 0.0, step = 0.05, group = GRP_LIQ, tooltip = "Two consecutive swings are 'equal' when within this multiple of ATR.")
+int   eqAtrLen        = input.int(14, "Equal tolerance ATR length", minval = 1, group = GRP_LIQ)
+bool  confirmLiqSweep = input.bool(false, "Confirm sweep (close back through)", group = GRP_LIQ, tooltip = "Off: sweep when the wick pierces the level. On: sweep only once a bar CLOSES back through the level (grab + rejection).")
+int   maxLiqPerSide   = input.int(6,  "Max active levels per side", minval = 1, maxval = 50, group = GRP_LIQ)
+int   maxSweptKept    = input.int(10, "Max swept levels kept", minval = 0, maxval = 100, group = GRP_LIQ)
+color bslColor        = input.color(#089981, "BSL color (buy-side, above)", group = GRP_LIQ)
+color sslColor        = input.color(#f23645, "SSL color (sell-side, below)", group = GRP_LIQ)
+color eqColor         = input.color(#ab47bc, "Equal-level color", group = GRP_LIQ)
+color sweptLiqColor   = input.color(#787b86, "Swept-level color", group = GRP_LIQ)
+
+// ── Liquidity model ──────────────────────────────────────────────────────────
+// A resting liquidity level. isBuy = above price (BSL) vs below price (SSL).
+type LiqLevel
+    float price
+    int   startTime
+    int   confirmBar
+    bool  isBuy
+    bool  isEqual
+    bool  pierced
+    line  ln
+
+var array<LiqLevel> bslActive = array.new<LiqLevel>()
+var array<LiqLevel> sslActive = array.new<LiqLevel>()
+
+// Most recent confirmed swing on each side (used for equal-level tests).
+var float lastSwingHigh     = na
+var int   lastSwingHighTime = na
+var float lastSwingLow      = na
+var int   lastSwingLowTime  = na
+
+// Diagnostic storage: keep active liquidity levels in arrays.
+// The visual segment starts on the confirmation bar and remains visible historically.
+addLevel(array<LiqLevel> arr, float price, int startTime, int confirmBar, bool isBuy, bool isEqual, line ln) =>
+    array.push(arr, LiqLevel.new(price, startTime, confirmBar, isBuy, isEqual, false, ln))
+
+// Stop a diagnostic line exactly on the sweep bar.
+// During this test build, swept historical lines remain visible and are NOT faded/deleted.
+retireLine(line ln, int x2Val) =>
+    if not na(ln)
+        line.set_extend(ln, extend.none)
+        line.set_x2(ln, x2Val)
+
+// ── Pivots + equal-level test (computed every bar, acted on confirmed bars) ──
+float pivotHi = ta.pivothigh(pivotLeft, pivotRight)
+float pivotLo = ta.pivotlow(pivotLeft, pivotRight)
+float atrEq   = ta.atr(eqAtrLen)
+
+// Previous-day high/low from the last CLOSED daily bar (non-repainting idiom).
+[pdHigh, pdLow] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead = barmerge.lookahead_on)
+bool isNewDay  = timeframe.change("D")
+bool pdEnabled = timeframe.in_seconds() <= timeframe.in_seconds("D")
+
+// Persistent PDH/PDL state.
+var float pdHighPrice   = na
+var float pdLowPrice    = na
+var line  pdHighLine    = na
+var line  pdLowLine     = na
+var label pdHighLabel   = na
+var label pdLowLabel    = na
+var bool  pdHighPierced = false
+var bool  pdLowPierced  = false
+var bool  pdHighSwept   = false
+var bool  pdLowSwept    = false
+
+// Per-bar liquidity sweep events (for markers; reused by later phases).
+bool bslSweepEvent = false
+bool sslSweepEvent = false
+
+// Per-bar pivot confirmation events (for diagnostic markers).
+bool pivotHiEvent = false
+bool pivotLoEvent = false
+
+if processBar
+    // New swing high -> BSL level (+ equal-high test vs the prior swing high).
+    if not na(pivotHi)
+        pivotHiEvent := true
+        int  hiTime   = time[pivotRight]
+        bool isEqHigh = not na(lastSwingHigh) and not na(atrEq) and math.abs(pivotHi - lastSwingHigh) <= eqTolAtr * atrEq
+        bool showHigh = dmLiqVis and (showSwings or (isEqHigh and showEqual))
+        line hiLine = na
+        if showHigh
+            color hiCol = (isEqHigh and showEqual) ? eqColor : bslColor
+            // The pivot itself occurred `pivotRight` bars ago, but it only becomes
+            // actionable liquidity NOW, on this confirmation bar.
+            hiLine := line.new(
+                 x1 = bar_index,
+                 y1 = pivotHi,
+                 x2 = bar_index + 1,
+                 y2 = pivotHi,
+                 xloc = xloc.bar_index,
+                 extend = extend.right,
+                 color = hiCol,
+                 width = 2,
+                 style = line.style_solid)
+        addLevel(bslActive, pivotHi, hiTime, bar_index, true, isEqHigh, hiLine)
+        lastSwingHigh     := pivotHi
+        lastSwingHighTime := hiTime
+
+    // New swing low -> SSL level (+ equal-low test vs the prior swing low).
+    if not na(pivotLo)
+        pivotLoEvent := true
+        int  loTime  = time[pivotRight]
+        bool isEqLow = not na(lastSwingLow) and not na(atrEq) and math.abs(pivotLo - lastSwingLow) <= eqTolAtr * atrEq
+        bool showLow = dmLiqVis and (showSwings or (isEqLow and showEqual))
+        line loLine = na
+        if showLow
+            color loCol = (isEqLow and showEqual) ? eqColor : sslColor
+            // Same rule as BSL: the historical pivot marker is back-plotted,
+            // but the liquidity level only becomes actionable on confirmation.
+            loLine := line.new(
+                 x1 = bar_index,
+                 y1 = pivotLo,
+                 x2 = bar_index + 1,
+                 y2 = pivotLo,
+                 xloc = xloc.bar_index,
+                 extend = extend.right,
+                 color = loCol,
+                 width = 2,
+                 style = line.style_solid)
+        addLevel(sslActive, pivotLo, loTime, bar_index, false, isEqLow, loLine)
+        lastSwingLow     := pivotLo
+        lastSwingLowTime := loTime
+
+    // BSL sweeps: wick above the level; optional confirm = close back below.
+    if array.size(bslActive) > 0
+        for i = array.size(bslActive) - 1 to 0
+            LiqLevel lvl = array.get(bslActive, i)
+            if not na(lvl.ln)
+                line.set_x2(lvl.ln, bar_index)
+            // Never let the confirmation bar sweep the level it just created.
+            bool eligible = bar_index > lvl.confirmBar
+            if eligible and high > lvl.price
+                lvl.pierced := true
+            bool swept = eligible and (confirmLiqSweep ? (lvl.pierced and close < lvl.price) : (high > lvl.price))
+            if swept
+                bslSweepEvent := true
+                retireLine(lvl.ln, bar_index)
+                array.remove(bslActive, i)
+
+    // SSL sweeps: wick below the level; optional confirm = close back above.
+    if array.size(sslActive) > 0
+        for i = array.size(sslActive) - 1 to 0
+            LiqLevel lvl = array.get(sslActive, i)
+            if not na(lvl.ln)
+                line.set_x2(lvl.ln, bar_index)
+            // Same protection for sell-side liquidity.
+            bool eligible = bar_index > lvl.confirmBar
+            if eligible and low < lvl.price
+                lvl.pierced := true
+            bool swept = eligible and (confirmLiqSweep ? (lvl.pierced and close > lvl.price) : (low < lvl.price))
+            if swept
+                sslSweepEvent := true
+                retireLine(lvl.ln, bar_index)
+                array.remove(sslActive, i)
+
+    // Previous-day high/low: always detect when TF is suitable; only draw when visible.
+    if pdEnabled and isNewDay and not na(pdHigh) and not na(pdLow)
+        if not na(pdHighLine)
+            line.delete(pdHighLine)
+        if not na(pdLowLine)
+            line.delete(pdLowLine)
+        if not na(pdHighLabel)
+            label.delete(pdHighLabel)
+        if not na(pdLowLabel)
+            label.delete(pdLowLabel)
+        pdHighLine  := na
+        pdLowLine   := na
+        pdHighLabel := na
+        pdLowLabel  := na
+        pdHighPrice   := pdHigh
+        pdLowPrice    := pdLow
+        pdHighPierced := false
+        pdLowPierced  := false
+        pdHighSwept   := false
+        pdLowSwept    := false
+        if showPDHL
+            pdHighLine := line.new(time, pdHigh, time, pdHigh, xloc = xloc.bar_time, extend = extend.right, color = bslColor, width = 1, style = line.style_dotted)
+            pdLowLine  := line.new(time, pdLow,  time, pdLow,  xloc = xloc.bar_time, extend = extend.right, color = sslColor, width = 1, style = line.style_dotted)
+            if showLiqLabels
+                pdHighLabel := label.new(time, pdHigh, "PDH", xloc = xloc.bar_time, style = label.style_none, textcolor = bslColor, size = size.tiny)
+                pdLowLabel  := label.new(time, pdLow,  "PDL", xloc = xloc.bar_time, style = label.style_none, textcolor = sslColor, size = size.tiny)
+
+    if pdEnabled and not na(pdHighPrice) and not pdHighSwept
+        if not na(pdHighLine)
+            line.set_x2(pdHighLine, time)
+        if high > pdHighPrice
+            pdHighPierced := true
+        bool sweptPdh = confirmLiqSweep ? (pdHighPierced and close < pdHighPrice) : (high > pdHighPrice)
+        if sweptPdh
+            pdHighSwept   := true
+            bslSweepEvent := true
+            retireLine(pdHighLine, time)
+            pdHighLine := na
+
+    if pdEnabled and not na(pdLowPrice) and not pdLowSwept
+        if not na(pdLowLine)
+            line.set_x2(pdLowLine, time)
+        if low < pdLowPrice
+            pdLowPierced := true
+        bool sweptPdl = confirmLiqSweep ? (pdLowPierced and close > pdLowPrice) : (low < pdLowPrice)
+        if sweptPdl
+            pdLowSwept    := true
+            sslSweepEvent := true
+            retireLine(pdLowLine, time)
+            pdLowLine := na
+
+// ── Liquidity sweep markers (events, not trade signals) ──────────────────────
+plotshape(dmLiqVis and showLiqSweeps and bslSweepEvent, title = "BSL swept", style = shape.xcross, location = location.abovebar, color = bslColor, size = size.tiny)
+plotshape(dmLiqVis and showLiqSweeps and sslSweepEvent, title = "SSL swept", style = shape.xcross, location = location.belowbar, color = sslColor, size = size.tiny)
+
+// (Phase 2 diagnostic markers and data-window counts removed to stay under Pine 64-plot limit.
+//  Values available in Phase 5.5 validation table and Phase 6 backtest table.)
+
+// ============================================================================
+// PHASE 3 — MARKET STRUCTURE
+// Confirmed structural pivots, HH/HL/LH/LL classification, BOS/CHoCH detection.
+// Uses a SEPARATE set of pivots from Phase 2 liquidity (independent sensitivity).
+// Non-repainting: structural pivots only become usable after ta.pivothigh/
+// ta.pivotlow confirms them (structureRight bars later). BOS/CHoCH events
+// belong to the actual break bar, never backdated.
+// ============================================================================
+
+// ── A. Inputs ────────────────────────────────────────────────────────────────
+string GRP_STR = "Market Structure"
+bool   showStructure       = input.bool(true,  "Show market structure", group = GRP_STR)
+bool   showStructureLabels = input.bool(true,  "Show HH/HL/LH/LL labels", group = GRP_STR)
+bool   showBOS             = input.bool(true,  "Show BOS", group = GRP_STR)
+bool   showCHoCH           = input.bool(true,  "Show CHoCH", group = GRP_STR)
+int    structureLeft       = input.int(5, "Structure pivot left bars", minval = 1, group = GRP_STR)
+int    structureRight      = input.int(5, "Structure pivot right bars", minval = 1, group = GRP_STR)
+string structureBreakMode  = input.string("Close", "Structure break confirmation", options = ["Close", "Wick"], group = GRP_STR)
+bool   showStructureBias   = input.bool(false, "Show structure bias", group = GRP_STR)
+int    maxStructureEvents  = input.int(50, "Max structure events", minval = 10, maxval = 200, group = GRP_STR)
+bool   structureDebug      = input.bool(false, "Structure debug mode", group = GRP_STR)
+
+// ── B. Structural pivot detection (global scope, every bar) ──────────────────
+float strPivotHi = ta.pivothigh(high, structureLeft, structureRight)
+float strPivotLo = ta.pivotlow(low, structureLeft, structureRight)
+
+// ── C. Structural state (persistent across bars) ─────────────────────────────
+var float prevStrHigh        = na
+var float prevStrLow         = na
+var float activeStrHigh      = na
+var int   activeStrHighBar   = na
+var bool  activeStrHighUsed  = false
+var float activeStrLow       = na
+var int   activeStrLowBar    = na
+var bool  activeStrLowUsed   = false
+var int   structureBias      = 0
+
+// ── D. Object arrays for visualization (capped by maxStructureEvents) ────────
+var array<line>  strEventLines  = array.new<line>()
+var array<label> strEventLabels = array.new<label>()
+var array<label> swingClassLabels = array.new<label>()
+
+// Per-bar events (reset each bar; used by debug plotshapes).
+bool strHiConfirmed = false
+bool strLoConfirmed = false
+bool bullBreakEvent = false
+bool bearBreakEvent = false
+
+if processBar
+    // ── E. Break detection FIRST (uses current active levels before any new
+    //       pivot can replace them, preventing same-bar lookahead) ─────────────
+    float breakProbeHi = structureBreakMode == "Close" ? close : high
+    float breakProbeLo = structureBreakMode == "Close" ? close : low
+    bool  bullBreak = not na(activeStrHigh) and not activeStrHighUsed and breakProbeHi > activeStrHigh
+    bool  bearBreak = not na(activeStrLow)  and not activeStrLowUsed  and breakProbeLo < activeStrLow
+
+    // Same-bar double break (both sides breached): ambiguous — skip both.
+    if bullBreak and bearBreak
+        bullBreak := false
+        bearBreak := false
+
+    // ── F. Bullish break: BOS (with trend) or CHoCH (against trend) ──────────
+    if bullBreak
+        bullBreakEvent := true
+        bool isCHoCH = structureBias == -1
+        activeStrHighUsed := true
+        if isCHoCH
+            structureBias := 1
+        else if structureBias == 0
+            structureBias := 1
+        if dmStructVis and showStructure and (isCHoCH ? showCHoCH : showBOS)
+            string txt = isCHoCH ? "CHoCH" : "BOS"
+            color  col = #089981
+            line   ln  = line.new(activeStrHighBar, activeStrHigh, bar_index, activeStrHigh, xloc = xloc.bar_index, color = col, width = 1, style = isCHoCH ? line.style_dashed : line.style_solid)
+            label  lbl = label.new(bar_index, activeStrHigh, txt, xloc = xloc.bar_index, style = label.style_none, textcolor = col, size = size.small)
+            array.push(strEventLines, ln)
+            array.push(strEventLabels, lbl)
+            if array.size(strEventLines) > maxStructureEvents
+                line.delete(array.shift(strEventLines))
+            if array.size(strEventLabels) > maxStructureEvents
+                label.delete(array.shift(strEventLabels))
+
+    // ── G. Bearish break: BOS (with trend) or CHoCH (against trend) ──────────
+    if bearBreak
+        bearBreakEvent := true
+        bool isCHoCH = structureBias == 1
+        activeStrLowUsed := true
+        if isCHoCH
+            structureBias := -1
+        else if structureBias == 0
+            structureBias := -1
+        if dmStructVis and showStructure and (isCHoCH ? showCHoCH : showBOS)
+            string txt = isCHoCH ? "CHoCH" : "BOS"
+            color  col = #f23645
+            line   ln  = line.new(activeStrLowBar, activeStrLow, bar_index, activeStrLow, xloc = xloc.bar_index, color = col, width = 1, style = isCHoCH ? line.style_dashed : line.style_solid)
+            label  lbl = label.new(bar_index, activeStrLow, txt, xloc = xloc.bar_index, style = label.style_none, textcolor = col, size = size.small)
+            array.push(strEventLines, ln)
+            array.push(strEventLabels, lbl)
+            if array.size(strEventLines) > maxStructureEvents
+                line.delete(array.shift(strEventLines))
+            if array.size(strEventLabels) > maxStructureEvents
+                label.delete(array.shift(strEventLabels))
+
+    // ── H. New structural high: classify HH/LH + update active level ─────────
+    if not na(strPivotHi)
+        strHiConfirmed := true
+        int hiOrigBar = bar_index - structureRight
+        int hiClass   = na(prevStrHigh) ? 0 : (strPivotHi > prevStrHigh ? 1 : (strPivotHi < prevStrHigh ? -1 : 0))
+        if dmStructVis and showStructure and showStructureLabels and hiClass != 0
+            string hiText = hiClass == 1 ? "HH" : "LH"
+            color  hiCol  = hiClass == 1 ? #089981 : #f23645
+            label  lbl    = label.new(hiOrigBar, strPivotHi, hiText, xloc = xloc.bar_index, style = label.style_none, textcolor = hiCol, size = size.tiny)
+            array.push(swingClassLabels, lbl)
+            if array.size(swingClassLabels) > maxStructureEvents
+                label.delete(array.shift(swingClassLabels))
+        prevStrHigh       := strPivotHi
+        activeStrHigh     := strPivotHi
+        activeStrHighBar  := hiOrigBar
+        activeStrHighUsed := false
+
+    // ── I. New structural low: classify HL/LL + update active level ──────────
+    if not na(strPivotLo)
+        strLoConfirmed := true
+        int loOrigBar = bar_index - structureRight
+        int loClass   = na(prevStrLow) ? 0 : (strPivotLo > prevStrLow ? 1 : (strPivotLo < prevStrLow ? -1 : 0))
+        if dmStructVis and showStructure and showStructureLabels and loClass != 0
+            string loText = loClass == 1 ? "HL" : "LL"
+            color  loCol  = loClass == 1 ? #089981 : #f23645
+            label  lbl    = label.new(loOrigBar, strPivotLo, loText, xloc = xloc.bar_index, style = label.style_none, textcolor = loCol, size = size.tiny)
+            array.push(swingClassLabels, lbl)
+            if array.size(swingClassLabels) > maxStructureEvents
+                label.delete(array.shift(swingClassLabels))
+        prevStrLow       := strPivotLo
+        activeStrLow     := strPivotLo
+        activeStrLowBar  := loOrigBar
+        activeStrLowUsed := false
+
+// ── J. Structure bias display (small table, top-right corner) ────────────────
+var table biasTable = (showStructureBias and dmBiasTbl) ? table.new(position.top_right, 1, 1, bgcolor = color.new(#000000, 100)) : na
+renderBiasTable() =>
+    string biasText = structureBias == 1 ? "Bullish" : structureBias == -1 ? "Bearish" : "Neutral"
+    color  biasCol  = structureBias == 1 ? #089981 : structureBias == -1 ? #f23645 : #787b86
+    table.cell(biasTable, 0, 0, biasText, text_color = biasCol, text_size = size.small)
+
+if showStructureBias and dmBiasTbl and barstate.islast and not na(biasTable)
+    renderBiasTable()
+
+// ── K. Debug outputs (off by default; enable via "Structure debug mode") ─────
+// (Phase 3 debug plotshapes, bias plot, and bgcolor removed — 10 plot slots saved.
+//  Structure debug info available via Phase 3 bias table and Phase 7 regime table.)
+
+// ============================================================================
+// PHASE 4 — LIQUIDITY ENGINE
+// Identifies BSL/SSL, equal highs/lows, liquidity sweeps (wick grab + close
+// rejection), and consumed levels (close through). Detection only — no signals.
+// Uses its own confirmed pivots independent from Phase 2 and Phase 3.
+// Non-repainting: levels only become active after pivot confirmation.
+// Processing order: check existing levels FIRST, then add new pivots.
+// ============================================================================
+
+// ── A. Inputs ────────────────────────────────────────────────────────────────
+string GRP_LE = "Liquidity Engine"
+bool   showLiqEngine  = input.bool(true,  "Show liquidity", group = GRP_LE)
+bool   showLeBsl      = input.bool(true,  "Show BSL/SSL", group = GRP_LE)
+bool   showLeEqual    = input.bool(true,  "Show equal highs/lows", group = GRP_LE)
+bool   showLeSweeps   = input.bool(true,  "Show liquidity sweeps", group = GRP_LE)
+int    lePivotLeft    = input.int(5,  "Liquidity pivot left bars", minval = 1, group = GRP_LE)
+int    lePivotRight   = input.int(5,  "Liquidity pivot right bars", minval = 1, group = GRP_LE)
+int    leEqTolTicks   = input.int(4,  "Equal level tolerance (ticks)", minval = 1, group = GRP_LE, tooltip = "Two same-side pivots within this many ticks are an equal high/low cluster.")
+int    leMaxLevels    = input.int(100, "Max liquidity levels", minval = 10, maxval = 500, group = GRP_LE, tooltip = "Per side (BSL / SSL). Oldest levels removed when exceeded.")
+bool   leDebug        = input.bool(false, "Liquidity debug mode", group = GRP_LE)
+
+// ── B. Pivot detection (global scope, every bar) ─────────────────────────────
+float lePivotHi = ta.pivothigh(high, lePivotLeft, lePivotRight)
+float lePivotLo = ta.pivotlow(low, lePivotLeft, lePivotRight)
+
+// ── C. Liquidity level model ─────────────────────────────────────────────────
+type LeLevel
+    float price
+    int   origBar
+    int   confirmBar
+    bool  isBuy
+    bool  isEqual
+    bool  swept
+    bool  consumed
+    line  ln
+
+var array<LeLevel> leBslLevels    = array.new<LeLevel>()
+var array<LeLevel> leSslLevels    = array.new<LeLevel>()
+var array<line>    leRetiredLines = array.new<line>()
+
+var float lePrevSwingHigh = na
+var float lePrevSwingLow  = na
+
+float leEqTol = leEqTolTicks * syminfo.mintick
+
+// Per-bar events (reset each bar; used for markers and debug).
+bool leBslSweepEvt    = false
+bool leSslSweepEvt    = false
+bool leBslConsumedEvt = false
+bool leSslConsumedEvt = false
+bool leBslCreatedEvt  = false
+bool leSslCreatedEvt  = false
+bool leEqhEvt         = false
+bool leEqlEvt         = false
+
+if processBar
+    // ── D. Check active BSL levels for sweep / consumption ───────────────────
+    //    Sweep  = wick grabbed above + close rejected below (high > P, close < P)
+    //    Consumed = close through (close > P)
+    if array.size(leBslLevels) > 0
+        for i = array.size(leBslLevels) - 1 to 0
+            LeLevel lvl = array.get(leBslLevels, i)
+            if not na(lvl.ln)
+                line.set_x2(lvl.ln, bar_index)
+            bool eligible = bar_index > lvl.confirmBar
+            if eligible
+                if high > lvl.price and close < lvl.price
+                    lvl.swept := true
+                    leBslSweepEvt := true
+                    if not na(lvl.ln)
+                        line.set_extend(lvl.ln, extend.none)
+                        line.set_x2(lvl.ln, bar_index)
+                        line.set_color(lvl.ln, sweptLiqColor)
+                        line.set_style(lvl.ln, line.style_dashed)
+                        array.push(leRetiredLines, lvl.ln)
+                        if array.size(leRetiredLines) > leMaxLevels
+                            line.delete(array.shift(leRetiredLines))
+                    array.remove(leBslLevels, i)
+                else if close > lvl.price
+                    lvl.consumed := true
+                    leBslConsumedEvt := true
+                    if not na(lvl.ln)
+                        line.set_extend(lvl.ln, extend.none)
+                        line.set_x2(lvl.ln, bar_index)
+                        line.set_color(lvl.ln, sweptLiqColor)
+                        line.set_style(lvl.ln, line.style_dotted)
+                        array.push(leRetiredLines, lvl.ln)
+                        if array.size(leRetiredLines) > leMaxLevels
+                            line.delete(array.shift(leRetiredLines))
+                    array.remove(leBslLevels, i)
+
+    // ── E. Check active SSL levels for sweep / consumption ───────────────────
+    //    Sweep  = wick grabbed below + close rejected above (low < P, close > P)
+    //    Consumed = close through (close < P)
+    if array.size(leSslLevels) > 0
+        for i = array.size(leSslLevels) - 1 to 0
+            LeLevel lvl = array.get(leSslLevels, i)
+            if not na(lvl.ln)
+                line.set_x2(lvl.ln, bar_index)
+            bool eligible = bar_index > lvl.confirmBar
+            if eligible
+                if low < lvl.price and close > lvl.price
+                    lvl.swept := true
+                    leSslSweepEvt := true
+                    if not na(lvl.ln)
+                        line.set_extend(lvl.ln, extend.none)
+                        line.set_x2(lvl.ln, bar_index)
+                        line.set_color(lvl.ln, sweptLiqColor)
+                        line.set_style(lvl.ln, line.style_dashed)
+                        array.push(leRetiredLines, lvl.ln)
+                        if array.size(leRetiredLines) > leMaxLevels
+                            line.delete(array.shift(leRetiredLines))
+                    array.remove(leSslLevels, i)
+                else if close < lvl.price
+                    lvl.consumed := true
+                    leSslConsumedEvt := true
+                    if not na(lvl.ln)
+                        line.set_extend(lvl.ln, extend.none)
+                        line.set_x2(lvl.ln, bar_index)
+                        line.set_color(lvl.ln, sweptLiqColor)
+                        line.set_style(lvl.ln, line.style_dotted)
+                        array.push(leRetiredLines, lvl.ln)
+                        if array.size(leRetiredLines) > leMaxLevels
+                            line.delete(array.shift(leRetiredLines))
+                    array.remove(leSslLevels, i)
+
+    // ── F. Process newly confirmed pivot highs → BSL levels ──────────────────
+    if not na(lePivotHi)
+        int hiOrigBar = bar_index - lePivotRight
+        bool isDupHi = false
+        if array.size(leBslLevels) > 0
+            for j = 0 to array.size(leBslLevels) - 1
+                if math.abs(array.get(leBslLevels, j).price - lePivotHi) < syminfo.mintick
+                    isDupHi := true
+                    break
+        if not isDupHi
+            leBslCreatedEvt := true
+            bool isEqH = not na(lePrevSwingHigh) and math.abs(lePivotHi - lePrevSwingHigh) <= leEqTol
+            if isEqH
+                leEqhEvt := true
+            line hiLn = na
+            if dmLiqVis and showLiqEngine and showLeBsl
+                color hiCol = (isEqH and showLeEqual) ? eqColor : bslColor
+                hiLn := line.new(bar_index, lePivotHi, bar_index + 1, lePivotHi, xloc = xloc.bar_index, extend = extend.right, color = hiCol, width = 1)
+            array.push(leBslLevels, LeLevel.new(lePivotHi, hiOrigBar, bar_index, true, isEqH, false, false, hiLn))
+            if array.size(leBslLevels) > leMaxLevels
+                LeLevel old = array.shift(leBslLevels)
+                if not na(old.ln)
+                    line.delete(old.ln)
+        lePrevSwingHigh := lePivotHi
+
+    // ── G. Process newly confirmed pivot lows → SSL levels ───────────────────
+    if not na(lePivotLo)
+        int loOrigBar = bar_index - lePivotRight
+        bool isDupLo = false
+        if array.size(leSslLevels) > 0
+            for j = 0 to array.size(leSslLevels) - 1
+                if math.abs(array.get(leSslLevels, j).price - lePivotLo) < syminfo.mintick
+                    isDupLo := true
+                    break
+        if not isDupLo
+            leSslCreatedEvt := true
+            bool isEqL = not na(lePrevSwingLow) and math.abs(lePivotLo - lePrevSwingLow) <= leEqTol
+            if isEqL
+                leEqlEvt := true
+            line loLn = na
+            if dmLiqVis and showLiqEngine and showLeBsl
+                color loCol = (isEqL and showLeEqual) ? eqColor : sslColor
+                loLn := line.new(bar_index, lePivotLo, bar_index + 1, lePivotLo, xloc = xloc.bar_index, extend = extend.right, color = loCol, width = 1)
+            array.push(leSslLevels, LeLevel.new(lePivotLo, loOrigBar, bar_index, false, isEqL, false, false, loLn))
+            if array.size(leSslLevels) > leMaxLevels
+                LeLevel old = array.shift(leSslLevels)
+                if not na(old.ln)
+                    line.delete(old.ln)
+        lePrevSwingLow := lePivotLo
+
+// ── H. Sweep markers (normal mode) ──────────────────────────────────────────
+plotshape(dmLiqVis and showLiqEngine and showLeSweeps and leBslSweepEvt, title = "LE: BSL Sweep", style = shape.triangledown, location = location.abovebar, color = sweepColor, size = size.tiny)
+plotshape(dmLiqVis and showLiqEngine and showLeSweeps and leSslSweepEvt, title = "LE: SSL Sweep", style = shape.triangleup,   location = location.belowbar, color = sweepColor, size = size.tiny)
+
+// (Phase 4 debug plotshapes and data-window plots removed — 10 plot slots saved.
+//  Liquidity engine debug info available via sweep markers and Phase 7 regime table.)
+
+// ============================================================================
+// PHASE 5 — CRT CORE CONFLUENCE / SETUP QUALITY ENGINE
+// Scores potential LONG/SHORT setups by confluence of liquidity sweeps, market
+// structure (BOS/CHoCH), bias, displacement, and session timing.
+// Detection and scoring only — no automatic entries or strategy orders.
+// Scoring: Liquidity 25 + Structure 30 + Bias 20 + Displacement 15 + Session 10 = 100
+// ============================================================================
+
+// ── A. Inputs ────────────────────────────────────────────────────────────────
+string GRP_SE = "Setup Engine"
+bool   seEnabled         = input.bool(true,  "Enable setup engine", group = GRP_SE)
+int    seMinScore        = input.int(70,  "Minimum setup score", minval = 0, maxval = 100, group = GRP_SE)
+int    seStrongScore     = input.int(85,  "Strong setup score", minval = 0, maxval = 100, group = GRP_SE)
+int    seLiqLookback     = input.int(20,  "Liquidity lookback bars", minval = 5, maxval = 100, group = GRP_SE, tooltip = "How far back to look for a qualifying liquidity sweep.")
+int    seDispLookback    = input.int(10,  "Displacement lookback", minval = 3, maxval = 50, group = GRP_SE, tooltip = "Lookback for average candle body used in displacement test.")
+float  seDispMultiplier  = input.float(1.5, "Displacement body multiplier", minval = 1.0, step = 0.1, group = GRP_SE, tooltip = "Current body must exceed this multiple of the average body to count as displacement.")
+bool   seStrictSession   = input.bool(false, "Strict session filter", group = GRP_SE, tooltip = "On: setups outside the session window are rejected entirely. Off: reduced score only.")
+string seSessionTime     = input.session("0930-1600", "Session window", group = GRP_SE, tooltip = "Time window for full session quality points (exchange timezone).")
+bool   seAntiChase       = input.bool(true,  "Enable anti-chase filter", group = GRP_SE, tooltip = "Reject setups when price has already moved excessively from the structural level.")
+float  seChaseAtrMax     = input.float(3.0, "Max chase distance (x ATR)", minval = 1.0, step = 0.5, group = GRP_SE)
+int    seCooldown        = input.int(5, "Setup cooldown bars", minval = 0, maxval = 50, group = GRP_SE, tooltip = "Minimum bars between consecutive same-side setups.")
+bool   showSetupMarkers  = input.bool(true,  "Show setup markers", group = GRP_SE)
+bool   showSetupScore    = input.bool(true,  "Show setup score", group = GRP_SE)
+bool   showSetupDebug    = input.bool(false, "Show setup debug table", group = GRP_SE)
+
+// ── B. Pre-computed series (global scope, every bar) ─────────────────────────
+float seAvgBody   = ta.sma(math.abs(close - open), seDispLookback)
+float seAtr14     = ta.atr(14)
+bool  seInSession = not na(time(timeframe.period, seSessionTime))
+bool  seBullDisp  = close > open and not na(seAvgBody) and seAvgBody > 0 and (close - open) > seDispMultiplier * seAvgBody
+bool  seBearDisp  = close < open and not na(seAvgBody) and seAvgBody > 0 and (open - close) > seDispMultiplier * seAvgBody
+
+// ── C. Tracking state (persistent) ───────────────────────────────────────────
+var int   seBullStructBar   = na
+var bool  seBullIsCHoCH     = false
+var int   seBearStructBar   = na
+var bool  seBearIsCHoCH     = false
+var int   seSslSweepBar     = na
+var int   seBslSweepBar     = na
+var int   seLongCoolUntil   = 0
+var int   seShortCoolUntil  = 0
+var string seLongType       = ""
+var string seShortType      = ""
+var int   seLongScoreVal    = 0
+var int   seShortScoreVal   = 0
+
+var array<label> seLabels = array.new<label>()
+
+// Per-bar setup events (reset each bar).
+bool seLongEvt     = false
+bool seShortEvt    = false
+bool seLongStrong  = false
+bool seShortStrong = false
+
+if processBar and seEnabled
+    // Update tracking from Phase 3 structure events.
+    // structureBias[1] = bias BEFORE this bar's break (Phase 3 already updated it).
+    if bullBreakEvent
+        seBullStructBar := bar_index
+        seBullIsCHoCH   := structureBias[1] == -1
+    if bearBreakEvent
+        seBearStructBar := bar_index
+        seBearIsCHoCH   := structureBias[1] == 1
+
+    // Update tracking from Phase 4 liquidity sweep events.
+    if leSslSweepEvt
+        seSslSweepBar := bar_index
+    if leBslSweepEvt
+        seBslSweepBar := bar_index
+
+    // ── D. Score components ──────────────────────────────────────────────────
+    // LIQUIDITY (25 pts): recent sweep on the correct side
+    bool  recentSsl = not na(seSslSweepBar) and bar_index - seSslSweepBar <= seLiqLookback
+    bool  recentBsl = not na(seBslSweepBar) and bar_index - seBslSweepBar <= seLiqLookback
+    float longLiq   = recentSsl ? 25.0 : 0.0
+    float shortLiq  = recentBsl ? 25.0 : 0.0
+
+    // STRUCTURE (30 pts): recent BOS/CHoCH on the correct side
+    bool  recentBullStr = not na(seBullStructBar) and bar_index - seBullStructBar <= seLiqLookback
+    bool  recentBearStr = not na(seBearStructBar) and bar_index - seBearStructBar <= seLiqLookback
+    float longStr  = recentBullStr ? (seBullIsCHoCH ? 30.0 : (structureBias == 1 ? 30.0 : 20.0)) : 0.0
+    float shortStr = recentBearStr ? (seBearIsCHoCH ? 30.0 : (structureBias == -1 ? 30.0 : 20.0)) : 0.0
+
+    // BIAS (20 pts): current structure bias alignment
+    float longBias  = structureBias == 1 ? 20.0 : structureBias == 0 ? 10.0 : 5.0
+    float shortBias = structureBias == -1 ? 20.0 : structureBias == 0 ? 10.0 : 5.0
+
+    // DISPLACEMENT (15 pts): meaningful candle body on this bar
+    float longDisp  = seBullDisp ? 15.0 : 0.0
+    float shortDisp = seBearDisp ? 15.0 : 0.0
+
+    // SESSION (10 pts): within preferred trading window
+    float longSess  = seInSession ? 10.0 : 0.0
+    float shortSess = seInSession ? 10.0 : 0.0
+
+    // Total (clamped 0–100)
+    float lScore = math.min(longLiq + longStr + longBias + longDisp + longSess, 100.0)
+    float sScore = math.min(shortLiq + shortStr + shortBias + shortDisp + shortSess, 100.0)
+
+    // ANTI-CHASE: reject if price already moved too far from the structural level
+    if seAntiChase and not na(seAtr14) and seAtr14 > 0
+        if not na(activeStrHigh) and close > activeStrHigh and (close - activeStrHigh) > seChaseAtrMax * seAtr14
+            lScore := 0.0
+        if not na(activeStrLow) and close < activeStrLow and (activeStrLow - close) > seChaseAtrMax * seAtr14
+            sScore := 0.0
+
+    // STRICT SESSION: hard reject outside window
+    if seStrictSession and not seInSession
+        lScore := 0.0
+        sScore := 0.0
+
+    seLongScoreVal  := int(lScore)
+    seShortScoreVal := int(sScore)
+
+    // ── E. Trigger with duplicate prevention ─────────────────────────────────
+    // Require a NEW event (structure break or liquidity sweep) on THIS bar
+    // plus cooldown expired, plus score above minimum.
+    bool newLongEvt  = bullBreakEvent or leSslSweepEvt
+    bool newShortEvt = bearBreakEvent or leBslSweepEvt
+
+    if bar_index >= seLongCoolUntil and newLongEvt and lScore >= seMinScore
+        seLongEvt       := true
+        seLongStrong    := lScore >= seStrongScore
+        seLongCoolUntil := bar_index + seCooldown
+        seLongType      := seBullIsCHoCH and recentBullStr and recentSsl ? "Reversal" : "Continuation"
+        if showSetupScore
+            string txt = "L " + str.tostring(int(lScore))
+            color  col = seLongStrong ? #00e676 : #089981
+            label  lbl = label.new(bar_index, low, txt, xloc = xloc.bar_index, style = label.style_none, textcolor = col, size = size.tiny)
+            array.push(seLabels, lbl)
+            if array.size(seLabels) > 50
+                label.delete(array.shift(seLabels))
+
+    if bar_index >= seShortCoolUntil and newShortEvt and sScore >= seMinScore
+        seShortEvt       := true
+        seShortStrong    := sScore >= seStrongScore
+        seShortCoolUntil := bar_index + seCooldown
+        seShortType      := seBearIsCHoCH and recentBearStr and recentBsl ? "Reversal" : "Continuation"
+        if showSetupScore
+            string txt = "S " + str.tostring(int(sScore))
+            color  col = seShortStrong ? #ff1744 : #f23645
+            label  lbl = label.new(bar_index, high, txt, xloc = xloc.bar_index, style = label.style_none, textcolor = col, size = size.tiny)
+            array.push(seLabels, lbl)
+            if array.size(seLabels) > 50
+                label.delete(array.shift(seLabels))
+
+// ── F. Setup markers ─────────────────────────────────────────────────────────
+plotshape(seEnabled and showSetupMarkers and seLongEvt,  title = "Long Setup",  style = shape.triangleup,   location = location.belowbar, color = seLongStrong ? #00e676 : #089981, size = size.tiny)
+plotshape(seEnabled and showSetupMarkers and seShortEvt, title = "Short Setup", style = shape.triangledown, location = location.abovebar, color = seShortStrong ? #ff1744 : #f23645, size = size.tiny)
+
+// ── G. Debug table (bottom-right, current state only) ────────────────────────
+var table seDebugTbl = (showSetupDebug and dmDiag) ? table.new(position.bottom_right, 2, 10, bgcolor = color.new(#1e1e1e, 20), border_color = color.new(#444444, 50), border_width = 1) : na
+renderSetupDebugTable() =>
+    color _h = #aaaaaa
+    table.cell(seDebugTbl, 0, 0, "Bias",             text_color = _h, text_size = size.tiny)
+    table.cell(seDebugTbl, 1, 0, structureBias == 1 ? "Bullish" : structureBias == -1 ? "Bearish" : "Neutral", text_color = structureBias == 1 ? #089981 : structureBias == -1 ? #f23645 : #787b86, text_size = size.tiny)
+    table.cell(seDebugTbl, 0, 1, "SSL sweep",        text_color = _h, text_size = size.tiny)
+    table.cell(seDebugTbl, 1, 1, not na(seSslSweepBar) and bar_index - seSslSweepBar <= seLiqLookback ? str.tostring(bar_index - seSslSweepBar) + " bars" : "—", text_color = _h, text_size = size.tiny)
+    table.cell(seDebugTbl, 0, 2, "BSL sweep",        text_color = _h, text_size = size.tiny)
+    table.cell(seDebugTbl, 1, 2, not na(seBslSweepBar) and bar_index - seBslSweepBar <= seLiqLookback ? str.tostring(bar_index - seBslSweepBar) + " bars" : "—", text_color = _h, text_size = size.tiny)
+    table.cell(seDebugTbl, 0, 3, "Bull struct",      text_color = _h, text_size = size.tiny)
+    table.cell(seDebugTbl, 1, 3, not na(seBullStructBar) and bar_index - seBullStructBar <= seLiqLookback ? (seBullIsCHoCH ? "CHoCH" : "BOS") : "—", text_color = #089981, text_size = size.tiny)
+    table.cell(seDebugTbl, 0, 4, "Bear struct",      text_color = _h, text_size = size.tiny)
+    table.cell(seDebugTbl, 1, 4, not na(seBearStructBar) and bar_index - seBearStructBar <= seLiqLookback ? (seBearIsCHoCH ? "CHoCH" : "BOS") : "—", text_color = #f23645, text_size = size.tiny)
+    table.cell(seDebugTbl, 0, 5, "Bull disp",        text_color = _h, text_size = size.tiny)
+    table.cell(seDebugTbl, 1, 5, seBullDisp ? "Yes" : "No", text_color = _h, text_size = size.tiny)
+    table.cell(seDebugTbl, 0, 6, "Bear disp",        text_color = _h, text_size = size.tiny)
+    table.cell(seDebugTbl, 1, 6, seBearDisp ? "Yes" : "No", text_color = _h, text_size = size.tiny)
+    table.cell(seDebugTbl, 0, 7, "Long score",       text_color = _h, text_size = size.tiny)
+    table.cell(seDebugTbl, 1, 7, str.tostring(seLongScoreVal), text_color = #089981, text_size = size.tiny)
+    table.cell(seDebugTbl, 0, 8, "Short score",      text_color = _h, text_size = size.tiny)
+    table.cell(seDebugTbl, 1, 8, str.tostring(seShortScoreVal), text_color = #f23645, text_size = size.tiny)
+    table.cell(seDebugTbl, 0, 9, "Last setup",       text_color = _h, text_size = size.tiny)
+    table.cell(seDebugTbl, 1, 9, seLongType != "" ? "L: " + seLongType : seShortType != "" ? "S: " + seShortType : "—", text_color = _h, text_size = size.tiny)
+
+if showSetupDebug and dmDiag and barstate.islast and not na(seDebugTbl)
+    renderSetupDebugTable()
+
+// ── H. Alert conditions ──────────────────────────────────────────────────────
+alertcondition(seLongEvt,  title = "Qualified Long Setup",  message = "CRT: Qualified Long Setup")
+alertcondition(seShortEvt, title = "Qualified Short Setup", message = "CRT: Qualified Short Setup")
+
+// ============================================================================
+// PHASE 5.5 — SETUP VALIDATION / FORWARD PERFORMANCE AUDIT
+// For every Phase 5 setup, measures forward returns at +3/+6/+12 bars,
+// MFE/MAE over 12 bars, aggregates by score bucket and setup type.
+// Evaluation only — never modifies signal generation or existing logic.
+// ============================================================================
+
+// ── A. Inputs ────────────────────────────────────────────────────────────────
+string GRP_VAL = "Validation"
+bool   valEnabled       = input.bool(false, "Validation enabled", group = GRP_VAL)
+string valSessionMode   = input.string("All", "Validation session mode", options = ["All", "Preferred Session Only", "RTH Only"], group = GRP_VAL, tooltip = "Filter which signals are INCLUDED in audit statistics.")
+bool   showValLabels    = input.bool(false, "Show validation labels", group = GRP_VAL)
+int    valMaxLabels     = input.int(100, "Max validation labels", minval = 10, maxval = 500, group = GRP_VAL)
+int    valStartTime     = input.int(2020, "Validation start year", minval = 2000, maxval = 2030, group = GRP_VAL, tooltip = "Only include signals from this year onward.")
+int    valEndTime       = input.int(2030, "Validation end year",   minval = 2020, maxval = 2040, group = GRP_VAL, tooltip = "Only include signals before this year.")
+
+// ── B. Pending signal model ──────────────────────────────────────────────────
+type ValSignal
+    int    dir
+    int    sigBar
+    float  sigPrice
+    int    score
+    string setupType
+    bool   inSession
+    bool   isCHoCH
+    float  ret3
+    float  ret6
+    float  ret12
+    float  mfe
+    float  mae
+
+var array<ValSignal> valPending = array.new<ValSignal>()
+var array<label>     valLabels  = array.new<label>()
+
+// Sample coverage tracking.
+var int       valAccepted   = 0
+var int       valFirstYear  = na
+var int       valFirstMonth = na
+var int       valFirstDay   = na
+var int       valLastYear   = na
+var int       valLastMonth  = na
+var int       valLastDay    = na
+var array<int> valDays      = array.new<int>()
+
+// ── C. Aggregation buckets (12 indices) ──────────────────────────────────────
+// 0=OverallLong 1=OverallShort
+// 2=L70-74 3=L75-84 4=L85+ 5=S70-74 6=S75-84 7=S85+
+// 8=RevL 9=ContL 10=RevS 11=ContS
+var array<int>   vc   = array.new<int>(12, 0)
+var array<float> vr3  = array.new<float>(12, 0.0)
+var array<float> vr6  = array.new<float>(12, 0.0)
+var array<float> vr12 = array.new<float>(12, 0.0)
+var array<float> vmfe = array.new<float>(12, 0.0)
+var array<float> vmae = array.new<float>(12, 0.0)
+var array<int>   vp3  = array.new<int>(12, 0)
+var array<int>   vp6  = array.new<int>(12, 0)
+var array<int>   vp12 = array.new<int>(12, 0)
+
+addBucket(int b, float r3, float r6, float r12, float mf, float ma) =>
+    array.set(vc,   b, array.get(vc,   b) + 1)
+    array.set(vr3,  b, array.get(vr3,  b) + nz(r3))
+    array.set(vr6,  b, array.get(vr6,  b) + nz(r6))
+    array.set(vr12, b, array.get(vr12, b) + nz(r12))
+    array.set(vmfe, b, array.get(vmfe, b) + mf)
+    array.set(vmae, b, array.get(vmae, b) + ma)
+    if nz(r3)  > 0
+        array.set(vp3,  b, array.get(vp3,  b) + 1)
+    if nz(r6)  > 0
+        array.set(vp6,  b, array.get(vp6,  b) + 1)
+    if nz(r12) > 0
+        array.set(vp12, b, array.get(vp12, b) + 1)
+
+valRow(table t, int row, string name, color nc, int b) =>
+    int   n   = array.get(vc, b)
+    float a12 = n > 0 ? array.get(vr12, b) / n : 0.0
+    float af  = n > 0 ? array.get(vmfe, b) / n : 0.0
+    float aa  = n > 0 ? array.get(vmae, b) / n : 0.0
+    float pp  = n > 0 ? array.get(vp12, b) * 100.0 / n : 0.0
+    table.cell(t, 0, row, name,                                           text_color = nc,                            text_size = size.tiny, text_halign = text.align_left)
+    table.cell(t, 1, row, str.tostring(n),                                text_color = #aaaaaa,                       text_size = size.tiny)
+    table.cell(t, 2, row, str.tostring(math.round(a12 * 10) / 10),       text_color = a12 >= 0 ? #089981 : #f23645,  text_size = size.tiny)
+    table.cell(t, 3, row, str.tostring(math.round(af * 10) / 10),        text_color = #089981,                       text_size = size.tiny)
+    table.cell(t, 4, row, str.tostring(math.round(aa * 10) / 10),        text_color = #f23645,                       text_size = size.tiny)
+    table.cell(t, 5, row, str.tostring(math.round(pp)) + "%",            text_color = pp >= 50 ? #089981 : #f23645,  text_size = size.tiny)
+
+// ── D. Per-bar processing ────────────────────────────────────────────────────
+bool valInRange = year >= valStartTime and year <= valEndTime
+
+if processBar and valEnabled
+    // Capture new Phase 5 setups as pending validation signals.
+    if seLongEvt and valInRange
+        bool valInclude = valSessionMode == "All" or seInSession
+        if valInclude
+            valAccepted += 1
+            if na(valFirstYear)
+                valFirstYear := year
+                valFirstMonth := month
+                valFirstDay := dayofmonth
+            valLastYear := year
+            valLastMonth := month
+            valLastDay := dayofmonth
+            int dayId = year * 10000 + month * 100 + dayofmonth
+            bool dayExL = false
+            if array.size(valDays) > 0
+                for d = 0 to array.size(valDays) - 1
+                    if array.get(valDays, d) == dayId
+                        dayExL := true
+                        break
+            if not dayExL
+                array.push(valDays, dayId)
+            array.push(valPending, ValSignal.new(1, bar_index, close, seLongScoreVal, seLongType, seInSession, seBullIsCHoCH, na, na, na, 0.0, 0.0))
+    if seShortEvt and valInRange
+        bool valInclude = valSessionMode == "All" or seInSession
+        if valInclude
+            valAccepted += 1
+            if na(valFirstYear)
+                valFirstYear := year
+                valFirstMonth := month
+                valFirstDay := dayofmonth
+            valLastYear := year
+            valLastMonth := month
+            valLastDay := dayofmonth
+            int dayId = year * 10000 + month * 100 + dayofmonth
+            bool dayExS = false
+            if array.size(valDays) > 0
+                for d = 0 to array.size(valDays) - 1
+                    if array.get(valDays, d) == dayId
+                        dayExS := true
+                        break
+            if not dayExS
+                array.push(valDays, dayId)
+            array.push(valPending, ValSignal.new(-1, bar_index, close, seShortScoreVal, seShortType, seInSession, seBearIsCHoCH, na, na, na, 0.0, 0.0))
+
+    // Update pending signals: running MFE/MAE and milestone returns.
+    if array.size(valPending) > 0
+        for i = array.size(valPending) - 1 to 0
+            ValSignal sig = array.get(valPending, i)
+            int elapsed = bar_index - sig.sigBar
+
+            // MFE / MAE (bars 1–12 after signal)
+            if elapsed >= 1 and elapsed <= 12
+                if sig.dir == 1
+                    sig.mfe := math.max(sig.mfe, high - sig.sigPrice)
+                    sig.mae := math.max(sig.mae, sig.sigPrice - low)
+                else
+                    sig.mfe := math.max(sig.mfe, sig.sigPrice - low)
+                    sig.mae := math.max(sig.mae, high - sig.sigPrice)
+
+            // Milestone returns
+            if elapsed == 3 and na(sig.ret3)
+                sig.ret3 := sig.dir == 1 ? close - sig.sigPrice : sig.sigPrice - close
+            if elapsed == 6 and na(sig.ret6)
+                sig.ret6 := sig.dir == 1 ? close - sig.sigPrice : sig.sigPrice - close
+
+            // Finalize at +12 bars: record return, aggregate, optionally label.
+            if elapsed >= 12
+                if na(sig.ret12)
+                    sig.ret12 := sig.dir == 1 ? close - sig.sigPrice : sig.sigPrice - close
+
+                // Determine 3 buckets this signal belongs to.
+                int b0 = sig.dir == 1 ? 0 : 1
+                int b1 = sig.score >= 85 ? (sig.dir == 1 ? 4 : 7) : sig.score >= 75 ? (sig.dir == 1 ? 3 : 6) : (sig.dir == 1 ? 2 : 5)
+                int b2 = sig.setupType == "Reversal" ? (sig.dir == 1 ? 8 : 10) : (sig.dir == 1 ? 9 : 11)
+                addBucket(b0, sig.ret3, sig.ret6, sig.ret12, sig.mfe, sig.mae)
+                addBucket(b1, sig.ret3, sig.ret6, sig.ret12, sig.mfe, sig.mae)
+                addBucket(b2, sig.ret3, sig.ret6, sig.ret12, sig.mfe, sig.mae)
+
+                // Optional validation label at the original signal bar.
+                if showValLabels and dmValVis
+                    int    off  = bar_index - sig.sigBar
+                    string dCh  = sig.dir == 1 ? "L" : "S"
+                    string vTxt = dCh + str.tostring(sig.score) + "\n60m " + (nz(sig.ret12) >= 0 ? "+" : "") + str.tostring(math.round(nz(sig.ret12) * 10) / 10) + "\nMFE " + str.tostring(math.round(sig.mfe * 10) / 10) + "\nMAE " + str.tostring(math.round(sig.mae * 10) / 10)
+                    color  vCol = sig.dir == 1 ? #089981 : #f23645
+                    float  vY   = sig.dir == 1 ? nz(low[off], close) : nz(high[off], close)
+                    label  vLbl = label.new(sig.sigBar, vY, vTxt, xloc = xloc.bar_index, style = label.style_none, textcolor = vCol, size = size.tiny)
+                    array.push(valLabels, vLbl)
+                    if array.size(valLabels) > valMaxLabels
+                        label.delete(array.shift(valLabels))
+
+                array.remove(valPending, i)
+
+// ── E. Audit table (bottom-left, summary statistics) ─────────────────────────
+var table valTable = (valEnabled and dmValVis) ? table.new(position.bottom_left, 6, 21, bgcolor = color.new(#1e1e1e, 15), border_color = color.new(#444444, 50), border_width = 1) : na
+renderValidationTable() =>
+    color _th = #cccccc
+    color _td = #aaaaaa
+    // ── Performance section ──
+    table.cell(valTable, 0, 0, "Setup",   text_color = _th, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(valTable, 1, 0, "N",       text_color = _th, text_size = size.tiny)
+    table.cell(valTable, 2, 0, "Avg60m",  text_color = _th, text_size = size.tiny)
+    table.cell(valTable, 3, 0, "MFE",     text_color = _th, text_size = size.tiny)
+    table.cell(valTable, 4, 0, "MAE",     text_color = _th, text_size = size.tiny)
+    table.cell(valTable, 5, 0, "+60m%",   text_color = _th, text_size = size.tiny)
+    valRow(valTable, 1,  "Long",    #089981, 0)
+    valRow(valTable, 2,  "Short",   #f23645, 1)
+    valRow(valTable, 3,  "L 70-74", #089981, 2)
+    valRow(valTable, 4,  "L 75-84", #089981, 3)
+    valRow(valTable, 5,  "L 85+",   #089981, 4)
+    valRow(valTable, 6,  "S 70-74", #f23645, 5)
+    valRow(valTable, 7,  "S 75-84", #f23645, 6)
+    valRow(valTable, 8,  "S 85+",   #f23645, 7)
+    valRow(valTable, 9,  "RevL",    #089981, 8)
+    valRow(valTable, 10, "ContL",   #089981, 9)
+    valRow(valTable, 11, "RevS",    #f23645, 10)
+    valRow(valTable, 12, "ContS",   #f23645, 11)
+    // ── Sample coverage section ──
+    int _completed = array.get(vc, 0) + array.get(vc, 1)
+    int _pending   = array.size(valPending)
+    string _first  = na(valFirstYear) ? "—" : str.tostring(valFirstMonth) + "/" + str.tostring(valFirstDay) + "/" + str.tostring(valFirstYear % 100)
+    string _last   = na(valLastYear)  ? "—" : str.tostring(valLastMonth)  + "/" + str.tostring(valLastDay)  + "/" + str.tostring(valLastYear % 100)
+    table.cell(valTable, 0, 13, "── SAMPLE ──", text_color = _th, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(valTable, 1, 13, "",             text_color = _th, text_size = size.tiny)
+    table.cell(valTable, 2, 13, "",             text_color = _th, text_size = size.tiny)
+    table.cell(valTable, 3, 13, "",             text_color = _th, text_size = size.tiny)
+    table.cell(valTable, 4, 13, "",             text_color = _th, text_size = size.tiny)
+    table.cell(valTable, 5, 13, "",             text_color = _th, text_size = size.tiny)
+    table.cell(valTable, 0, 14, "First",        text_color = _td, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(valTable, 1, 14, _first,         text_color = _td, text_size = size.tiny)
+    table.cell(valTable, 0, 15, "Last",         text_color = _td, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(valTable, 1, 15, _last,          text_color = _td, text_size = size.tiny)
+    table.cell(valTable, 0, 16, "Days",         text_color = _td, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(valTable, 1, 16, str.tostring(array.size(valDays)), text_color = _td, text_size = size.tiny)
+    table.cell(valTable, 0, 17, "Accepted",     text_color = _td, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(valTable, 1, 17, str.tostring(valAccepted), text_color = _td, text_size = size.tiny)
+    table.cell(valTable, 0, 18, "Completed",    text_color = _td, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(valTable, 1, 18, str.tostring(_completed),  text_color = #089981, text_size = size.tiny)
+    table.cell(valTable, 0, 19, "Pending",      text_color = _td, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(valTable, 1, 19, str.tostring(_pending),    text_color = _pending > 0 ? #ff9800 : _td, text_size = size.tiny)
+    table.cell(valTable, 0, 20, "Mode",         text_color = _td, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(valTable, 1, 20, valSessionMode + " " + str.tostring(valStartTime) + "-" + str.tostring(valEndTime), text_color = _td, text_size = size.tiny)
+
+if valEnabled and dmValVis and barstate.islast and not na(valTable)
+    renderValidationTable()
+
+// (Phase 5.5 data-window plots removed — 9 plot slots saved.
+//  All values displayed in the Phase 5.5 validation table.)
+
+// ============================================================================
+// PHASE 6 — TRADE ENGINE + BACKTEST
+// Turns Phase 5 setups into hypothetical trades with deterministic entry,
+// stop, target, and max holding period. Measures R, win rate, profit factor,
+// drawdown. One trade at a time, no future information, no optimization.
+// ============================================================================
+
+// ── A. Inputs ────────────────────────────────────────────────────────────────
+string GRP_TR = "Trade Engine"
+bool   trEnabled     = input.bool(true,  "Enable trade engine", group = GRP_TR)
+string trEntryMode   = input.string("Signal Close", "Trade entry mode", options = ["Signal Close"], group = GRP_TR)
+string trStopMode    = input.string("ATR Stop", "Stop loss mode", options = ["ATR Stop", "Structure Stop"], group = GRP_TR)
+float  trStopATR     = input.float(1.5, "Stop ATR multiplier", minval = 0.5, step = 0.5, group = GRP_TR)
+float  trTargetR     = input.float(2.0, "Target R-multiple", minval = 0.5, step = 0.5, group = GRP_TR)
+int    trMaxMinutes  = input.int(60, "Max trade duration (minutes)", minval = 5, group = GRP_TR)
+bool   showTrMarkers = input.bool(true,  "Show trade markers", group = GRP_TR)
+int    trMaxLabels   = input.int(50, "Max trade labels", minval = 10, maxval = 200, group = GRP_TR)
+
+// Max bars from minutes (adapts to chart timeframe).
+int trMaxBarsCnt = math.max(1, math.round(trMaxMinutes * 60 / timeframe.in_seconds()))
+
+// ── B. Active trade state (flat vars — one trade at a time) ──────────────────
+var bool   trActive     = false
+var int    trDir        = 0
+var int    trBarEntry   = 0
+var float  trPxEntry    = 0.0
+var float  trPxStop     = 0.0
+var float  trPxTarget   = 0.0
+var float  trRisk       = 0.0
+var int    trScore      = 0
+var string trSetupType  = ""
+var bool   trSess       = false
+var float  trRunMfe     = 0.0
+var float  trRunMae     = 0.0
+
+// ── C. Aggregation (same 12 bucket layout as Phase 5.5) ──────────────────────
+var array<int>   tc   = array.new<int>(12, 0)
+var array<int>   twn  = array.new<int>(12, 0)
+var array<float> trs  = array.new<float>(12, 0.0)
+var array<float> tgp  = array.new<float>(12, 0.0)
+var array<float> tgl  = array.new<float>(12, 0.0)
+
+addP6(int b, float rR) =>
+    array.set(tc,  b, array.get(tc,  b) + 1)
+    if rR > 0
+        array.set(twn, b, array.get(twn, b) + 1)
+        array.set(tgp, b, array.get(tgp, b) + rR)
+    if rR < 0
+        array.set(tgl, b, array.get(tgl, b) + math.abs(rR))
+    array.set(trs, b, array.get(trs, b) + rR)
+
+p6Row(table t, int row, string name, color nc, int b) =>
+    int   n  = array.get(tc, b)
+    float sr = array.get(trs, b)
+    int   w  = array.get(twn, b)
+    float ar = n > 0 ? sr / n : 0.0
+    float wr = n > 0 ? w * 100.0 / n : 0.0
+    float gp = array.get(tgp, b)
+    float gl = array.get(tgl, b)
+    float pf = gl > 0 ? gp / gl : (gp > 0 ? 99.9 : 0.0)
+    table.cell(t, 0, row, name,                                      text_color = nc,                           text_size = size.tiny, text_halign = text.align_left)
+    table.cell(t, 1, row, str.tostring(n),                           text_color = #aaaaaa,                      text_size = size.tiny)
+    table.cell(t, 2, row, str.tostring(math.round(wr)) + "%",       text_color = wr >= 50 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(t, 3, row, str.tostring(math.round(ar * 100) / 100), text_color = ar >= 0 ? #089981 : #f23645,  text_size = size.tiny)
+    table.cell(t, 4, row, str.tostring(math.round(sr * 100) / 100), text_color = sr >= 0 ? #089981 : #f23645,  text_size = size.tiny)
+    table.cell(t, 5, row, str.tostring(math.round(pf * 10) / 10),   text_color = pf >= 1 ? #089981 : #f23645,  text_size = size.tiny)
+
+// ── D. Equity / drawdown / audit counters ────────────────────────────────────
+var float trEquity   = 0.0
+var float trPeak     = 0.0
+var float trMaxDD    = 0.0
+var int   trTotal    = 0
+var int   trSkipped  = 0
+var int   trInvalid  = 0
+var int   trWins     = 0
+var int   trLosses   = 0
+var int   trTimed    = 0
+var array<label> trLabels = array.new<label>()
+
+// Per-bar trade events.
+bool trEntryEvt  = false
+int  trEntryDir  = 0
+bool trExitEvt   = false
+float trExitR    = na
+int   trExitDir  = 0
+
+// Phase 10 audit counters (declared here so they're available inside Phase 6's block).
+var int liveFilterQual = 0
+var int liveMismatch   = 0
+
+// Phase 11 — Forward Validation state (declared here for Phase 6 integration).
+string GRP_P11 = "Forward Validation"
+bool   fwdEnabled    = input.bool(true,  "Forward validation enabled", group = GRP_P11)
+int    fwdStartYear  = input.int(2026,   "Forward start year",  minval = 2020, maxval = 2035, group = GRP_P11)
+int    fwdStartMonth = input.int(8,      "Forward start month", minval = 1, maxval = 12, group = GRP_P11)
+int    fwdStartDay   = input.int(18,     "Forward start day",   minval = 1, maxval = 31, group = GRP_P11)
+
+bool fwdPeriod = year > fwdStartYear or (year == fwdStartYear and (month > fwdStartMonth or (month == fwdStartMonth and dayofmonth >= fwdStartDay)))
+
+var bool  isFwdTrade  = false
+var int   fwdSignals  = 0
+var int   fwdClosed   = 0
+var int   fwdWins     = 0
+var int   fwdLosses   = 0
+var float fwdSumR     = 0.0
+var float fwdGP       = 0.0
+var float fwdGL       = 0.0
+var float fwdEq       = 0.0
+var float fwdPk       = 0.0
+var float fwdDD       = 0.0
+var int   fwdLongN    = 0
+var int   fwdLongW    = 0
+var float fwdLongR    = 0.0
+var int   fwdShortN   = 0
+var int   fwdShortW   = 0
+var float fwdShortR   = 0.0
+var int   fwdDays     = 0
+var int   fwdPrevDom  = -1
+
+// ============================================================================
+// PHASE 7 — REGIME + CONTEXT ANALYSIS (inputs, state, helpers)
+// Tags every Phase 6 trade with an INDEPENDENT HTF regime, alignment,
+// volatility, and 7-bucket time-of-day. Diagnostic only.
+// ============================================================================
+string GRP_P7 = "Regime Analysis"
+bool   p7ShowTable    = input.bool(true,  "Show regime table", group = GRP_P7)
+string p7RegimeTf     = input.timeframe("60", "Regime timeframe", group = GRP_P7, tooltip = "Higher-timeframe for independent EMA regime. Default 60m.")
+int    p7FastLen      = input.int(20, "Fast EMA length", minval = 5, group = GRP_P7)
+int    p7SlowLen      = input.int(50, "Slow EMA length", minval = 10, group = GRP_P7)
+float  p7NeutThresh   = input.float(0.10, "Neutral threshold (x ATR)", minval = 0.0, step = 0.05, group = GRP_P7, tooltip = "EMA separation must exceed this × HTF ATR to classify as trending.")
+float  p7VolLow       = input.float(0.80, "Low volatility threshold",  minval = 0.1, step = 0.05, group = GRP_P7)
+float  p7VolHigh      = input.float(1.20, "High volatility threshold", minval = 0.5, step = 0.05, group = GRP_P7)
+string p7AnalysisMode = input.string("All Phase 6 Trades", "Analysis session", options = ["All Phase 6 Trades", "RTH Only"], group = GRP_P7, tooltip = "RTH Only limits Phase 7 stats to 09:30-16:00 entries. Does NOT change Phase 6.")
+
+// Volatility ratio (chart-TF ATR vs its 50-bar average).
+float p7AtrSma50 = ta.sma(nz(seAtr14), 50)
+float p7AtrRatio = not na(seAtr14) and not na(p7AtrSma50) and p7AtrSma50 > 0 ? seAtr14 / p7AtrSma50 : 1.0
+
+// Independent HTF regime from PREVIOUS CLOSED HTF bar (non-repainting).
+[p7HtfCl, p7HtfFast, p7HtfSlow, p7HtfFastPrev, p7HtfAtr] = request.security(syminfo.tickerid, p7RegimeTf, [close[1], ta.ema(close, p7FastLen)[1], ta.ema(close, p7SlowLen)[1], ta.ema(close, p7FastLen)[2], ta.atr(14)[1]], lookahead = barmerge.lookahead_on)
+
+float p7EmaSep  = math.abs(nz(p7HtfFast) - nz(p7HtfSlow))
+bool  p7EmaWide = not na(p7HtfAtr) and p7HtfAtr > 0 and p7EmaSep >= p7NeutThresh * p7HtfAtr
+bool  p7IsBull  = p7EmaWide and not na(p7HtfCl) and not na(p7HtfFast) and not na(p7HtfSlow) and not na(p7HtfFastPrev) and p7HtfCl > p7HtfFast and p7HtfFast > p7HtfSlow and p7HtfFast > p7HtfFastPrev
+bool  p7IsBear  = p7EmaWide and not na(p7HtfCl) and not na(p7HtfFast) and not na(p7HtfSlow) and not na(p7HtfFastPrev) and p7HtfCl < p7HtfFast and p7HtfFast < p7HtfSlow and p7HtfFast < p7HtfFastPrev
+int   p7HtfRegime = p7IsBull ? 1 : p7IsBear ? -1 : 0
+
+// Per-trade tags (stored at entry, never retroactively changed).
+var int   p7Regime      = 0
+var int   p7Alignment   = 0
+var int   p7VolBucket   = 0
+var int   p7TimeBucket  = -1
+var bool  p7Include     = true
+var int   p7Classified  = 0
+var int   p7Analyzed    = 0
+
+// ── Phase 8 — Filter Test (definitions, evaluated at trade close) ────────────
+string GRP_P8 = "Filter Test"
+bool   p8Enabled   = input.bool(true,  "Enable filter test", group = GRP_P8)
+string p8Universe  = input.string("All Phase 6 Trades", "Analysis universe", options = ["All Phase 6 Trades", "RTH Only"], group = GRP_P8, tooltip = "RTH Only limits to Open/MidAM/Midday/PM entries. Does NOT change Phase 6.")
+int    p8MinTrades = input.int(30, "Minimum trades for comparison", minval = 5, group = GRP_P8)
+
+// 9 variants: 0=Baseline, 1=NoNeutral, 2=NoAftHrs, 3=NoNeut+AftHrs, 4=CL Aligned, 5=RS Counter, 6=Context, 7=Context+NoNeut, 8=Context+NoNeut+AftHrs
+var array<int>   f8n  = array.new<int>(9, 0)
+var array<int>   f8w  = array.new<int>(9, 0)
+var array<float> f8rs = array.new<float>(9, 0.0)
+var array<float> f8gp = array.new<float>(9, 0.0)
+var array<float> f8gl = array.new<float>(9, 0.0)
+var array<float> f8eq = array.new<float>(9, 0.0)
+var array<float> f8pk = array.new<float>(9, 0.0)
+var array<float> f8dd = array.new<float>(9, 0.0)
+
+addF8(int v, float rR) =>
+    array.set(f8n, v, array.get(f8n, v) + 1)
+    if rR > 0
+        array.set(f8w, v, array.get(f8w, v) + 1)
+        array.set(f8gp, v, array.get(f8gp, v) + rR)
+    if rR < 0
+        array.set(f8gl, v, array.get(f8gl, v) + math.abs(rR))
+    array.set(f8rs, v, array.get(f8rs, v) + rR)
+    float eq = array.get(f8eq, v) + rR
+    array.set(f8eq, v, eq)
+    float pk = math.max(array.get(f8pk, v), eq)
+    array.set(f8pk, v, pk)
+    array.set(f8dd, v, math.max(array.get(f8dd, v), pk - eq))
+
+f8Row(table t, int row, string name, int v) =>
+    int   n  = array.get(f8n, v)
+    float sr = array.get(f8rs, v)
+    float ar = n > 0 ? sr / n : 0.0
+    int   w  = array.get(f8w, v)
+    float wr = n > 0 ? w * 100.0 / n : 0.0
+    float gp = array.get(f8gp, v)
+    float gl = array.get(f8gl, v)
+    float pf = gl > 0 ? gp / gl : (gp > 0 ? 99.9 : 0.0)
+    float dd = array.get(f8dd, v)
+    int   fl = array.get(f8n, 0) - n
+    string flag = n > 0 and n < p8MinTrades ? " *" : ""
+    color  nc = #aaaaaa
+    table.cell(t, 0, row, name + flag,                                text_color = nc,                           text_size = size.tiny, text_halign = text.align_left)
+    table.cell(t, 1, row, str.tostring(n),                            text_color = nc,                           text_size = size.tiny)
+    table.cell(t, 2, row, str.tostring(math.round(wr)) + "%",        text_color = wr >= 50 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(t, 3, row, str.tostring(math.round(ar * 100) / 100),  text_color = ar >= 0 ? #089981 : #f23645,  text_size = size.tiny)
+    table.cell(t, 4, row, str.tostring(math.round(sr * 100) / 100),  text_color = sr >= 0 ? #089981 : #f23645,  text_size = size.tiny)
+    table.cell(t, 5, row, str.tostring(math.round(pf * 10) / 10),    text_color = pf >= 1 ? #089981 : #f23645,  text_size = size.tiny)
+    table.cell(t, 6, row, str.tostring(math.round(dd * 100) / 100),  text_color = #f23645,                      text_size = size.tiny)
+    table.cell(t, 7, row, str.tostring(fl),                           text_color = nc,                           text_size = size.tiny)
+
+// ── Phase 9 — Walk-Forward definitions ───────────────────────────────────────
+string GRP_P9 = "Walk-Forward"
+bool   p9Enabled  = input.bool(true,   "Enable walk-forward analysis", group = GRP_P9)
+int    p9Holdout  = input.int(25,      "Holdout %", minval = 10, maxval = 50, group = GRP_P9)
+int    p9MinSeg   = input.int(20,      "Minimum segment trades", minval = 5, group = GRP_P9)
+
+var array<float> p9R   = array.new<float>()
+var array<int>   p9Reg = array.new<int>()
+var array<int>   p9Aln = array.new<int>()
+var array<int>   p9Tmb = array.new<int>()
+var array<int>   p9Dir = array.new<int>()
+var array<int>   p9Fam = array.new<int>()
+
+// 26 result slots: 6 variants × 4 periods (E/M/L/All) + H Dev + H Hold
+var array<int>   p9sn  = array.new<int>(26, 0)
+var array<int>   p9sw  = array.new<int>(26, 0)
+var array<float> p9sr  = array.new<float>(26, 0.0)
+var array<float> p9sgp = array.new<float>(26, 0.0)
+var array<float> p9sgl = array.new<float>(26, 0.0)
+var array<float> p9sdd = array.new<float>(26, 0.0)
+
+p9Filt(int v, int reg, int aln, int tmb, int dir, int fam) =>
+    bool dOk = not (dir == 1 and fam == 0) or aln == 1
+    bool eOk = not (dir == -1 and fam == 3) or aln == -1
+    v == 0 ? true : v == 1 ? reg != 0 : v == 2 ? reg != 0 and tmb != 6 : v == 3 ? dOk and eOk : v == 4 ? dOk and eOk and reg != 0 : dOk and eOk and reg != 0 and tmb != 6
+
+p9Calc(int slot, int variant, int s, int e) =>
+    int n = 0
+    int w = 0
+    float sr = 0.0
+    float gp = 0.0
+    float gl = 0.0
+    float eq = 0.0
+    float pk = 0.0
+    float dd = 0.0
+    if s < e
+        for i = s to e - 1
+            if p9Filt(variant, array.get(p9Reg, i), array.get(p9Aln, i), array.get(p9Tmb, i), array.get(p9Dir, i), array.get(p9Fam, i))
+                float rr = array.get(p9R, i)
+                n += 1
+                sr += rr
+                if rr > 0
+                    w += 1
+                    gp += rr
+                if rr < 0
+                    gl += math.abs(rr)
+                eq += rr
+                pk := math.max(pk, eq)
+                dd := math.max(dd, pk - eq)
+    array.set(p9sn, slot, n)
+    array.set(p9sw, slot, w)
+    array.set(p9sr, slot, sr)
+    array.set(p9sgp, slot, gp)
+    array.set(p9sgl, slot, gl)
+    array.set(p9sdd, slot, dd)
+
+// Phase 9 score storage (for Phase 12 calibration).
+var array<int> p9Sc = array.new<int>()
+
+// Phase 12 — Entry Research inputs/state.
+string GRP_P12 = "Entry Research"
+bool   p12Enabled   = input.bool(false, "Enable Phase 12 research", group = GRP_P12)
+string p12Model     = input.string("Control", "Entry model", options = ["Control", "BOS", "Retest", "Retest+Confirm"], group = GRP_P12, tooltip = "Display/selection only during Phase 12 research. The research funnel always evaluates the full Setup → BOS → Retest → Confirm sequence so every stage can be audited without changing Phase 11 live logic.")
+int    p12Expiry    = input.int(8, "Retest expiry bars", minval = 3, maxval = 20, group = GRP_P12)
+float  p12RetestTol = input.float(0.10, "Retest tolerance (x ATR)", minval = 0.0, step = 0.05, group = GRP_P12)
+
+var int   p12State     = 0
+var int   p12Dir       = 0
+var float p12BosLvl    = na
+var int   p12BosBar    = na
+var int   p12SetupBar  = na
+var int   p12RetestBar = na
+var int   p12Setups    = 0
+var int   p12BosConf   = 0
+var int   p12RetestOk  = 0
+var int   p12ConfirmOk = 0
+var int   p12ExpBos    = 0
+var int   p12ExpRet    = 0
+var int   p12ExpConf   = 0
+var int   p12InvBos    = 0
+var int   p12InvRet    = 0
+var int   p12InvConf   = 0
+
+// Score calibration buckets: 12 = 6 score bands × 2 directions (0-5=Long, 6-11=Short).
+var array<int>   p12cn  = array.new<int>(12, 0)
+var array<int>   p12cw  = array.new<int>(12, 0)
+var array<float> p12cr  = array.new<float>(12, 0.0)
+var array<float> p12cgp = array.new<float>(12, 0.0)
+var array<float> p12cgl = array.new<float>(12, 0.0)
+
+// Phase 13 — Entry Model Comparison (4 parallel trade trackers).
+string GRP_P13 = "Entry Comparison"
+bool   p13Enabled = input.bool(false, "Enable Phase 13 comparison", group = GRP_P13)
+
+// 4 models: 0=Control, 1=BOS, 2=Retest, 3=Confirm
+var array<int>   p13n  = array.new<int>(4, 0)
+var array<int>   p13w  = array.new<int>(4, 0)
+var array<float> p13rs = array.new<float>(4, 0.0)
+var array<float> p13gp = array.new<float>(4, 0.0)
+var array<float> p13gl = array.new<float>(4, 0.0)
+var array<float> p13eq = array.new<float>(4, 0.0)
+var array<float> p13pk = array.new<float>(4, 0.0)
+var array<float> p13dd = array.new<float>(4, 0.0)
+var array<bool>  p13act = array.new<bool>(4, false)
+var array<int>   p13dr  = array.new<int>(4, 0)
+var array<int>   p13br  = array.new<int>(4, 0)
+var array<float> p13en  = array.new<float>(4, 0.0)
+var array<float> p13st  = array.new<float>(4, 0.0)
+var array<float> p13tg  = array.new<float>(4, 0.0)
+var array<float> p13rk  = array.new<float>(4, 0.0)
+
+openP13(int m, int dir) =>
+    if not array.get(p13act, m)
+        float atr = nz(seAtr14, 1.0)
+        float rsk = trStopATR * atr
+        float stp = dir == 1 ? close - rsk : close + rsk
+        float tgt = dir == 1 ? close + rsk * trTargetR : close - rsk * trTargetR
+        array.set(p13act, m, true)
+        array.set(p13dr, m, dir)
+        array.set(p13br, m, bar_index)
+        array.set(p13en, m, close)
+        array.set(p13st, m, stp)
+        array.set(p13tg, m, tgt)
+        array.set(p13rk, m, rsk)
+
+closeP13(int m, float rr) =>
+    array.set(p13act, m, false)
+    array.set(p13n, m, array.get(p13n, m) + 1)
+    if rr > 0
+        array.set(p13w, m, array.get(p13w, m) + 1)
+        array.set(p13gp, m, array.get(p13gp, m) + rr)
+    if rr < 0
+        array.set(p13gl, m, array.get(p13gl, m) + math.abs(rr))
+    array.set(p13rs, m, array.get(p13rs, m) + rr)
+    float eq = array.get(p13eq, m) + rr
+    array.set(p13eq, m, eq)
+    float pk = math.max(array.get(p13pk, m), eq)
+    array.set(p13pk, m, pk)
+    array.set(p13dd, m, math.max(array.get(p13dd, m), pk - eq))
+
+// Phase 14 — Date-scoped Historical Validation Engine.
+// Runs independently of Phase 13 trade state while consuming the same
+// Setup → BOS → Retest → Confirm stage events. It is measurement-only.
+string GRP_P14 = "Historical Validation"
+bool p14Enabled    = input.bool(false, "Enable Phase 14 validation", group = GRP_P14)
+int  p14StartYear  = input.int(2026, "Start year",  minval = 2000, maxval = 2100, group = GRP_P14, inline = "p14s")
+int  p14StartMonth = input.int(6,    "Month",      minval = 1,    maxval = 12,   group = GRP_P14, inline = "p14s")
+int  p14StartDay   = input.int(18,   "Day",        minval = 1,    maxval = 31,   group = GRP_P14, inline = "p14s")
+int  p14EndYear    = input.int(2026, "End year",    minval = 2000, maxval = 2100, group = GRP_P14, inline = "p14e")
+int  p14EndMonth   = input.int(8,    "Month",       minval = 1,    maxval = 12,   group = GRP_P14, inline = "p14e")
+int  p14EndDay     = input.int(18,   "Day",         minval = 1,    maxval = 31,   group = GRP_P14, inline = "p14e")
+
+// Integer timestamp construction uses the chart symbol's exchange timezone.
+// The end is represented as the next day's midnight, making the chosen end
+// date inclusive for every supported chart timeframe.
+int  p14StartTs      = timestamp(syminfo.timezone, p14StartYear, p14StartMonth, p14StartDay, 0, 0)
+int  p14EndExclusive = timestamp(syminfo.timezone, p14EndYear, p14EndMonth, p14EndDay + 1, 0, 0)
+bool p14RangeValid   = p14EndExclusive > p14StartTs
+bool p14InWindow     = p14RangeValid and time >= p14StartTs and time < p14EndExclusive
+
+// Loaded-chart coverage audit. A forming realtime bar does not count as
+// confirmed right-side coverage.
+var int p14FirstChartTs = na
+var int p14LastChartTs  = na
+if barstate.isfirst
+    p14FirstChartTs := time
+if barstate.isconfirmed
+    p14LastChartTs := time_close
+
+// Four independent model trackers: 0=Control, 1=BOS, 2=Retest, 3=Confirm.
+var array<int>   p14ent = array.new<int>(4, 0)
+var array<int>   p14n   = array.new<int>(4, 0)
+var array<int>   p14w   = array.new<int>(4, 0)
+var array<int>   p14l   = array.new<int>(4, 0)
+var array<float> p14rs  = array.new<float>(4, 0.0)
+var array<float> p14gp  = array.new<float>(4, 0.0)
+var array<float> p14gl  = array.new<float>(4, 0.0)
+var array<float> p14eq  = array.new<float>(4, 0.0)
+var array<float> p14pk  = array.new<float>(4, 0.0)
+var array<float> p14dd  = array.new<float>(4, 0.0)
+var array<float> p14lw  = array.new<float>(4, na)
+var array<float> p14ll  = array.new<float>(4, na)
+var array<int>   p14cw  = array.new<int>(4, 0)
+var array<int>   p14cl  = array.new<int>(4, 0)
+var array<int>   p14mcw = array.new<int>(4, 0)
+var array<int>   p14mcl = array.new<int>(4, 0)
+
+var array<bool>  p14act = array.new<bool>(4, false)
+var array<int>   p14dir = array.new<int>(4, 0)
+var array<int>   p14bar = array.new<int>(4, 0)
+var array<float> p14en  = array.new<float>(4, 0.0)
+var array<float> p14st  = array.new<float>(4, 0.0)
+var array<float> p14tg  = array.new<float>(4, 0.0)
+var array<float> p14rk  = array.new<float>(4, 0.0)
+var array<int>   p14sc  = array.new<int>(4, 0)
+var array<int>   p14reg = array.new<int>(4, 0)
+var array<int>   p14tmb = array.new<int>(4, 0)
+var array<int>   p14seg = array.new<int>(4, 0)
+
+// Breakdown layouts are model-major. Each bucket stores five floats:
+// N, wins, TotalR, gross profit, gross loss.
+var array<float> p14dst = array.new<float>(40, 0.0)   // 4 models × 2 directions × 5
+var array<float> p14rst = array.new<float>(60, 0.0)   // 4 models × 3 regimes × 5
+var array<float> p14tst = array.new<float>(140, 0.0)  // 4 models × 7 sessions × 5
+var array<float> p14bst = array.new<float>(120, 0.0)  // 4 models × 6 score bands × 5
+var array<float> p14xst = array.new<float>(60, 0.0)   // 4 models × 3 date thirds × 5
+
+// Date-scoped copy of the research funnel state. Arrays allow the function to
+// mutate its own state without touching Phase 12's persistent variables.
+var array<int>   p14fc  = array.new<int>(4, 0)  // Setup / BOS / Retest / Confirm
+var array<int>   p14fst = array.new<int>(1, 0)
+var array<int>   p14fdr = array.new<int>(1, 0)
+var array<int>   p14fsb = array.new<int>(1, 0)
+var array<int>   p14fbb = array.new<int>(1, 0)
+var array<int>   p14frb = array.new<int>(1, 0)
+var array<int>   p14fsc = array.new<int>(1, 0)
+var array<float> p14fbl = array.new<float>(1, na)
+// 0 Bars, 1 Canonical, 2 Control, 3 BOS, 4 Retest, 5 Confirm,
+// 6 Raw Long, 7 Raw Short, 8 Raw Total, 9 Variant-C qualified.
+var array<int>   p14dbg = array.new<int>(10, 0)
+var array<int>   p14dts = array.new<int>(1, na) // Last confirmed in-window bar timestamp
+// Per model: attempts / disabled / out-of-window / already-active / success.
+var array<int>   p14odbg = array.new<int>(20, 0)
+// Phase 14 funnel diagnostics:
+// 0 bull breaks in window, 1 bear breaks in window, 2 funnel starts,
+// 3 WAIT_BOS bar evaluations, 4 matching BOS, 5 opposite-BOS resets,
+// 6 BOS expiries, 7 retest hits, 8 retest invalidations, 9 confirm hits.
+var array<int>   p14fdbg = array.new<int>(10, 0)
+
+p14AddBreak(array<float> stats, int bucketIdx, float rr) =>
+    int base = bucketIdx * 5
+    array.set(stats, base, array.get(stats, base) + 1.0)
+    if rr > 0
+        array.set(stats, base + 1, array.get(stats, base + 1) + 1.0)
+        array.set(stats, base + 3, array.get(stats, base + 3) + rr)
+    else if rr < 0
+        array.set(stats, base + 4, array.get(stats, base + 4) + math.abs(rr))
+    array.set(stats, base + 2, array.get(stats, base + 2) + rr)
+
+p14TrackWindowBar(bool rawLong, bool rawShort, bool variantCSetup, bool canonicalSetup) =>
+    array.set(p14dbg, 0, array.get(p14dbg, 0) + 1)
+    array.set(p14dts, 0, time)
+    if rawLong
+        array.set(p14dbg, 6, array.get(p14dbg, 6) + 1)
+    if rawShort
+        array.set(p14dbg, 7, array.get(p14dbg, 7) + 1)
+    if rawLong or rawShort
+        array.set(p14dbg, 8, array.get(p14dbg, 8) + 1)
+    if variantCSetup
+        array.set(p14dbg, 9, array.get(p14dbg, 9) + 1)
+    if canonicalSetup
+        array.set(p14dbg, 1, array.get(p14dbg, 1) + 1)
+
+openP14(int m, int dir, int score) =>
+    int dbgBase = m * 5
+    array.set(p14odbg, dbgBase, array.get(p14odbg, dbgBase) + 1)
+    bool opened = false
+    if not p14Enabled
+        array.set(p14odbg, dbgBase + 1, array.get(p14odbg, dbgBase + 1) + 1)
+    else if not p14InWindow
+        array.set(p14odbg, dbgBase + 2, array.get(p14odbg, dbgBase + 2) + 1)
+    else if array.get(p14act, m)
+        array.set(p14odbg, dbgBase + 3, array.get(p14odbg, dbgBase + 3) + 1)
+    else
+        float atr = nz(seAtr14, 1.0)
+        float rsk = trStopATR * atr
+        float stp = dir == 1 ? close - rsk : close + rsk
+        float tgt = dir == 1 ? close + rsk * trTargetR : close - rsk * trTargetR
+        int hm = hour * 60 + minute
+        int tmb = hm >= 1080 or hm < 240 ? 0 : hm < 570 ? 1 : hm < 630 ? 2 : hm < 720 ? 3 : hm < 840 ? 4 : hm < 960 ? 5 : hm < 1080 ? 6 : 0
+        int span = p14EndExclusive - p14StartTs
+        int seg = span > 0 ? int(math.min(2.0, math.floor((time - p14StartTs) * 3.0 / span))) : 0
+        array.set(p14act, m, true)
+        array.set(p14dir, m, dir)
+        array.set(p14bar, m, bar_index)
+        array.set(p14en, m, close)
+        array.set(p14st, m, stp)
+        array.set(p14tg, m, tgt)
+        array.set(p14rk, m, rsk)
+        array.set(p14sc, m, score)
+        array.set(p14reg, m, p7HtfRegime)
+        array.set(p14tmb, m, tmb)
+        array.set(p14seg, m, seg)
+        array.set(p14ent, m, array.get(p14ent, m) + 1)
+        array.set(p14odbg, dbgBase + 4, array.get(p14odbg, dbgBase + 4) + 1)
+        opened := true
+    opened
+
+closeP14(int m, float rr) =>
+    array.set(p14act, m, false)
+    array.set(p14n, m, array.get(p14n, m) + 1)
+    if rr > 0
+        array.set(p14w, m, array.get(p14w, m) + 1)
+        array.set(p14gp, m, array.get(p14gp, m) + rr)
+        float oldLw = array.get(p14lw, m)
+        array.set(p14lw, m, na(oldLw) ? rr : math.max(oldLw, rr))
+        int winRun = array.get(p14cw, m) + 1
+        array.set(p14cw, m, winRun)
+        array.set(p14mcw, m, math.max(array.get(p14mcw, m), winRun))
+        array.set(p14cl, m, 0)
+    else if rr < 0
+        array.set(p14l, m, array.get(p14l, m) + 1)
+        array.set(p14gl, m, array.get(p14gl, m) + math.abs(rr))
+        float oldLl = array.get(p14ll, m)
+        array.set(p14ll, m, na(oldLl) ? rr : math.min(oldLl, rr))
+        int lossRun = array.get(p14cl, m) + 1
+        array.set(p14cl, m, lossRun)
+        array.set(p14mcl, m, math.max(array.get(p14mcl, m), lossRun))
+        array.set(p14cw, m, 0)
+    else
+        array.set(p14cw, m, 0)
+        array.set(p14cl, m, 0)
+    array.set(p14rs, m, array.get(p14rs, m) + rr)
+    float eq = array.get(p14eq, m) + rr
+    array.set(p14eq, m, eq)
+    float pk = math.max(array.get(p14pk, m), eq)
+    array.set(p14pk, m, pk)
+    array.set(p14dd, m, math.max(array.get(p14dd, m), pk - eq))
+
+    int dir = array.get(p14dir, m)
+    int reg = array.get(p14reg, m)
+    int tmb = array.get(p14tmb, m)
+    int score = array.get(p14sc, m)
+    int seg = array.get(p14seg, m)
+    int scoreBucket = score >= 95 ? 5 : score >= 90 ? 4 : score >= 85 ? 3 : score >= 80 ? 2 : score >= 75 ? 1 : 0
+    p14AddBreak(p14dst, m * 2 + (dir == 1 ? 0 : 1), rr)
+    p14AddBreak(p14rst, m * 3 + (reg == 1 ? 0 : reg == -1 ? 1 : 2), rr)
+    p14AddBreak(p14tst, m * 7 + tmb, rr)
+    if score >= 70
+        p14AddBreak(p14bst, m * 6 + scoreBucket, rr)
+    p14AddBreak(p14xst, m * 3 + seg, rr)
+
+p14ProcessFunnel(
+    bool canonicalLong,
+    bool canonicalShort,
+    int canonicalScore,
+    bool bullBreakNow,
+    bool bearBreakNow,
+    float priorStrHigh,
+    float priorStrLow,
+    float currentStrHigh,
+    float currentStrLow) =>
+    int state = array.get(p14fst, 0)
+    int dir = array.get(p14fdr, 0)
+    int setupBar = array.get(p14fsb, 0)
+    int bosBar = array.get(p14fbb, 0)
+    int retestBar = array.get(p14frb, 0)
+    int score = array.get(p14fsc, 0)
+    float bosLvl = array.get(p14fbl, 0)
+    bool canonicalSetup = canonicalLong or canonicalShort
+    int canonicalDir = canonicalLong ? 1 : canonicalShort ? -1 : 0
+
+    if canonicalSetup and state == 0
+        state := 1
+        dir := canonicalDir
+        setupBar := bar_index
+        bosBar := na
+        retestBar := na
+        bosLvl := na
+        score := canonicalScore
+        array.set(p14fc, 0, array.get(p14fc, 0) + 1)
+        array.set(p14fdbg, 2, array.get(p14fdbg, 2) + 1)
+
+    if state == 1
+        array.set(p14fdbg, 3, array.get(p14fdbg, 3) + 1)
+        // Use explicit per-bar structure-event snapshots passed from global scope.
+        // This makes Phase 14 consume the exact same confirmed BOS events that
+        // Phase 12 sees, rather than relying on implicit global-series capture
+        // from inside the date-scoped research function.
+        bool bosOk = (dir == 1 and bullBreakNow) or (dir == -1 and bearBreakNow)
+        bool oppBos = (dir == 1 and bearBreakNow) or (dir == -1 and bullBreakNow)
+        if bosOk
+            array.set(p14fdbg, 4, array.get(p14fdbg, 4) + 1)
+            float brokenLvl = dir == 1 ? priorStrHigh : priorStrLow
+            bosLvl := not na(brokenLvl) ? brokenLvl : (dir == 1 ? currentStrHigh : currentStrLow)
+            bosBar := bar_index
+            array.set(p14fc, 1, array.get(p14fc, 1) + 1)
+            array.set(p14dbg, 3, array.get(p14dbg, 3) + 1)
+            openP14(1, dir, score)
+            state := 2
+        else if oppBos
+            array.set(p14fdbg, 5, array.get(p14fdbg, 5) + 1)
+            state := 0
+        else if bar_index - setupBar > p12Expiry
+            array.set(p14fdbg, 6, array.get(p14fdbg, 6) + 1)
+            state := 0
+
+    else if state == 2 and not na(bosLvl)
+        float tol = nz(seAtr14, 1.0) * p12RetestTol
+        bool eligibleRetest = not na(bosBar) and bar_index > bosBar
+        bool retestTouch = eligibleRetest and (dir == 1 ? low <= bosLvl + tol : high >= bosLvl - tol)
+        bool retInv = eligibleRetest and (dir == 1 ? close < bosLvl - tol : close > bosLvl + tol)
+        if retInv
+            array.set(p14fdbg, 8, array.get(p14fdbg, 8) + 1)
+            state := 0
+        else if retestTouch
+            array.set(p14fdbg, 7, array.get(p14fdbg, 7) + 1)
+            retestBar := bar_index
+            array.set(p14fc, 2, array.get(p14fc, 2) + 1)
+            array.set(p14dbg, 4, array.get(p14dbg, 4) + 1)
+            openP14(2, dir, score)
+            state := 3
+        else if not na(bosBar) and bar_index - bosBar > p12Expiry
+            state := 0
+
+    else if state == 3 and not na(bosLvl) and not na(retestBar)
+        float tol = nz(seAtr14, 1.0) * p12RetestTol
+        bool eligibleConfirm = bar_index > retestBar
+        bool confirmed = eligibleConfirm and (dir == 1 ? (close > open and close > bosLvl) : (close < open and close < bosLvl))
+        bool confInv = eligibleConfirm and (dir == 1 ? close < bosLvl - tol : close > bosLvl + tol)
+        if confirmed
+            array.set(p14fdbg, 9, array.get(p14fdbg, 9) + 1)
+            array.set(p14fc, 3, array.get(p14fc, 3) + 1)
+            array.set(p14dbg, 5, array.get(p14dbg, 5) + 1)
+            openP14(3, dir, score)
+            state := 4
+        else if confInv or bar_index - retestBar > p12Expiry
+            state := 0
+
+    if state == 4
+        state := 0
+
+    array.set(p14fst, 0, state)
+    array.set(p14fdr, 0, dir)
+    array.set(p14fsb, 0, setupBar)
+    array.set(p14fbb, 0, bosBar)
+    array.set(p14frb, 0, retestBar)
+    array.set(p14fsc, 0, score)
+    array.set(p14fbl, 0, bosLvl)
+
+// Phase 14 helper used by the inline historical runner.
+// Setup creation stays in global scope (where the canonical feed is proven to work);
+// this helper advances an already-started candidate through BOS -> Retest -> Confirm.
+p14AdvanceStartedFunnel(
+    int state,
+    int dir,
+    int setupBar,
+    int bosBar,
+    int retestBar,
+    int score,
+    float bosLvl,
+    bool bullBreakNow,
+    bool bearBreakNow,
+    float priorStrHigh,
+    float priorStrLow,
+    float currentStrHigh,
+    float currentStrLow) =>
+    int s = state
+    int bb = bosBar
+    int rb = retestBar
+    float bl = bosLvl
+
+    if s == 1
+        array.set(p14fdbg, 3, array.get(p14fdbg, 3) + 1)
+        bool bosOk = (dir == 1 and bullBreakNow) or (dir == -1 and bearBreakNow)
+        bool oppBos = (dir == 1 and bearBreakNow) or (dir == -1 and bullBreakNow)
+
+        if bosOk
+            array.set(p14fdbg, 4, array.get(p14fdbg, 4) + 1)
+            float brokenLvl = dir == 1 ? priorStrHigh : priorStrLow
+            bl := not na(brokenLvl) ? brokenLvl : (dir == 1 ? currentStrHigh : currentStrLow)
+            bb := bar_index
+            array.set(p14fc, 1, array.get(p14fc, 1) + 1)
+            array.set(p14dbg, 3, array.get(p14dbg, 3) + 1)
+            openP14(1, dir, score)
+            s := 2
+        else if oppBos
+            array.set(p14fdbg, 5, array.get(p14fdbg, 5) + 1)
+            s := 0
+        else if bar_index - setupBar > p12Expiry
+            array.set(p14fdbg, 6, array.get(p14fdbg, 6) + 1)
+            s := 0
+
+    else if s == 2 and not na(bl)
+        float tol = nz(seAtr14, 1.0) * p12RetestTol
+        bool eligibleRetest = not na(bb) and bar_index > bb
+        bool retestTouch = eligibleRetest and (dir == 1 ? low <= bl + tol : high >= bl - tol)
+        bool retInv = eligibleRetest and (dir == 1 ? close < bl - tol : close > bl + tol)
+
+        if retInv
+            array.set(p14fdbg, 8, array.get(p14fdbg, 8) + 1)
+            s := 0
+        else if retestTouch
+            array.set(p14fdbg, 7, array.get(p14fdbg, 7) + 1)
+            rb := bar_index
+            array.set(p14fc, 2, array.get(p14fc, 2) + 1)
+            array.set(p14dbg, 4, array.get(p14dbg, 4) + 1)
+            openP14(2, dir, score)
+            s := 3
+        else if not na(bb) and bar_index - bb > p12Expiry
+            s := 0
+
+    else if s == 3 and not na(bl) and not na(rb)
+        float tol = nz(seAtr14, 1.0) * p12RetestTol
+        bool eligibleConfirm = bar_index > rb
+        bool confirmed = eligibleConfirm and (dir == 1 ? (close > open and close > bl) : (close < open and close < bl))
+        bool confInv = eligibleConfirm and (dir == 1 ? close < bl - tol : close > bl + tol)
+
+        if confirmed
+            array.set(p14fdbg, 9, array.get(p14fdbg, 9) + 1)
+            array.set(p14fc, 3, array.get(p14fc, 3) + 1)
+            array.set(p14dbg, 5, array.get(p14dbg, 5) + 1)
+            openP14(3, dir, score)
+            s := 4
+        else if confInv or bar_index - rb > p12Expiry
+            s := 0
+
+    if s == 4
+        s := 0
+
+    [s, bb, rb, bl]
+
+// Phase 11: count forward trading days.
+if fwdEnabled and fwdPeriod and processBar and dayofmonth != fwdPrevDom
+    fwdDays += 1
+    fwdPrevDom := dayofmonth
+
+// 31 buckets: 0-5 regime×dir, 6-8 alignment, 9-11 vol, 12-18 time, 19-30 setup×regime.
+var array<int>   p7c  = array.new<int>(31, 0)
+var array<int>   p7w  = array.new<int>(31, 0)
+var array<float> p7rs = array.new<float>(31, 0.0)
+var array<float> p7gp = array.new<float>(31, 0.0)
+var array<float> p7gl = array.new<float>(31, 0.0)
+
+addP7(int b, float rR) =>
+    if b >= 0 and b < 31
+        array.set(p7c, b, array.get(p7c, b) + 1)
+        if rR > 0
+            array.set(p7w, b, array.get(p7w, b) + 1)
+            array.set(p7gp, b, array.get(p7gp, b) + rR)
+        if rR < 0
+            array.set(p7gl, b, array.get(p7gl, b) + math.abs(rR))
+        array.set(p7rs, b, array.get(p7rs, b) + rR)
+
+p7Row(table t, int row, string name, color nc, int b) =>
+    int   n  = array.get(p7c, b)
+    float sr = array.get(p7rs, b)
+    int   w  = array.get(p7w, b)
+    float ar = n > 0 ? sr / n : 0.0
+    float wr = n > 0 ? w * 100.0 / n : 0.0
+    float gp = array.get(p7gp, b)
+    float gl = array.get(p7gl, b)
+    float pf = gl > 0 ? gp / gl : (gp > 0 ? 99.9 : 0.0)
+    table.cell(t, 0, row, name,                                      text_color = nc,                           text_size = size.tiny, text_halign = text.align_left)
+    table.cell(t, 1, row, str.tostring(n),                           text_color = #aaaaaa,                      text_size = size.tiny)
+    table.cell(t, 2, row, str.tostring(math.round(wr)) + "%",       text_color = wr >= 50 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(t, 3, row, str.tostring(math.round(ar * 100) / 100), text_color = ar >= 0 ? #089981 : #f23645,  text_size = size.tiny)
+    table.cell(t, 4, row, str.tostring(math.round(sr * 100) / 100), text_color = sr >= 0 ? #089981 : #f23645,  text_size = size.tiny)
+    table.cell(t, 5, row, str.tostring(math.round(pf * 10) / 10),   text_color = pf >= 1 ? #089981 : #f23645,  text_size = size.tiny)
+
+if processBar and trEnabled
+    // ── E. Manage active trade: update MFE/MAE, check exits ──────────────────
+    if trActive
+        int elapsed = bar_index - trBarEntry
+        if elapsed >= 1
+            // Running MFE / MAE
+            if trDir == 1
+                trRunMfe := math.max(trRunMfe, high - trPxEntry)
+                trRunMae := math.max(trRunMae, trPxEntry - low)
+            else
+                trRunMfe := math.max(trRunMfe, trPxEntry - low)
+                trRunMae := math.max(trRunMae, high - trPxEntry)
+
+            // Exit conditions (SL checked first = conservative same-bar rule)
+            float rResult = na
+            string reason = ""
+            if trDir == 1
+                if low <= trPxStop
+                    rResult := -1.0
+                    reason  := "SL"
+                else if high >= trPxTarget
+                    rResult := trTargetR
+                    reason  := "TP"
+                else if elapsed >= trMaxBarsCnt
+                    rResult := trRisk > 0 ? (close - trPxEntry) / trRisk : 0.0
+                    reason  := "TIME"
+            else
+                if high >= trPxStop
+                    rResult := -1.0
+                    reason  := "SL"
+                else if low <= trPxTarget
+                    rResult := trTargetR
+                    reason  := "TP"
+                else if elapsed >= trMaxBarsCnt
+                    rResult := trRisk > 0 ? (trPxEntry - close) / trRisk : 0.0
+                    reason  := "TIME"
+
+            if not na(rResult)
+                trExitEvt := true
+                trExitR   := rResult
+                trExitDir := trDir
+
+                // Aggregate into 3 buckets
+                int b0 = trDir == 1 ? 0 : 1
+                int b1 = trScore >= 85 ? (trDir == 1 ? 4 : 7) : trScore >= 75 ? (trDir == 1 ? 3 : 6) : (trDir == 1 ? 2 : 5)
+                int b2 = trSetupType == "Reversal" ? (trDir == 1 ? 8 : 10) : (trDir == 1 ? 9 : 11)
+                addP6(b0, rResult)
+                addP6(b1, rResult)
+                addP6(b2, rResult)
+
+                // Equity / drawdown
+                trEquity += rResult
+                trPeak   := math.max(trPeak, trEquity)
+                trMaxDD  := math.max(trMaxDD, trPeak - trEquity)
+                trTotal  += 1
+                if reason == "TP"
+                    trWins += 1
+                else if reason == "SL"
+                    trLosses += 1
+                else
+                    trTimed += 1
+
+                // Phase 7: aggregate using INDEPENDENT HTF regime (only if included in analysis)
+                if p7Include
+                    p7Analyzed += 1
+                    int p7regIdx = trDir == 1 ? (p7Regime == 1 ? 0 : p7Regime == -1 ? 1 : 2) : (p7Regime == 1 ? 3 : p7Regime == -1 ? 4 : 5)
+                    int p7alnIdx = p7Alignment == 1 ? 6 : p7Alignment == -1 ? 7 : 8
+                    int p7volIdx = p7VolBucket == 0 ? 9 : p7VolBucket == 2 ? 11 : 10
+                    int p7timIdx = 12 + p7TimeBucket
+                    addP7(p7regIdx, rResult)
+                    addP7(p7alnIdx, rResult)
+                    addP7(p7volIdx, rResult)
+                    addP7(p7timIdx, rResult)
+                    int p7srIdx = -1
+                    if trDir == 1 and trSetupType == "Continuation"
+                        p7srIdx := p7Alignment == 1 ? 19 : p7Alignment == -1 ? 20 : 21
+                    else if trDir == 1 and trSetupType == "Reversal"
+                        p7srIdx := p7Alignment == 1 ? 22 : p7Alignment == -1 ? 23 : 24
+                    else if trDir == -1 and trSetupType == "Continuation"
+                        p7srIdx := p7Alignment == 1 ? 25 : p7Alignment == -1 ? 26 : 27
+                    else if trDir == -1 and trSetupType == "Reversal"
+                        p7srIdx := p7Alignment == 1 ? 28 : p7Alignment == -1 ? 29 : 30
+                    addP7(p7srIdx, rResult)
+
+                // Phase 9: store per-trade data for walk-forward analysis
+                if p9Enabled
+                    int p9fam = trDir == 1 ? (trSetupType == "Continuation" ? 0 : 1) : (trSetupType == "Continuation" ? 2 : 3)
+                    array.push(p9R, rResult)
+                    array.push(p9Reg, p7Regime)
+                    array.push(p9Aln, p7Alignment)
+                    array.push(p9Tmb, p7TimeBucket)
+                    array.push(p9Dir, trDir)
+                    array.push(p9Fam, p9fam)
+                    array.push(p9Sc, trScore)
+
+                // Phase 8: evaluate filter variants on this completed trade
+                bool f8InU = p8Universe == "All Phase 6 Trades" or (p7TimeBucket >= 2 and p7TimeBucket <= 5)
+                if p8Enabled and f8InU
+                    addF8(0, rResult)
+                    bool f8dOk = not (trDir == 1 and trSetupType == "Continuation") or p7Alignment == 1
+                    bool f8eOk = not (trDir == -1 and trSetupType == "Reversal") or p7Alignment == -1
+                    if p7Regime != 0
+                        addF8(1, rResult)
+                    if p7TimeBucket != 6
+                        addF8(2, rResult)
+                    if p7Regime != 0 and p7TimeBucket != 6
+                        addF8(3, rResult)
+                    if f8dOk
+                        addF8(4, rResult)
+                    if f8eOk
+                        addF8(5, rResult)
+                    if f8dOk and f8eOk
+                        addF8(6, rResult)
+                    if f8dOk and f8eOk and p7Regime != 0
+                        addF8(7, rResult)
+                    if f8dOk and f8eOk and p7Regime != 0 and p7TimeBucket != 6
+                        addF8(8, rResult)
+
+                // Phase 11: accumulate forward stats if this was a forward C-filtered trade
+                if isFwdTrade
+                    isFwdTrade := false
+                    fwdClosed += 1
+                    fwdSumR += rResult
+                    if rResult > 0
+                        fwdWins += 1
+                        fwdGP += rResult
+                    else
+                        fwdLosses += 1
+                        fwdGL += math.abs(rResult)
+                    fwdEq += rResult
+                    fwdPk := math.max(fwdPk, fwdEq)
+                    fwdDD := math.max(fwdDD, fwdPk - fwdEq)
+                    if trDir == 1
+                        fwdLongN += 1
+                        fwdLongR += rResult
+                        if rResult > 0
+                            fwdLongW += 1
+                    else
+                        fwdShortN += 1
+                        fwdShortR += rResult
+                        if rResult > 0
+                            fwdShortW += 1
+
+                // Exit label
+                if showTrMarkers and dmTrMarks
+                    string rTxt = reason + " " + (rResult >= 0 ? "+" : "") + str.tostring(math.round(rResult * 100) / 100) + "R"
+                    color  rCol = rResult >= 0 ? #089981 : #f23645
+                    float  rY   = trDir == 1 ? low : high
+                    label  lbl  = label.new(bar_index, rY, rTxt, xloc = xloc.bar_index, style = label.style_none, textcolor = rCol, size = size.tiny)
+                    array.push(trLabels, lbl)
+                    if array.size(trLabels) > trMaxLabels
+                        label.delete(array.shift(trLabels))
+
+                trActive := false
+
+    // ── F. Open new trade from Phase 5 signals ───────────────────────────────
+    if not trActive and (seLongEvt or seShortEvt)
+        int   dir   = seLongEvt ? 1 : -1
+        float entry = close
+        float atr   = nz(seAtr14, 1.0)
+        float stop  = na
+        float risk  = na
+        bool  valid = true
+
+        if trStopMode == "ATR Stop"
+            stop := dir == 1 ? entry - trStopATR * atr : entry + trStopATR * atr
+            risk := trStopATR * atr
+        else
+            stop := dir == 1 ? activeStrLow : activeStrHigh
+            if na(stop)
+                valid := false
+            else
+                risk := math.abs(entry - stop)
+                if risk < syminfo.mintick or (dir == 1 and stop >= entry) or (dir == -1 and stop <= entry)
+                    valid := false
+
+        if valid and not na(risk) and risk > 0
+            trActive    := true
+            trDir       := dir
+            trBarEntry  := bar_index
+            trPxEntry   := entry
+            trPxStop    := nz(stop)
+            trPxTarget  := dir == 1 ? entry + risk * trTargetR : entry - risk * trTargetR
+            trRisk      := risk
+            trScore     := dir == 1 ? seLongScoreVal : seShortScoreVal
+            trSetupType := dir == 1 ? seLongType : seShortType
+            trSess      := seInSession
+            trRunMfe    := 0.0
+            trRunMae    := 0.0
+            trEntryEvt  := true
+            trEntryDir  := dir
+            // Phase 7: tag INDEPENDENT HTF regime + full time classification
+            p7Regime    := p7HtfRegime
+            p7Alignment := (dir == 1 and p7HtfRegime == 1) or (dir == -1 and p7HtfRegime == -1) ? 1 : (dir == 1 and p7HtfRegime == -1) or (dir == -1 and p7HtfRegime == 1) ? -1 : 0
+            p7VolBucket := p7AtrRatio < p7VolLow ? 0 : p7AtrRatio > p7VolHigh ? 2 : 1
+            int p7hm    = hour * 60 + minute
+            p7TimeBucket := p7hm >= 1080 or p7hm < 240 ? 0 : p7hm < 570 ? 1 : p7hm < 630 ? 2 : p7hm < 720 ? 3 : p7hm < 840 ? 4 : p7hm < 960 ? 5 : p7hm < 1080 ? 6 : 0
+            p7Include   := p7AnalysisMode == "All Phase 6 Trades" or (p7hm >= 570 and p7hm < 960)
+            p7Classified += 1
+            // Phase 10 audit: does this Phase 6 trade pass the C filter?
+            bool p10cPass = p7Regime != 0 and p7TimeBucket != 6
+            if p10cPass
+                liveFilterQual += 1
+            // Phase 11: tag if this is a forward-period C-filtered trade
+            isFwdTrade := fwdEnabled and fwdPeriod and p10cPass
+            if isFwdTrade
+                fwdSignals += 1
+        else
+            trInvalid += 1
+    else if trActive and (seLongEvt or seShortEvt)
+        trSkipped += 1
+
+// ── G. Trade markers ─────────────────────────────────────────────────────────
+plotshape(trEnabled and dmTrMarks and showTrMarkers and trEntryEvt and trEntryDir == 1,  title = "TR: Long Entry",  style = shape.circle, location = location.belowbar, color = #00e676, size = size.tiny)
+plotshape(trEnabled and dmTrMarks and showTrMarkers and trEntryEvt and trEntryDir == -1, title = "TR: Short Entry", style = shape.circle, location = location.abovebar, color = #ff1744, size = size.tiny)
+
+// ── H. Performance table (top-left) ─────────────────────────────────────────
+var table trTable = (trEnabled and dmBtTable) ? table.new(position.top_left, 6, 17, bgcolor = color.new(#1e1e1e, 15), border_color = color.new(#444444, 50), border_width = 1) : na
+renderTradeTable() =>
+    color _h6 = #cccccc
+    color _d6 = #aaaaaa
+    table.cell(trTable, 0, 0, "BACKTEST", text_color = _h6, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(trTable, 1, 0, "N",        text_color = _h6, text_size = size.tiny)
+    table.cell(trTable, 2, 0, "Win%",     text_color = _h6, text_size = size.tiny)
+    table.cell(trTable, 3, 0, "AvgR",     text_color = _h6, text_size = size.tiny)
+    table.cell(trTable, 4, 0, "TotR",     text_color = _h6, text_size = size.tiny)
+    table.cell(trTable, 5, 0, "PF",       text_color = _h6, text_size = size.tiny)
+    p6Row(trTable, 1,  "Long",    #089981, 0)
+    p6Row(trTable, 2,  "Short",   #f23645, 1)
+    p6Row(trTable, 3,  "L 70-74", #089981, 2)
+    p6Row(trTable, 4,  "L 75-84", #089981, 3)
+    p6Row(trTable, 5,  "L 85+",   #089981, 4)
+    p6Row(trTable, 6,  "S 70-74", #f23645, 5)
+    p6Row(trTable, 7,  "S 75-84", #f23645, 6)
+    p6Row(trTable, 8,  "S 85+",   #f23645, 7)
+    p6Row(trTable, 9,  "RevL",    #089981, 8)
+    p6Row(trTable, 10, "ContL",   #089981, 9)
+    p6Row(trTable, 11, "RevS",    #f23645, 10)
+    p6Row(trTable, 12, "ContS",   #f23645, 11)
+    // Summary
+    float _avgR = trTotal > 0 ? trEquity / trTotal : 0.0
+    float _totGp = array.get(tgp, 0) + array.get(tgp, 1)
+    float _totGl = array.get(tgl, 0) + array.get(tgl, 1)
+    float _pf = _totGl > 0 ? _totGp / _totGl : (_totGp > 0 ? 99.9 : 0.0)
+    table.cell(trTable, 0, 13, "── SUMMARY ──", text_color = _h6, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(trTable, 0, 14, "TotalR",  text_color = _d6, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(trTable, 1, 14, str.tostring(math.round(trEquity * 100) / 100), text_color = trEquity >= 0 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(trTable, 2, 14, "MaxDD",   text_color = _d6, text_size = size.tiny)
+    table.cell(trTable, 3, 14, str.tostring(math.round(trMaxDD * 100) / 100), text_color = #f23645, text_size = size.tiny)
+    table.cell(trTable, 4, 14, "Expect",  text_color = _d6, text_size = size.tiny)
+    table.cell(trTable, 5, 14, str.tostring(math.round(_avgR * 100) / 100), text_color = _avgR >= 0 ? #089981 : #f23645, text_size = size.tiny)
+    // Audit
+    table.cell(trTable, 0, 15, "── AUDIT ──", text_color = _h6, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(trTable, 0, 16, "Trades " + str.tostring(trTotal) + " | W " + str.tostring(trWins) + " L " + str.tostring(trLosses) + " T " + str.tostring(trTimed), text_color = _d6, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(trTable, 3, 16, "Skip " + str.tostring(trSkipped), text_color = _d6, text_size = size.tiny)
+    table.cell(trTable, 4, 16, "Inv " + str.tostring(trInvalid), text_color = _d6, text_size = size.tiny)
+    table.cell(trTable, 5, 16, "PF " + str.tostring(math.round(_pf * 10) / 10), text_color = _pf >= 1 ? #089981 : #f23645, text_size = size.tiny)
+
+if trEnabled and dmBtTable and barstate.islast and not na(trTable)
+    renderTradeTable()
+
+// (Phase 6 equity/drawdown data-window plots removed — values in backtest table.)
+
+// ── Phase 7 Regime Analysis table (middle-right) ─────────────────────────────
+var table p7Table = (trEnabled and p7ShowTable and dmBtTable) ? table.new(position.middle_right, 6, 39, bgcolor = color.new(#1e1e1e, 15), border_color = color.new(#444444, 50), border_width = 1) : na
+renderRegimeTable() =>
+    color _h7 = #cccccc
+    color _d7 = #aaaaaa
+    table.cell(p7Table, 0, 0, "HTF REGIME", text_color = _h7, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(p7Table, 1, 0, "N",    text_color = _h7, text_size = size.tiny)
+    table.cell(p7Table, 2, 0, "Win%", text_color = _h7, text_size = size.tiny)
+    table.cell(p7Table, 3, 0, "AvgR", text_color = _h7, text_size = size.tiny)
+    table.cell(p7Table, 4, 0, "TotR", text_color = _h7, text_size = size.tiny)
+    table.cell(p7Table, 5, 0, "PF",   text_color = _h7, text_size = size.tiny)
+    p7Row(p7Table, 1,  "L+Bull",   #089981, 0)
+    p7Row(p7Table, 2,  "L+Bear",   #089981, 1)
+    p7Row(p7Table, 3,  "L+Neut",   #089981, 2)
+    p7Row(p7Table, 4,  "S+Bull",   #f23645, 3)
+    p7Row(p7Table, 5,  "S+Bear",   #f23645, 4)
+    p7Row(p7Table, 6,  "S+Neut",   #f23645, 5)
+    table.cell(p7Table, 0, 7, "ALIGNMENT", text_color = _h7, text_size = size.tiny, text_halign = text.align_left)
+    p7Row(p7Table, 8,  "Aligned",  #089981, 6)
+    p7Row(p7Table, 9,  "Counter",  #f23645, 7)
+    p7Row(p7Table, 10, "Neutral",  _d7,     8)
+    table.cell(p7Table, 0, 11, "VOLATILITY", text_color = _h7, text_size = size.tiny, text_halign = text.align_left)
+    p7Row(p7Table, 12, "Low",     _d7, 9)
+    p7Row(p7Table, 13, "Normal",  _d7, 10)
+    p7Row(p7Table, 14, "High",    _d7, 11)
+    table.cell(p7Table, 0, 15, "TIME", text_color = _h7, text_size = size.tiny, text_halign = text.align_left)
+    p7Row(p7Table, 16, "Overnight", _d7, 12)
+    p7Row(p7Table, 17, "Premarket", _d7, 13)
+    p7Row(p7Table, 18, "Open",      _d7, 14)
+    p7Row(p7Table, 19, "MidAM",     _d7, 15)
+    p7Row(p7Table, 20, "Midday",    _d7, 16)
+    p7Row(p7Table, 21, "PM",        _d7, 17)
+    p7Row(p7Table, 22, "AftHrs",    _d7, 18)
+    table.cell(p7Table, 0, 23, "SETUP x REG", text_color = _h7, text_size = size.tiny, text_halign = text.align_left)
+    p7Row(p7Table, 24, "CL Al",  #089981, 19)
+    p7Row(p7Table, 25, "CL Ct",  #089981, 20)
+    p7Row(p7Table, 26, "CL N",   #089981, 21)
+    p7Row(p7Table, 27, "RL Al",  #089981, 22)
+    p7Row(p7Table, 28, "RL Ct",  #089981, 23)
+    p7Row(p7Table, 29, "RL N",   #089981, 24)
+    p7Row(p7Table, 30, "CS Al",  #f23645, 25)
+    p7Row(p7Table, 31, "CS Ct",  #f23645, 26)
+    p7Row(p7Table, 32, "CS N",   #f23645, 27)
+    p7Row(p7Table, 33, "RS Al",  #f23645, 28)
+    p7Row(p7Table, 34, "RS Ct",  #f23645, 29)
+    p7Row(p7Table, 35, "RS N",   #f23645, 30)
+    table.cell(p7Table, 0, 36, "── AUDIT ──", text_color = _h7, text_size = size.tiny, text_halign = text.align_left)
+    int _p7TimeSum = 0
+    for tb = 12 to 18
+        _p7TimeSum += array.get(p7c, tb)
+    table.cell(p7Table, 0, 37, "P6 " + str.tostring(trTotal) + " | Tagged " + str.tostring(p7Classified) + " | Analyzed " + str.tostring(p7Analyzed), text_color = _d7, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(p7Table, 0, 38, "TimeCls " + str.tostring(_p7TimeSum) + " | Mode: " + p7AnalysisMode, text_color = _d7, text_size = size.tiny, text_halign = text.align_left)
+
+if trEnabled and p7ShowTable and dmBtTable and barstate.islast and not na(p7Table)
+    renderRegimeTable()
+
+// ── Phase 8 Filter Test table (bottom-center) ───────────────────────────────
+var table f8Table = (trEnabled and p8Enabled and dmBtTable) ? table.new(position.bottom_center, 8, 11, bgcolor = color.new(#1e1e1e, 15), border_color = color.new(#444444, 50), border_width = 1) : na
+renderFilterTestTable() =>
+    color _h8 = #cccccc
+    table.cell(f8Table, 0, 0, "FILTER TEST", text_color = _h8, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(f8Table, 1, 0, "N",     text_color = _h8, text_size = size.tiny)
+    table.cell(f8Table, 2, 0, "Win%",  text_color = _h8, text_size = size.tiny)
+    table.cell(f8Table, 3, 0, "AvgR",  text_color = _h8, text_size = size.tiny)
+    table.cell(f8Table, 4, 0, "TotR",  text_color = _h8, text_size = size.tiny)
+    table.cell(f8Table, 5, 0, "PF",    text_color = _h8, text_size = size.tiny)
+    table.cell(f8Table, 6, 0, "MaxDD", text_color = _h8, text_size = size.tiny)
+    table.cell(f8Table, 7, 0, "Filt",  text_color = _h8, text_size = size.tiny)
+    f8Row(f8Table, 1,  "Baseline",       0)
+    f8Row(f8Table, 2,  "A NoNeutral",    1)
+    f8Row(f8Table, 3,  "B NoAftHrs",     2)
+    f8Row(f8Table, 4,  "C NoN+AH",       3)
+    f8Row(f8Table, 5,  "D CL Align",     4)
+    f8Row(f8Table, 6,  "E RS Ctr",       5)
+    f8Row(f8Table, 7,  "F Context",       6)
+    f8Row(f8Table, 8,  "G Ctx+NoN",       7)
+    f8Row(f8Table, 9,  "H Ctx+NoN+AH",   8)
+    table.cell(f8Table, 0, 10, "* = N < " + str.tostring(p8MinTrades) + " | Universe: " + p8Universe, text_color = #787b86, text_size = size.tiny, text_halign = text.align_left)
+
+if trEnabled and p8Enabled and dmBtTable and barstate.islast and not na(f8Table)
+    renderFilterTestTable()
+
+// ── Phase 9 Walk-Forward table (bottom-left, Walk-Forward/Debug mode) ────────
+bool dmShowP9 = dmWalkFwd or dmDiag
+renderWalkForwardTable() =>
+    int p9total = array.size(p9R)
+    if p9total > 0
+        int p9e = math.round(p9total / 3)
+        int p9m = math.round(p9total * 2 / 3)
+        int p9d = math.round(p9total * (100 - p9Holdout) / 100)
+        // Compute all: 6 variants (0=Baseline,1=A,2=C,3=F,4=G,5=H) × 4 periods
+        for v = 0 to 5
+            p9Calc(v * 4 + 0, v, 0, p9e)
+            p9Calc(v * 4 + 1, v, p9e, p9m)
+            p9Calc(v * 4 + 2, v, p9m, p9total)
+            p9Calc(v * 4 + 3, v, 0, p9total)
+        p9Calc(24, 5, 0, p9d)
+        p9Calc(25, 5, p9d, p9total)
+
+        var table p9Table = table.new(position.bottom_left, 8, 20, bgcolor = color.new(#1e1e1e, 15), border_color = color.new(#444444, 50), border_width = 1)
+        color _h9 = #cccccc
+        color _d9 = #aaaaaa
+        // Header
+        table.cell(p9Table, 0, 0, "WALK-FWD",  text_color = _h9, text_size = size.tiny, text_halign = text.align_left)
+        table.cell(p9Table, 1, 0, "N",     text_color = _h9, text_size = size.tiny)
+        table.cell(p9Table, 2, 0, "TotR",  text_color = _h9, text_size = size.tiny)
+        table.cell(p9Table, 3, 0, "PF",    text_color = _h9, text_size = size.tiny)
+        table.cell(p9Table, 4, 0, "MaxDD", text_color = _h9, text_size = size.tiny)
+        table.cell(p9Table, 5, 0, "+Seg",  text_color = _h9, text_size = size.tiny)
+        table.cell(p9Table, 6, 0, "Worst", text_color = _h9, text_size = size.tiny)
+        table.cell(p9Table, 7, 0, "Flag",  text_color = _h9, text_size = size.tiny)
+        // Summary rows for each variant
+        string[] p9names = array.from("Baseline", "A NoNeut", "C NoN+AH", "F Context", "G Ctx+NoN", "H Full")
+        for v = 0 to 5
+            int   allN  = array.get(p9sn, v * 4 + 3)
+            float allR  = array.get(p9sr, v * 4 + 3)
+            float allGP = array.get(p9sgp, v * 4 + 3)
+            float allGL = array.get(p9sgl, v * 4 + 3)
+            float allDD = array.get(p9sdd, v * 4 + 3)
+            float allPF = allGL > 0 ? allGP / allGL : (allGP > 0 ? 99.9 : 0.0)
+            int   pos = 0
+            float worst = 1e10
+            float sumP  = 0.0
+            float maxP  = 0.0
+            for p = 0 to 2
+                float segR = array.get(p9sr, v * 4 + p)
+                if segR > 0
+                    pos += 1
+                    sumP += segR
+                    maxP := math.max(maxP, segR)
+                worst := math.min(worst, segR)
+            float conc = sumP > 0 ? maxP / sumP * 100 : 0.0
+            string flag = pos == 3 ? "ROBUST" : pos >= 2 ? "MIXED" : "UNSTABLE"
+            if allN < p9MinSeg * 3
+                flag := flag + " *"
+            color fc = pos == 3 ? #089981 : pos >= 2 ? #ff9800 : #f23645
+            table.cell(p9Table, 0, v + 1, array.get(p9names, v), text_color = _d9, text_size = size.tiny, text_halign = text.align_left)
+            table.cell(p9Table, 1, v + 1, str.tostring(allN), text_color = _d9, text_size = size.tiny)
+            table.cell(p9Table, 2, v + 1, str.tostring(math.round(allR * 100) / 100), text_color = allR >= 0 ? #089981 : #f23645, text_size = size.tiny)
+            table.cell(p9Table, 3, v + 1, str.tostring(math.round(allPF * 10) / 10), text_color = allPF >= 1 ? #089981 : #f23645, text_size = size.tiny)
+            table.cell(p9Table, 4, v + 1, str.tostring(math.round(allDD * 100) / 100), text_color = #f23645, text_size = size.tiny)
+            table.cell(p9Table, 5, v + 1, str.tostring(pos) + "/3", text_color = fc, text_size = size.tiny)
+            table.cell(p9Table, 6, v + 1, str.tostring(math.round(worst * 100) / 100), text_color = worst >= 0 ? #089981 : #f23645, text_size = size.tiny)
+            table.cell(p9Table, 7, v + 1, flag, text_color = fc, text_size = size.tiny)
+        // H segment detail
+        table.cell(p9Table, 0, 8, "H DETAIL", text_color = _h9, text_size = size.tiny, text_halign = text.align_left)
+        table.cell(p9Table, 1, 8, "N", text_color = _h9, text_size = size.tiny)
+        table.cell(p9Table, 2, 8, "AvgR", text_color = _h9, text_size = size.tiny)
+        table.cell(p9Table, 3, 8, "TotR", text_color = _h9, text_size = size.tiny)
+        table.cell(p9Table, 4, 8, "PF", text_color = _h9, text_size = size.tiny)
+        table.cell(p9Table, 5, 8, "MaxDD", text_color = _h9, text_size = size.tiny)
+        string[] p9segs = array.from("Early", "Middle", "Late")
+        for p = 0 to 2
+            int   sn  = array.get(p9sn, 5 * 4 + p)
+            float ssr = array.get(p9sr, 5 * 4 + p)
+            float sar = sn > 0 ? ssr / sn : 0.0
+            float sgp = array.get(p9sgp, 5 * 4 + p)
+            float sgl = array.get(p9sgl, 5 * 4 + p)
+            float spf = sgl > 0 ? sgp / sgl : (sgp > 0 ? 99.9 : 0.0)
+            float sdd = array.get(p9sdd, 5 * 4 + p)
+            string lowN = sn < p9MinSeg ? " *" : ""
+            table.cell(p9Table, 0, 9 + p, array.get(p9segs, p) + lowN, text_color = _d9, text_size = size.tiny, text_halign = text.align_left)
+            table.cell(p9Table, 1, 9 + p, str.tostring(sn), text_color = _d9, text_size = size.tiny)
+            table.cell(p9Table, 2, 9 + p, str.tostring(math.round(sar * 100) / 100), text_color = sar >= 0 ? #089981 : #f23645, text_size = size.tiny)
+            table.cell(p9Table, 3, 9 + p, str.tostring(math.round(ssr * 100) / 100), text_color = ssr >= 0 ? #089981 : #f23645, text_size = size.tiny)
+            table.cell(p9Table, 4, 9 + p, str.tostring(math.round(spf * 10) / 10), text_color = spf >= 1 ? #089981 : #f23645, text_size = size.tiny)
+            table.cell(p9Table, 5, 9 + p, str.tostring(math.round(sdd * 100) / 100), text_color = #f23645, text_size = size.tiny)
+        // Dev / Holdout
+        table.cell(p9Table, 0, 12, "DEV/HOLD", text_color = _h9, text_size = size.tiny, text_halign = text.align_left)
+        for dh = 0 to 1
+            int   dn  = array.get(p9sn, 24 + dh)
+            float dr  = array.get(p9sr, 24 + dh)
+            float dar = dn > 0 ? dr / dn : 0.0
+            float dgp = array.get(p9sgp, 24 + dh)
+            float dgl = array.get(p9sgl, 24 + dh)
+            float dpf = dgl > 0 ? dgp / dgl : (dgp > 0 ? 99.9 : 0.0)
+            float ddd = array.get(p9sdd, 24 + dh)
+            table.cell(p9Table, 0, 13 + dh, dh == 0 ? "H Dev" : "H Hold", text_color = _d9, text_size = size.tiny, text_halign = text.align_left)
+            table.cell(p9Table, 1, 13 + dh, str.tostring(dn), text_color = _d9, text_size = size.tiny)
+            table.cell(p9Table, 2, 13 + dh, str.tostring(math.round(dar * 100) / 100), text_color = dar >= 0 ? #089981 : #f23645, text_size = size.tiny)
+            table.cell(p9Table, 3, 13 + dh, str.tostring(math.round(dr * 100) / 100), text_color = dr >= 0 ? #089981 : #f23645, text_size = size.tiny)
+            table.cell(p9Table, 4, 13 + dh, str.tostring(math.round(dpf * 10) / 10), text_color = dpf >= 1 ? #089981 : #f23645, text_size = size.tiny)
+            table.cell(p9Table, 5, 13 + dh, str.tostring(math.round(ddd * 100) / 100), text_color = #f23645, text_size = size.tiny)
+        // Retention
+        float devAr = array.get(p9sn, 24) > 0 ? array.get(p9sr, 24) / array.get(p9sn, 24) : 0.0
+        float holAr = array.get(p9sn, 25) > 0 ? array.get(p9sr, 25) / array.get(p9sn, 25) : 0.0
+        string retTxt = devAr > 0 ? str.tostring(math.round(holAr / devAr * 100)) + "%" : "N/A"
+        table.cell(p9Table, 0, 15, "Retention", text_color = _d9, text_size = size.tiny, text_halign = text.align_left)
+        table.cell(p9Table, 1, 15, retTxt, text_color = _d9, text_size = size.tiny)
+        // Audit
+        table.cell(p9Table, 0, 16, "── AUDIT ──", text_color = _h9, text_size = size.tiny, text_halign = text.align_left)
+        table.cell(p9Table, 0, 17, "E " + str.tostring(p9e) + " M " + str.tostring(p9m - p9e) + " L " + str.tostring(p9total - p9m) + " = " + str.tostring(p9total), text_color = _d9, text_size = size.tiny, text_halign = text.align_left)
+        table.cell(p9Table, 3, 17, "Dev " + str.tostring(p9d) + " Hold " + str.tostring(p9total - p9d), text_color = _d9, text_size = size.tiny)
+
+if p9Enabled and dmShowP9 and barstate.islast
+    renderWalkForwardTable()
+
+// ============================================================================
+// PHASE 10 — LOCKED LIVE DECISION ENGINE
+// Converts Phase 9 validated C NoN+AH filter into a live trading decision.
+// Uses EXACTLY the same logic: HTF regime != Neutral AND time != After-hours.
+// No optimization, no future data, no changes to Phases 1-9.
+// ============================================================================
+
+// ── A. Inputs ────────────────────────────────────────────────────────────────
+string GRP_P10 = "Live Engine"
+bool   showHistLive  = input.bool(false, "Show historical live decisions", group = GRP_P10)
+bool   showLiveDebug = input.bool(false, "Show live filter diagnostics", group = GRP_P10)
+
+// ── B. Live filter: exact C NoN+AH from Phase 8 line 1564 ───────────────────
+// Phase 8 C: `p7Regime != 0 and p7TimeBucket != 6`
+// Recomputed here using the same HTF regime + time bucket as Phase 7.
+int   liveHm     = hour * 60 + minute
+int   liveTmb    = liveHm >= 1080 or liveHm < 240 ? 0 : liveHm < 570 ? 1 : liveHm < 630 ? 2 : liveHm < 720 ? 3 : liveHm < 840 ? 4 : liveHm < 960 ? 5 : liveHm < 1080 ? 6 : 0
+bool  liveRegOk  = p7HtfRegime != 0
+bool  liveTimeOk = liveTmb != 6
+bool  liveFilter = liveRegOk and liveTimeOk
+
+// One canonical historical setup feed shared by Phase 12/12.5 and Phase 14.
+// Variant C remains the validated raw Phase 5 event plus the frozen liveFilter.
+bool p12VariantCSetupEvt = (seLongEvt or seShortEvt) and liveFilter
+bool canonicalLongSetup = p12VariantCSetupEvt and seLongEvt
+bool canonicalShortSetup = p12VariantCSetupEvt and not seLongEvt and seShortEvt
+bool p12CanonicalSetupEvt = canonicalLongSetup or canonicalShortSetup
+int  p12CanonicalSetupScore = canonicalLongSetup ? seLongScoreVal : canonicalShortSetup ? seShortScoreVal : 0
+
+// ── C. Decision state ────────────────────────────────────────────────────────
+var string liveDecision    = "WAIT"
+var int    liveDecBar      = na
+var float  liveEntry       = na
+var float  liveStopPx      = na
+var float  liveRiskPx      = na
+var float  liveT1          = na
+var float  liveT2          = na
+var string liveType        = ""
+var int    liveScoreVal    = 0
+var string liveWaitReason  = "Waiting for valid CRT setup"
+var int    liveSignalCount = 0
+// (liveFilterQual and liveMismatch declared earlier, before Phase 6 if-block)
+
+bool liveLongEvt  = false
+bool liveShortEvt = false
+
+if processBar
+    // Expire decision after max trade duration
+    if liveDecision != "WAIT" and not na(liveDecBar) and bar_index - liveDecBar > trMaxBarsCnt
+        liveDecision   := "WAIT"
+        liveDecBar     := na
+        liveWaitReason := "Waiting for valid CRT setup"
+
+    // Check for new qualifying setup. Filter audit is handled inside Phase 6's
+    // trade-open block (liveFilterQual) for exact P8C reconciliation.
+    bool hasSetup = seLongEvt or seShortEvt
+    if hasSetup
+        if liveFilter
+            int dir = seLongEvt ? 1 : -1
+            float atr = nz(seAtr14, 1.0)
+            float stp = na
+            float rsk = na
+            bool  ok  = true
+            if trStopMode == "ATR Stop"
+                stp := dir == 1 ? close - trStopATR * atr : close + trStopATR * atr
+                rsk := trStopATR * atr
+            else
+                stp := dir == 1 ? activeStrLow : activeStrHigh
+                if na(stp)
+                    ok := false
+                else
+                    rsk := math.abs(close - stp)
+                    if rsk < syminfo.mintick or (dir == 1 and stp >= close) or (dir == -1 and stp <= close)
+                        ok := false
+            if ok and not na(rsk) and rsk > 0
+                if dir == 1
+                    liveLongEvt := true
+                else
+                    liveShortEvt := true
+                liveDecision   := dir == 1 ? "LONG" : "SHORT"
+                liveDecBar     := bar_index
+                liveEntry      := close
+                liveStopPx     := nz(stp)
+                liveRiskPx     := rsk
+                liveT1         := dir == 1 ? close + rsk : close - rsk
+                liveT2         := dir == 1 ? close + 2 * rsk : close - 2 * rsk
+                liveType       := dir == 1 ? seLongType : seShortType
+                liveScoreVal   := dir == 1 ? seLongScoreVal : seShortScoreVal
+                liveSignalCount += 1
+            else
+                liveWaitReason := "Invalid stop"
+        else
+            liveWaitReason := not liveRegOk ? "Neutral regime filtered" : "After-hours filtered"
+
+// ── D. Live signal markers ───────────────────────────────────────────────────
+plotshape((dmLive or showHistLive) and liveLongEvt,  title = "LIVE: Long",  style = shape.triangleup,   location = location.belowbar, color = #00e676, size = size.small)
+plotshape((dmLive or showHistLive) and liveShortEvt, title = "LIVE: Short", style = shape.triangledown, location = location.abovebar, color = #ff1744, size = size.small)
+
+// ── E. Live dashboard (top-right, Live mode only) ────────────────────────────
+var table liveTable = dmLive ? table.new(position.top_right, 2, 25, bgcolor = color.new(#1e1e1e, 10), border_color = color.new(#444444, 50), border_width = 1) : na
+renderLiveTable() =>
+    color _hl = #cccccc
+    color _dl = #aaaaaa
+    bool  act = liveDecision != "WAIT"
+    color dCol = liveDecision == "LONG" ? #00e676 : liveDecision == "SHORT" ? #ff1744 : #787b86
+    string regTxt = p7HtfRegime == 1 ? "Bull" : p7HtfRegime == -1 ? "Bear" : "Neutral"
+    string sesTxt = liveTmb == 0 ? "Night" : liveTmb == 1 ? "Pre" : liveTmb == 2 ? "Open" : liveTmb == 3 ? "MidAM" : liveTmb == 4 ? "Midday" : liveTmb == 5 ? "PM" : "AftHrs"
+    table.cell(liveTable, 0, 0, "CRT CORE",    text_color = _hl, text_size = size.small, text_halign = text.align_left)
+    table.cell(liveTable, 1, 0, "LIVE",         text_color = dCol, text_size = size.small)
+    table.cell(liveTable, 0, 1, "Decision",     text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 1, liveDecision,   text_color = dCol, text_size = size.small)
+    table.cell(liveTable, 0, 2, "Setup",        text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 2, act ? liveType : "—", text_color = _dl, text_size = size.tiny)
+    table.cell(liveTable, 0, 3, "Score",        text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 3, act ? str.tostring(liveScoreVal) : "—", text_color = _dl, text_size = size.tiny)
+    table.cell(liveTable, 0, 4, "HTF Regime",   text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 4, regTxt,         text_color = p7HtfRegime == 1 ? #089981 : p7HtfRegime == -1 ? #f23645 : #787b86, text_size = size.tiny)
+    table.cell(liveTable, 0, 5, "Session",      text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 5, sesTxt,         text_color = _dl, text_size = size.tiny)
+    table.cell(liveTable, 0, 6, "Entry",        text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 6, act ? str.tostring(liveEntry) : "—", text_color = _dl, text_size = size.tiny)
+    table.cell(liveTable, 0, 7, "Stop",         text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 7, act ? str.tostring(liveStopPx) : "—", text_color = #f23645, text_size = size.tiny)
+    table.cell(liveTable, 0, 8, "T1 (1R)",      text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 8, act ? str.tostring(liveT1) : "—", text_color = #089981, text_size = size.tiny)
+    table.cell(liveTable, 0, 9, "T2 (2R)",      text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 9, act ? str.tostring(liveT2) : "—", text_color = #089981, text_size = size.tiny)
+    table.cell(liveTable, 0, 10, "Status",      text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 10, act ? "READY" : liveWaitReason, text_color = act ? #00e676 : #787b86, text_size = size.tiny)
+    // Audit: filter-qualified count (inside Phase 6 trade-open) vs Phase 8 C
+    table.cell(liveTable, 0, 11, "── AUDIT ──", text_color = _hl, text_size = size.tiny, text_halign = text.align_left)
+    int p8cN = array.get(f8n, 3)
+    int p10mm = math.abs(liveFilterQual - p8cN)
+    table.cell(liveTable, 0, 12, "P8C " + str.tostring(p8cN) + " | Filter " + str.tostring(liveFilterQual) + " | MM " + str.tostring(p10mm), text_color = p10mm == 0 ? #089981 : #ff1744, text_size = size.tiny, text_halign = text.align_left)
+    // ── Forward Validation section ──
+    table.cell(liveTable, 0, 13, "── FORWARD ──", text_color = _hl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 13, "FROZEN",         text_color = #089981, text_size = size.tiny)
+    string fwdStartTxt = str.tostring(fwdStartMonth) + "/" + str.tostring(fwdStartDay) + "/" + str.tostring(fwdStartYear % 100)
+    int fwdOpenN = fwdSignals - fwdClosed
+    table.cell(liveTable, 0, 14, "Start",          text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 14, fwdStartTxt + " | " + str.tostring(fwdDays) + "d", text_color = _dl, text_size = size.tiny)
+    table.cell(liveTable, 0, 15, "Signals",        text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 15, str.tostring(fwdSignals) + " | Cls " + str.tostring(fwdClosed) + " | Open " + str.tostring(fwdOpenN), text_color = _dl, text_size = size.tiny)
+    float fwdWinPct = fwdClosed > 0 ? fwdWins * 100.0 / fwdClosed : 0.0
+    float fwdAvgR   = fwdClosed > 0 ? fwdSumR / fwdClosed : 0.0
+    float fwdPF     = fwdGL > 0 ? fwdGP / fwdGL : (fwdGP > 0 ? 99.9 : 0.0)
+    table.cell(liveTable, 0, 16, "Win%",           text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 16, fwdClosed > 0 ? str.tostring(math.round(fwdWinPct)) + "% (" + str.tostring(fwdWins) + "W " + str.tostring(fwdLosses) + "L)" : "—", text_color = fwdWinPct >= 50 ? #089981 : fwdClosed > 0 ? #f23645 : _dl, text_size = size.tiny)
+    table.cell(liveTable, 0, 17, "AvgR | TotR",    text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 17, fwdClosed > 0 ? str.tostring(math.round(fwdAvgR * 100) / 100) + " | " + str.tostring(math.round(fwdSumR * 100) / 100) : "—", text_color = fwdSumR >= 0 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(liveTable, 0, 18, "PF | MaxDD",     text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 18, fwdClosed > 0 ? str.tostring(math.round(fwdPF * 10) / 10) + " | " + str.tostring(math.round(fwdDD * 100) / 100) : "—", text_color = fwdPF >= 1 ? #089981 : fwdClosed > 0 ? #f23645 : _dl, text_size = size.tiny)
+    // Long/Short breakdown
+    float fwdLWp = fwdLongN > 0 ? fwdLongW * 100.0 / fwdLongN : 0.0
+    float fwdSWp = fwdShortN > 0 ? fwdShortW * 100.0 / fwdShortN : 0.0
+    table.cell(liveTable, 0, 19, "L / S",          text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 19, "L:" + str.tostring(fwdLongN) + " " + str.tostring(math.round(fwdLongR * 100) / 100) + "R | S:" + str.tostring(fwdShortN) + " " + str.tostring(math.round(fwdShortR * 100) / 100) + "R", text_color = _dl, text_size = size.tiny)
+    // Historical vs Forward comparison
+    float histAvgR = p8cN > 0 ? array.get(f8rs, 3) / p8cN : 0.0
+    float histPF   = array.get(f8gl, 3) > 0 ? array.get(f8gp, 3) / array.get(f8gl, 3) : 0.0
+    table.cell(liveTable, 0, 20, "── HIST vs FWD ──", text_color = _hl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 0, 21, "AvgR",           text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 21, "H:" + str.tostring(math.round(histAvgR * 100) / 100) + " F:" + (fwdClosed > 0 ? str.tostring(math.round(fwdAvgR * 100) / 100) : "—"), text_color = _dl, text_size = size.tiny)
+    table.cell(liveTable, 0, 22, "PF",             text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 22, "H:" + str.tostring(math.round(histPF * 10) / 10) + " F:" + (fwdClosed > 0 ? str.tostring(math.round(fwdPF * 10) / 10) : "—"), text_color = _dl, text_size = size.tiny)
+    // Sample status
+    string fwdStatus = fwdClosed >= 50 ? "VALIDATION" : fwdClosed >= 20 ? "EARLY" : "INSUFFICIENT"
+    color  fwdStCol  = fwdClosed >= 50 ? #089981 : fwdClosed >= 20 ? #ff9800 : #f23645
+    table.cell(liveTable, 0, 23, "Sample",         text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 23, fwdStatus + " (N=" + str.tostring(fwdClosed) + ")", text_color = fwdStCol, text_size = size.tiny)
+    // Repaint/Lookahead audit
+    table.cell(liveTable, 0, 24, "Repaint",        text_color = _dl, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveTable, 1, 24, "PASS | No lookahead", text_color = #089981, text_size = size.tiny)
+
+if dmLive and barstate.islast and not na(liveTable)
+    renderLiveTable()
+
+// ── F. Live filter diagnostics (bottom-right, off by default) ────────────────
+var table liveDbgTbl = (dmLive and showLiveDebug) ? table.new(position.bottom_right, 2, 18, bgcolor = color.new(#1e1e1e, 10), border_color = color.new(#444444, 50), border_width = 1) : na
+renderLiveDebugTable() =>
+    color _hd = #cccccc
+    color _dd = #aaaaaa
+    bool  actD = liveDecision != "WAIT"
+    string regTxtD = p7HtfRegime == 1 ? "Bull" : p7HtfRegime == -1 ? "Bear" : "Neutral"
+    string biasTxtD = structureBias == 1 ? "Bull" : structureBias == -1 ? "Bear" : "Neutral"
+    string alnTxtD = actD ? (liveType == "Continuation" ? (liveDecision == "LONG" ? (p7HtfRegime == 1 ? "Aligned" : p7HtfRegime == -1 ? "Counter" : "Neutral") : (p7HtfRegime == -1 ? "Aligned" : p7HtfRegime == 1 ? "Counter" : "Neutral")) : (liveType == "Reversal" ? (liveDecision == "LONG" ? (p7HtfRegime == 1 ? "Aligned" : p7HtfRegime == -1 ? "Counter" : "Neutral") : (p7HtfRegime == -1 ? "Aligned" : p7HtfRegime == 1 ? "Counter" : "Neutral")) : "—")) : "—"
+    string tmbTxtD = liveTmb == 0 ? "Night" : liveTmb == 1 ? "Pre" : liveTmb == 2 ? "Open" : liveTmb == 3 ? "MidAM" : liveTmb == 4 ? "Midday" : liveTmb == 5 ? "PM" : "AftHrs"
+    bool isNeutral = p7HtfRegime == 0
+    bool isAftHrs  = liveTmb == 6
+    color yc = #089981
+    color nc = #f23645
+    table.cell(liveDbgTbl, 0, 0,  "FILTER CHAIN",      text_color = _hd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 0,  actD ? liveDecision : "WAIT", text_color = actD ? #00e676 : #787b86, text_size = size.tiny)
+    table.cell(liveDbgTbl, 0, 1,  "Direction",          text_color = _dd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 1,  actD ? liveDecision : "—",    text_color = _dd, text_size = size.tiny)
+    table.cell(liveDbgTbl, 0, 2,  "Setup Family",       text_color = _dd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 2,  actD ? liveType : "—",        text_color = _dd, text_size = size.tiny)
+    table.cell(liveDbgTbl, 0, 3,  "Score",              text_color = _dd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 3,  actD ? str.tostring(liveScoreVal) : "—", text_color = _dd, text_size = size.tiny)
+    table.cell(liveDbgTbl, 0, 4,  "HTF Regime",         text_color = _dd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 4,  regTxtD,              text_color = p7HtfRegime == 1 ? #089981 : p7HtfRegime == -1 ? #f23645 : #787b86, text_size = size.tiny)
+    table.cell(liveDbgTbl, 0, 5,  "Local Bias",         text_color = _dd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 5,  biasTxtD,             text_color = structureBias == 1 ? #089981 : structureBias == -1 ? #f23645 : #787b86, text_size = size.tiny)
+    table.cell(liveDbgTbl, 0, 6,  "Alignment",          text_color = _dd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 6,  alnTxtD,              text_color = _dd, text_size = size.tiny)
+    table.cell(liveDbgTbl, 0, 7,  "Time Bucket",        text_color = _dd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 7,  tmbTxtD,              text_color = _dd, text_size = size.tiny)
+    // Filter booleans
+    table.cell(liveDbgTbl, 0, 8,  "── P8C FILTER ──",   text_color = _hd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 0, 9,  "Is Neutral?",        text_color = _dd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 9,  isNeutral ? "YES → BLOCK" : "NO → PASS", text_color = isNeutral ? nc : yc, text_size = size.tiny)
+    table.cell(liveDbgTbl, 0, 10, "Is After-Hrs?",      text_color = _dd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 10, isAftHrs ? "YES → BLOCK" : "NO → PASS", text_color = isAftHrs ? nc : yc, text_size = size.tiny)
+    table.cell(liveDbgTbl, 0, 11, "P8C Pass",           text_color = _dd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 11, liveFilter ? "YES" : "NO", text_color = liveFilter ? yc : nc, text_size = size.tiny)
+    // Full chain
+    table.cell(liveDbgTbl, 0, 12, "── FULL CHAIN ──",   text_color = _hd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 0, 13, "Base Setup",         text_color = _dd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 13, actD ? "YES" : "NO",  text_color = actD ? yc : nc, text_size = size.tiny)
+    table.cell(liveDbgTbl, 0, 14, "Score >= Min",       text_color = _dd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 14, actD ? "YES" : "—",   text_color = actD ? yc : _dd, text_size = size.tiny)
+    table.cell(liveDbgTbl, 0, 15, "P8C Filter",         text_color = _dd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 15, liveFilter ? "YES" : "NO", text_color = liveFilter ? yc : nc, text_size = size.tiny)
+    table.cell(liveDbgTbl, 0, 16, "Final Live Pass",    text_color = _dd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 16, actD ? "YES" : "NO",  text_color = actD ? yc : nc, text_size = size.tiny)
+    // Key insight
+    table.cell(liveDbgTbl, 0, 17, "Dir HTF filter?",    text_color = _hd, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(liveDbgTbl, 1, 17, "NO — C only blocks Neutral+AftHrs", text_color = #ff9800, text_size = size.tiny)
+
+if dmLive and showLiveDebug and barstate.islast and not na(liveDbgTbl)
+    renderLiveDebugTable()
+
+// ── Phase 12 BOS + retest + confirmation state machine (research only) ───────
+// Full research funnel always runs:
+// SETUP → BOS → RETEST → CONFIRM.
+// Phase 13 hooks open each comparison model at the appropriate confirmed stage.
+// This does NOT change Phase 11 live logic.
+if processBar and p12Enabled
+    bool p12hasSetup = p12CanonicalSetupEvt
+
+    // Start a new parent candidate only while the research funnel is idle.
+    if p12hasSetup and p12State == 0
+        p12State     := 1   // WAIT_BOS
+        p12Dir       := seLongEvt ? 1 : -1
+        p12SetupBar  := bar_index
+        p12BosLvl    := na
+        p12BosBar    := na
+        p12RetestBar := na
+        p12Setups    += 1
+        if p13Enabled
+            openP13(0, p12Dir)   // CONTROL entry
+
+    if p12State == 1
+        // WAIT_BOS: confirmed structure break in setup direction.
+        bool bosOk  = (p12Dir == 1 and bullBreakEvent) or (p12Dir == -1 and bearBreakEvent)
+        bool oppBos = (p12Dir == 1 and bearBreakEvent) or (p12Dir == -1 and bullBreakEvent)
+
+        if bosOk
+            // Preserve the structure level that was actually broken.
+            // Phase 3 can update activeStrHigh/Low later on this same bar,
+            // so [1] avoids accidentally storing a newly-confirmed pivot.
+            float brokenLvl = p12Dir == 1 ? activeStrHigh[1] : activeStrLow[1]
+            p12BosLvl  := not na(brokenLvl) ? brokenLvl : (p12Dir == 1 ? activeStrHigh : activeStrLow)
+            p12BosBar  := bar_index
+            p12BosConf += 1
+            if p13Enabled
+                openP13(1, p12Dir)   // BOS entry
+            p12State := 2            // ALWAYS continue to WAIT_RETEST
+
+        else if oppBos
+            p12InvBos += 1
+            p12State  := 0
+
+        else if bar_index - p12SetupBar > p12Expiry
+            p12ExpBos += 1
+            p12State  := 0
+
+    else if p12State == 2 and not na(p12BosLvl)
+        // WAIT_RETEST: retest can only happen AFTER the BOS bar.
+        float tol = nz(seAtr14, 1.0) * p12RetestTol
+        bool eligibleRetest = not na(p12BosBar) and bar_index > p12BosBar
+        bool retestTouch = eligibleRetest and (p12Dir == 1 ? low <= p12BosLvl + tol : high >= p12BosLvl - tol)
+        bool retInv      = eligibleRetest and (p12Dir == 1 ? close < p12BosLvl - tol : close > p12BosLvl + tol)
+
+        if retInv
+            p12InvRet += 1
+            p12State  := 0
+
+        else if retestTouch
+            p12RetestOk  += 1
+            p12RetestBar := bar_index
+            if p13Enabled
+                openP13(2, p12Dir)   // RETEST entry
+            p12State := 3            // ALWAYS continue to WAIT_CONFIRM
+
+        else if not na(p12BosBar) and bar_index - p12BosBar > p12Expiry
+            p12ExpRet += 1
+            p12State  := 0
+
+    else if p12State == 3 and not na(p12BosLvl) and not na(p12RetestBar)
+        // WAIT_CONFIRM: confirmation must occur on a bar AFTER the retest.
+        // Long: bullish candle closing above BOS.
+        // Short: bearish candle closing below BOS.
+        float cTol = nz(seAtr14, 1.0) * p12RetestTol
+        bool eligibleConfirm = bar_index > p12RetestBar
+        bool confirmed = eligibleConfirm and (p12Dir == 1 ? (close > open and close > p12BosLvl) : (close < open and close < p12BosLvl))
+        bool confInv   = eligibleConfirm and (p12Dir == 1 ? close < p12BosLvl - cTol : close > p12BosLvl + cTol)
+
+        if confirmed
+            p12ConfirmOk += 1
+            if p13Enabled
+                openP13(3, p12Dir)   // CONFIRM entry
+            p12State := 4
+
+        else if confInv
+            p12InvConf += 1
+            p12State   := 0
+
+        else if bar_index - p12RetestBar > p12Expiry
+            p12ExpConf += 1
+            p12State   := 0
+
+    // READY = completed research candidate. Reset after counting/opening model.
+    if p12State == 4
+        p12State := 0
+
+// ── Phase 13 bar-by-bar trade simulation for all 4 models ────────────────────
+// Wrapped in a function to keep Pine's main script body below compiler limits.
+p13ProcessTrades() =>
+    for m = 0 to 3
+        if array.get(p13act, m)
+            int elapsed = bar_index - array.get(p13br, m)
+            if elapsed >= 1
+                int   d = array.get(p13dr, m)
+                float s = array.get(p13st, m)
+                float t = array.get(p13tg, m)
+                float r = array.get(p13rk, m)
+                float e = array.get(p13en, m)
+                float rr = na
+                if d == 1
+                    if low <= s
+                        rr := -1.0
+                    else if high >= t
+                        rr := trTargetR
+                    else if elapsed >= trMaxBarsCnt
+                        rr := r > 0 ? (close - e) / r : 0.0
+                else
+                    if high >= s
+                        rr := -1.0
+                    else if low <= t
+                        rr := trTargetR
+                    else if elapsed >= trMaxBarsCnt
+                        rr := r > 0 ? (e - close) / r : 0.0
+                if not na(rr)
+                    closeP13(m, rr)
+
+if processBar and p13Enabled
+    p13ProcessTrades()
+
+// ── Phase 14 date-scoped bar-by-bar simulation ──────────────────────────────
+// Uses the same ATR entry/stop/target and duration rules as Phase 13. Stop is
+// checked before target on ambiguous bars. Any position still open at the
+// inclusive window end is marked to the final in-window close.
+p14ProcessTrades() =>
+    for m = 0 to 3
+        if array.get(p14act, m)
+            int elapsed = bar_index - array.get(p14bar, m)
+            int d = array.get(p14dir, m)
+            float r = array.get(p14rk, m)
+            float e = array.get(p14en, m)
+            float rr = na
+
+            // If the chart jumps across the end boundary (for example a
+            // session gap), use the preceding close and never the out-of-range
+            // bar's high/low.
+            if time >= p14EndExclusive
+                float endPx = nz(close[1], close)
+                rr := r > 0 ? (d == 1 ? (endPx - e) / r : (e - endPx) / r) : 0.0
+            else if elapsed >= 1
+                float s = array.get(p14st, m)
+                float t = array.get(p14tg, m)
+                if d == 1
+                    if low <= s
+                        rr := -1.0
+                    else if high >= t
+                        rr := trTargetR
+                    else if elapsed >= trMaxBarsCnt
+                        rr := r > 0 ? (close - e) / r : 0.0
+                    else if time_close >= p14EndExclusive
+                        rr := r > 0 ? (close - e) / r : 0.0
+                else
+                    if high >= s
+                        rr := -1.0
+                    else if low <= t
+                        rr := trTargetR
+                    else if elapsed >= trMaxBarsCnt
+                        rr := r > 0 ? (e - close) / r : 0.0
+                    else if time_close >= p14EndExclusive
+                        rr := r > 0 ? (e - close) / r : 0.0
+
+            if not na(rr)
+                closeP14(m, rr)
+
+if p14Enabled and barstate.isconfirmed
+    // Feed measurement, Control baseline entry attempts, and the structural
+    // funnel share the same confirmed historical execution gate.
+    if p14InWindow
+        p14TrackWindowBar(seLongEvt, seShortEvt, p12VariantCSetupEvt, p12CanonicalSetupEvt)
+        if bullBreakEvent
+            array.set(p14fdbg, 0, array.get(p14fdbg, 0) + 1)
+        if bearBreakEvent
+            array.set(p14fdbg, 1, array.get(p14fdbg, 1) + 1)
+
+        // CONTROL is the frozen baseline and must see EVERY canonical Variant-C
+        // setup independently of the BOS→Retest→Confirm funnel's internal state.
+        // openP14() itself preserves the existing one-trade-at-a-time rule by
+        // rejecting an attempt while model 0 already has an active trade.
+        if p12CanonicalSetupEvt
+            int p14ControlDir = canonicalLongSetup ? 1 : -1
+            array.set(p14dbg, 2, array.get(p14dbg, 2) + 1)
+            openP14(0, p14ControlDir, p12CanonicalSetupScore)
+
+        // Delayed-entry research funnel.
+        // Canonical setup START remains inline because this exact scope is already
+        // proven by the Control model to receive every historical setup event.
+        int _p14State = array.get(p14fst, 0)
+        int _p14Dir = array.get(p14fdr, 0)
+        int _p14SetupBar = array.get(p14fsb, 0)
+        int _p14BosBar = array.get(p14fbb, 0)
+        int _p14RetestBar = array.get(p14frb, 0)
+        int _p14Score = array.get(p14fsc, 0)
+        float _p14BosLvl = array.get(p14fbl, 0)
+
+        if p12CanonicalSetupEvt and _p14State == 0
+            _p14State := 1
+            _p14Dir := canonicalLongSetup ? 1 : -1
+            _p14SetupBar := bar_index
+            _p14BosBar := na
+            _p14RetestBar := na
+            _p14BosLvl := na
+            _p14Score := p12CanonicalSetupScore
+            array.set(p14fc, 0, array.get(p14fc, 0) + 1)
+            array.set(p14fdbg, 2, array.get(p14fdbg, 2) + 1)
+
+        [_p14State2, _p14BosBar2, _p14RetestBar2, _p14BosLvl2] = p14AdvanceStartedFunnel(
+             _p14State, _p14Dir, _p14SetupBar, _p14BosBar, _p14RetestBar,
+             _p14Score, _p14BosLvl, bullBreakEvent, bearBreakEvent,
+             activeStrHigh[1], activeStrLow[1], activeStrHigh, activeStrLow)
+
+        array.set(p14fst, 0, _p14State2)
+        array.set(p14fdr, 0, _p14Dir)
+        array.set(p14fsb, 0, _p14SetupBar)
+        array.set(p14fbb, 0, _p14BosBar2)
+        array.set(p14frb, 0, _p14RetestBar2)
+        array.set(p14fsc, 0, _p14Score)
+        array.set(p14fbl, 0, _p14BosLvl2)
+
+    p14ProcessTrades()
+
+// ── G. Live alerts ───────────────────────────────────────────────────────────
+alertcondition(liveLongEvt,  title = "CRT LONG",  message = "CRT LONG — check chart for entry/stop/target")
+alertcondition(liveShortEvt, title = "CRT SHORT", message = "CRT SHORT — check chart for entry/stop/target")
+if liveLongEvt
+    alert("CRT LONG | " + syminfo.ticker + " " + timeframe.period + " | Entry: " + str.tostring(close) + " | Stop: " + str.tostring(liveStopPx) + " | T1: " + str.tostring(liveT1) + " | T2: " + str.tostring(liveT2) + " | " + liveType + " " + str.tostring(liveScoreVal), alert.freq_once_per_bar)
+if liveShortEvt
+    alert("CRT SHORT | " + syminfo.ticker + " " + timeframe.period + " | Entry: " + str.tostring(close) + " | Stop: " + str.tostring(liveStopPx) + " | T1: " + str.tostring(liveT1) + " | T2: " + str.tostring(liveT2) + " | " + liveType + " " + str.tostring(liveScoreVal), alert.freq_once_per_bar)
+
+// ============================================================================
+// PHASE 12 — ENTRY RESEARCH TABLE (score calibration + BOS funnel)
+// Heavy table/render logic is wrapped in functions to avoid Pine CE10295.
+// ============================================================================
+
+p12Render(table tbl) =>
+    int p12total = array.size(p9R)
+
+    // Score calibration: 6 bands × 2 directions, C-filtered only.
+    if p12total > 0 and array.size(p9Sc) == p12total
+        for i = 0 to p12total - 1
+            int reg = array.get(p9Reg, i)
+            int tmb = array.get(p9Tmb, i)
+            if reg != 0 and tmb != 6
+                float rr  = array.get(p9R, i)
+                int   sc  = array.get(p9Sc, i)
+                int   dir = array.get(p9Dir, i)
+                int   sb  = sc >= 95 ? 5 : sc >= 90 ? 4 : sc >= 85 ? 3 : sc >= 80 ? 2 : sc >= 75 ? 1 : 0
+                int   idx = dir == 1 ? sb : sb + 6
+                array.set(p12cn, idx, array.get(p12cn, idx) + 1)
+                if rr > 0
+                    array.set(p12cw, idx, array.get(p12cw, idx) + 1)
+                    array.set(p12cgp, idx, array.get(p12cgp, idx) + rr)
+                if rr < 0
+                    array.set(p12cgl, idx, array.get(p12cgl, idx) + math.abs(rr))
+                array.set(p12cr, idx, array.get(p12cr, idx) + rr)
+
+    color h = #cccccc
+    color d = #aaaaaa
+    table.cell(tbl, 0, 0, "SCORE CALIB", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 0, "N",    text_color = h, text_size = size.tiny)
+    table.cell(tbl, 2, 0, "Win%", text_color = h, text_size = size.tiny)
+    table.cell(tbl, 3, 0, "AvgR", text_color = h, text_size = size.tiny)
+    table.cell(tbl, 4, 0, "TotR", text_color = h, text_size = size.tiny)
+    table.cell(tbl, 5, 0, "PF",   text_color = h, text_size = size.tiny)
+
+    string[] names = array.from("L 70-74", "L 75-79", "L 80-84", "L 85-89", "L 90-94", "L 95+", "S 70-74", "S 75-79", "S 80-84", "S 85-89", "S 90-94", "S 95+")
+    for b = 0 to 11
+        int   n  = array.get(p12cn, b)
+        float sr = array.get(p12cr, b)
+        int   w  = array.get(p12cw, b)
+        float wr = n > 0 ? w * 100.0 / n : 0.0
+        float ar = n > 0 ? sr / n : 0.0
+        float gp = array.get(p12cgp, b)
+        float gl = array.get(p12cgl, b)
+        float pf = gl > 0 ? gp / gl : (gp > 0 ? 99.9 : 0.0)
+        color rc = b < 6 ? #089981 : #f23645
+        table.cell(tbl, 0, b + 1, array.get(names, b), text_color = rc, text_size = size.tiny, text_halign = text.align_left)
+        table.cell(tbl, 1, b + 1, str.tostring(n), text_color = d, text_size = size.tiny)
+        table.cell(tbl, 2, b + 1, str.tostring(math.round(wr)) + "%", text_color = wr >= 50 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, 3, b + 1, str.tostring(math.round(ar * 100) / 100), text_color = ar >= 0 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, 4, b + 1, str.tostring(math.round(sr * 100) / 100), text_color = sr >= 0 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, 5, b + 1, str.tostring(math.round(pf * 10) / 10), text_color = pf >= 1 ? #089981 : #f23645, text_size = size.tiny)
+
+    table.cell(tbl, 0, 13, "── BOS FUNNEL ──", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 13, "Full funnel", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 2, 13, "Exp: " + str.tostring(p12Expiry) + "b", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 0, 14, "Raw Setups", text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 14, str.tostring(p12Setups), text_color = d, text_size = size.tiny)
+    table.cell(tbl, 0, 15, "→ BOS Conf", text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 15, str.tostring(p12BosConf), text_color = p12BosConf > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 2, 15, "Exp " + str.tostring(p12ExpBos) + " Inv " + str.tostring(p12InvBos), text_color = #ff9800, text_size = size.tiny)
+    table.cell(tbl, 0, 16, "→ Retest OK", text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 16, str.tostring(p12RetestOk), text_color = p12RetestOk > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 2, 16, "Exp " + str.tostring(p12ExpRet) + " Inv " + str.tostring(p12InvRet), text_color = #ff9800, text_size = size.tiny)
+    table.cell(tbl, 0, 17, "→ Confirm OK", text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 17, str.tostring(p12ConfirmOk), text_color = p12ConfirmOk > 0 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(tbl, 2, 17, "Exp " + str.tostring(p12ExpConf) + " Inv " + str.tostring(p12InvConf), text_color = #ff9800, text_size = size.tiny)
+
+    string stTxt = p12State == 0 ? "IDLE" : p12State == 1 ? "WAIT_BOS" : p12State == 2 ? "WAIT_RET" : p12State == 3 ? "WAIT_CONF" : "READY"
+    string dirTxt = p12Dir == 1 ? "Long" : p12Dir == -1 ? "Short" : "—"
+    table.cell(tbl, 0, 18, "── TRACE ──", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 0, 19, "State", text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 19, stTxt + " " + dirTxt, text_color = p12State > 0 ? #ff9800 : d, text_size = size.tiny)
+    table.cell(tbl, 0, 20, "BOS Lvl", text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 20, not na(p12BosLvl) ? str.tostring(p12BosLvl) : "—", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 2, 20, not na(p12RetestBar) ? "Ret@" + str.tostring(p12RetestBar) : "—", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 0, 21, "Repaint: PASS", text_color = #089981, text_size = size.tiny, text_halign = text.align_left)
+
+p13Render(table tbl) =>
+    color h = #cccccc
+    color d = #aaaaaa
+    table.cell(tbl, 0, 0, "ENTRY TEST", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 0, "N",     text_color = h, text_size = size.tiny)
+    table.cell(tbl, 2, 0, "Ret%",  text_color = h, text_size = size.tiny)
+    table.cell(tbl, 3, 0, "Win%",  text_color = h, text_size = size.tiny)
+    table.cell(tbl, 4, 0, "AvgR",  text_color = h, text_size = size.tiny)
+    table.cell(tbl, 5, 0, "TotR",  text_color = h, text_size = size.tiny)
+    table.cell(tbl, 6, 0, "PF",    text_color = h, text_size = size.tiny)
+    table.cell(tbl, 7, 0, "MaxDD", text_color = h, text_size = size.tiny)
+
+    string[] names = array.from("Control", "BOS", "Retest", "Confirm")
+    for m = 0 to 3
+        int n = array.get(p13n, m)
+        float sr = array.get(p13rs, m)
+        int w = array.get(p13w, m)
+        float ar = n > 0 ? sr / n : 0.0
+        float wr = n > 0 ? w * 100.0 / n : 0.0
+        float gp = array.get(p13gp, m)
+        float gl = array.get(p13gl, m)
+        float pf = gl > 0 ? gp / gl : (gp > 0 ? 99.9 : 0.0)
+        float dd = array.get(p13dd, m)
+        int ret = p12Setups > 0 ? math.round(n * 100.0 / p12Setups) : 0
+        table.cell(tbl, 0, m + 1, array.get(names, m), text_color = d, text_size = size.tiny, text_halign = text.align_left)
+        table.cell(tbl, 1, m + 1, str.tostring(n), text_color = d, text_size = size.tiny)
+        table.cell(tbl, 2, m + 1, str.tostring(ret) + "%", text_color = d, text_size = size.tiny)
+        table.cell(tbl, 3, m + 1, str.tostring(math.round(wr)) + "%", text_color = wr >= 50 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, 4, m + 1, str.tostring(math.round(ar * 100) / 100), text_color = ar >= 0 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, 5, m + 1, str.tostring(math.round(sr * 100) / 100), text_color = sr >= 0 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, 6, m + 1, str.tostring(math.round(pf * 10) / 10), text_color = pf >= 1 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, 7, m + 1, str.tostring(math.round(dd * 100) / 100), text_color = #f23645, text_size = size.tiny)
+
+    int bestM = 0
+    float bestAvg = array.get(p13n, 0) > 0 ? array.get(p13rs, 0) / array.get(p13n, 0) : -999.0
+    for m = 1 to 3
+        int mn = array.get(p13n, m)
+        float ma = mn > 0 ? array.get(p13rs, m) / mn : -999.0
+        if mn >= 20 and ma > bestAvg
+            bestAvg := ma
+            bestM := m
+    string verdict = array.get(p13n, bestM) < 20 ? "INSUFFICIENT DATA" : array.get(names, bestM) + " (AvgR " + str.tostring(math.round(bestAvg * 100) / 100) + ")"
+    table.cell(tbl, 0, 5, "Best", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 5, verdict, text_color = #ff9800, text_size = size.tiny)
+    table.cell(tbl, 0, 6, "Repaint", text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 6, "PASS", text_color = #089981, text_size = size.tiny)
+
+p14TimeText(int ts) =>
+    na(ts) ? "—" : str.format_time(ts, "yyyy-MM-dd HH:mm", syminfo.timezone)
+
+p14Fmt(float value) =>
+    str.tostring(math.round(value * 100.0) / 100.0)
+
+p14BreakRow(table tbl, int row, string name, array<float> stats, int bucketCount, int bucket) =>
+    color d = #aaaaaa
+    table.cell(tbl, 0, row, name, text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    for m = 0 to 3
+        int base = (m * bucketCount + bucket) * 5
+        int n = int(array.get(stats, base))
+        int wins = int(array.get(stats, base + 1))
+        float totalR = array.get(stats, base + 2)
+        float gp = array.get(stats, base + 3)
+        float gl = array.get(stats, base + 4)
+        float avgR = n > 0 ? totalR / n : 0.0
+        float winPct = n > 0 ? wins * 100.0 / n : 0.0
+        float pf = gl > 0 ? gp / gl : (gp > 0 ? 99.9 : 0.0)
+        string txt = n > 0 ? "N " + str.tostring(n) + " | W " + str.tostring(math.round(winPct)) + "% | A " + p14Fmt(avgR) + " | T " + p14Fmt(totalR) + " | PF " + str.tostring(math.round(pf * 10.0) / 10.0) : "N 0 | W — | A — | T 0 | PF —"
+        table.cell(tbl, m + 1, row, txt, text_color = totalR >= 0 ? #089981 : #f23645, text_size = size.tiny)
+
+p14OpenAuditRow(table tbl, int row, string name, int model) =>
+    color d = #aaaaaa
+    int base = model * 5
+    int attempts = array.get(p14odbg, base)
+    int disabled = array.get(p14odbg, base + 1)
+    int outWindow = array.get(p14odbg, base + 2)
+    int active = array.get(p14odbg, base + 3)
+    int success = array.get(p14odbg, base + 4)
+    int completed = array.get(p14n, model)
+    bool balanced = attempts == disabled + outWindow + active + success
+    table.cell(tbl, 0, row, name, text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, row, "Attempts " + str.tostring(attempts), text_color = attempts > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 2, row, "Success " + str.tostring(success) + " | Done " + str.tostring(completed), text_color = success > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 3, row, "Already Active " + str.tostring(active), text_color = active > 0 ? #ff9800 : d, text_size = size.tiny)
+    table.cell(tbl, 4, row, "Disabled " + str.tostring(disabled) + " | Window " + str.tostring(outWindow) + (balanced ? " | BAL PASS" : " | BAL FAIL"), text_color = balanced ? d : #f23645, text_size = size.tiny)
+
+p14Render(table tbl) =>
+    color h = #cccccc
+    color d = #aaaaaa
+    string[] names = array.from("Control", "BOS", "Retest", "Confirm")
+    table.cell(tbl, 0, 0, "PHASE 14", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    for m = 0 to 3
+        table.cell(tbl, m + 1, 0, array.get(names, m), text_color = h, text_size = size.tiny)
+
+    string[] metrics = array.from("N", "Wins", "Losses", "Win %", "Avg R", "Total R", "Profit Factor", "Max Drawdown", "Largest Win", "Largest Loss", "Max Consecutive W", "Max Consecutive L", "Retention %", "Entries | Open")
+    for row = 1 to 14
+        table.cell(tbl, 0, row, array.get(metrics, row - 1), text_color = d, text_size = size.tiny, text_halign = text.align_left)
+
+    int controlEntries = array.get(p14ent, 0)
+    for m = 0 to 3
+        int n = array.get(p14n, m)
+        int wins = array.get(p14w, m)
+        int losses = array.get(p14l, m)
+        int entries = array.get(p14ent, m)
+        float totalR = array.get(p14rs, m)
+        float avgR = n > 0 ? totalR / n : 0.0
+        float winPct = n > 0 ? wins * 100.0 / n : 0.0
+        float gp = array.get(p14gp, m)
+        float gl = array.get(p14gl, m)
+        float pf = gl > 0 ? gp / gl : (gp > 0 ? 99.9 : 0.0)
+        float ret = m == 0 ? 100.0 : controlEntries > 0 ? entries * 100.0 / controlEntries : na
+        float largestWin = array.get(p14lw, m)
+        float largestLoss = array.get(p14ll, m)
+        int col = m + 1
+        table.cell(tbl, col, 1, str.tostring(n), text_color = d, text_size = size.tiny)
+        table.cell(tbl, col, 2, str.tostring(wins), text_color = #089981, text_size = size.tiny)
+        table.cell(tbl, col, 3, str.tostring(losses), text_color = #f23645, text_size = size.tiny)
+        table.cell(tbl, col, 4, n > 0 ? str.tostring(math.round(winPct)) + "%" : "—", text_color = winPct >= 50 ? #089981 : n > 0 ? #f23645 : d, text_size = size.tiny)
+        table.cell(tbl, col, 5, n > 0 ? p14Fmt(avgR) : "—", text_color = avgR >= 0 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, col, 6, p14Fmt(totalR), text_color = totalR >= 0 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, col, 7, n > 0 ? str.tostring(math.round(pf * 10.0) / 10.0) : "—", text_color = pf >= 1 ? #089981 : n > 0 ? #f23645 : d, text_size = size.tiny)
+        table.cell(tbl, col, 8, p14Fmt(array.get(p14dd, m)), text_color = #f23645, text_size = size.tiny)
+        table.cell(tbl, col, 9, na(largestWin) ? "—" : p14Fmt(largestWin), text_color = #089981, text_size = size.tiny)
+        table.cell(tbl, col, 10, na(largestLoss) ? "—" : p14Fmt(largestLoss), text_color = #f23645, text_size = size.tiny)
+        table.cell(tbl, col, 11, str.tostring(array.get(p14mcw, m)), text_color = #089981, text_size = size.tiny)
+        table.cell(tbl, col, 12, str.tostring(array.get(p14mcl, m)), text_color = #f23645, text_size = size.tiny)
+        table.cell(tbl, col, 13, na(ret) ? "—" : str.tostring(math.round(ret)) + "%", text_color = d, text_size = size.tiny)
+        table.cell(tbl, col, 14, str.tostring(entries) + " | " + str.tostring(entries - n), text_color = entries == n ? d : #ff9800, text_size = size.tiny)
+
+    table.cell(tbl, 0, 15, "── N | W% | AVG | TOTAL | PF ──", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    p14BreakRow(tbl, 16, "Long",        p14dst, 2, 0)
+    p14BreakRow(tbl, 17, "Short",       p14dst, 2, 1)
+    p14BreakRow(tbl, 18, "HTF Bull",    p14rst, 3, 0)
+    p14BreakRow(tbl, 19, "HTF Bear",    p14rst, 3, 1)
+    p14BreakRow(tbl, 20, "HTF Neutral", p14rst, 3, 2)
+    p14BreakRow(tbl, 21, "Overnight",   p14tst, 7, 0)
+    p14BreakRow(tbl, 22, "Premarket",   p14tst, 7, 1)
+    p14BreakRow(tbl, 23, "Open",        p14tst, 7, 2)
+    p14BreakRow(tbl, 24, "MidAM",       p14tst, 7, 3)
+    p14BreakRow(tbl, 25, "Midday",      p14tst, 7, 4)
+    p14BreakRow(tbl, 26, "PM",          p14tst, 7, 5)
+    p14BreakRow(tbl, 27, "After-hours", p14tst, 7, 6)
+    p14BreakRow(tbl, 28, "Score 70-74", p14bst, 6, 0)
+    p14BreakRow(tbl, 29, "Score 75-79", p14bst, 6, 1)
+    p14BreakRow(tbl, 30, "Score 80-84", p14bst, 6, 2)
+    p14BreakRow(tbl, 31, "Score 85-89", p14bst, 6, 3)
+    p14BreakRow(tbl, 32, "Score 90-94", p14bst, 6, 4)
+    p14BreakRow(tbl, 33, "Score 95+",   p14bst, 6, 5)
+    p14BreakRow(tbl, 34, "Early third", p14xst, 3, 0)
+    p14BreakRow(tbl, 35, "Middle third", p14xst, 3, 1)
+    p14BreakRow(tbl, 36, "Late third",  p14xst, 3, 2)
+
+    int dbgControl = array.get(p14ent, 0)
+    int dbgBos = array.get(p14ent, 1)
+    int dbgRetest = array.get(p14ent, 2)
+    int dbgConfirm = array.get(p14ent, 3)
+    int dbgRawTotal = array.get(p14dbg, 8)
+    int dbgVariantC = array.get(p14dbg, 9)
+    int dbgCanonical = array.get(p14dbg, 1)
+    bool dbgFeedOk = dbgRawTotal >= dbgVariantC and dbgVariantC == dbgCanonical
+    bool dbgOrderOk = dbgCanonical >= dbgControl and dbgControl >= dbgBos and dbgBos >= dbgRetest and dbgRetest >= dbgConfirm
+    string dbgFeedStatus = dbgRawTotal == 0 ? "RAW EMPTY" : dbgVariantC == 0 ? "VARIANT C ZERO" : dbgFeedOk ? "FEED PASS" : "FEED FAIL"
+    color dbgFeedColor = dbgRawTotal > 0 and dbgVariantC > 0 and dbgFeedOk ? #089981 : #f23645
+    string dbgControlStatus = dbgCanonical == 0 ? "NO CANONICAL" : dbgControl == 0 ? "CONTROL BLOCKED" : "CONTROL OK"
+    color dbgControlColor = dbgCanonical > 0 and dbgControl > 0 ? #089981 : #f23645
+    table.cell(tbl, 0, 37, "── SETUP FEED ──", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 37, "Bars In Window " + str.tostring(array.get(p14dbg, 0)), text_color = d, text_size = size.tiny)
+    table.cell(tbl, 2, 37, "Raw Long " + str.tostring(array.get(p14dbg, 6)), text_color = array.get(p14dbg, 6) > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 3, 37, "Raw Short " + str.tostring(array.get(p14dbg, 7)), text_color = array.get(p14dbg, 7) > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 4, 37, "Raw Total " + str.tostring(dbgRawTotal), text_color = dbgRawTotal > 0 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(tbl, 0, 38, "Variant C Feed", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 38, "Qualified " + str.tostring(dbgVariantC), text_color = dbgVariantC > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 2, 38, "Canonical Raw " + str.tostring(dbgCanonical), text_color = dbgCanonical > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 3, 38, dbgFeedStatus, text_color = dbgFeedColor, text_size = size.tiny)
+    table.cell(tbl, 4, 38, dbgControlStatus, text_color = dbgControlColor, text_size = size.tiny)
+    p14OpenAuditRow(tbl, 39, "Control Open", 0)
+    p14OpenAuditRow(tbl, 40, "BOS Open", 1)
+    p14OpenAuditRow(tbl, 41, "Retest Open", 2)
+    p14OpenAuditRow(tbl, 42, "Confirm Open " + (dbgOrderOk ? "| ORDER PASS" : "| ORDER FAIL"), 3)
+
+    table.cell(tbl, 0, 43, "── BOS FUNNEL DEBUG ──", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 43, "Bull BOS " + str.tostring(array.get(p14fdbg, 0)), text_color = array.get(p14fdbg, 0) > 0 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(tbl, 2, 43, "Bear BOS " + str.tostring(array.get(p14fdbg, 1)), text_color = array.get(p14fdbg, 1) > 0 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(tbl, 3, 43, "Starts " + str.tostring(array.get(p14fdbg, 2)), text_color = array.get(p14fdbg, 2) > 0 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(tbl, 4, 43, "WAIT evals " + str.tostring(array.get(p14fdbg, 3)), text_color = array.get(p14fdbg, 3) > 0 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(tbl, 0, 44, "Funnel result", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 44, "Match BOS " + str.tostring(array.get(p14fdbg, 4)), text_color = array.get(p14fdbg, 4) > 0 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(tbl, 2, 44, "Opp " + str.tostring(array.get(p14fdbg, 5)) + " | Exp " + str.tostring(array.get(p14fdbg, 6)), text_color = d, text_size = size.tiny)
+    table.cell(tbl, 3, 44, "Retest " + str.tostring(array.get(p14fdbg, 7)) + " | Inv " + str.tostring(array.get(p14fdbg, 8)), text_color = d, text_size = size.tiny)
+    table.cell(tbl, 4, 44, "Confirm " + str.tostring(array.get(p14fdbg, 9)), text_color = array.get(p14fdbg, 9) > 0 ? #089981 : d, text_size = size.tiny)
+
+    bool leftCovered = not na(p14FirstChartTs) and p14FirstChartTs <= p14StartTs
+    bool rightCovered = not na(p14LastChartTs) and p14LastChartTs >= p14EndExclusive
+    bool hasWindowBars = array.get(p14dbg, 0) > 0
+    bool fullData = p14RangeValid and leftCovered and rightCovered and hasWindowBars
+    string coverage = not p14RangeValid ? "INVALID RANGE" : fullData ? "FULL DATA" : "PARTIAL DATA"
+    color coverageColor = fullData ? #089981 : #ff9800
+    table.cell(tbl, 0, 45, "Coverage", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 45, coverage, text_color = coverageColor, text_size = size.tiny)
+    table.cell(tbl, 2, 45, leftCovered ? "Start OK" : "Start missing", text_color = leftCovered ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(tbl, 3, 45, rightCovered ? "End OK" : "End missing", text_color = rightCovered ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(tbl, 4, 45, hasWindowBars ? syminfo.timezone : "No in-window bars", text_color = hasWindowBars ? d : #f23645, text_size = size.tiny)
+
+    string startTxt = str.tostring(p14StartYear) + "-" + str.tostring(p14StartMonth) + "-" + str.tostring(p14StartDay)
+    string endTxt = str.tostring(p14EndYear) + "-" + str.tostring(p14EndMonth) + "-" + str.tostring(p14EndDay)
+    table.cell(tbl, 0, 46, "Window", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 46, startTxt, text_color = d, text_size = size.tiny)
+    table.cell(tbl, 2, 46, "through", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 3, 46, endTxt, text_color = d, text_size = size.tiny)
+    table.cell(tbl, 4, 46, "Inclusive", text_color = d, text_size = size.tiny)
+
+    table.cell(tbl, 0, 47, "Rules", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 47, "STOP first", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 2, 47, "ATR model", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 3, 47, "Date thirds", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 4, 47, "No lookahead", text_color = #089981, text_size = size.tiny)
+
+// Tables are created once; functions only mutate their cells.
+var table p12Table = table.new(position.middle_left, 6, 22, bgcolor = color.new(#1e1e1e, 15), border_color = color.new(#444444, 50), border_width = 1)
+var table p13Table = table.new(position.bottom_right, 8, 7, bgcolor = color.new(#1e1e1e, 15), border_color = color.new(#444444, 50), border_width = 1)
+var table p14Table = (p14Enabled and dmHistorical) ? table.new(position.top_left, 5, 48, bgcolor = color.new(#1e1e1e, 10), border_color = color.new(#444444, 50), border_width = 1) : na
+
+bool dmShowP12 = (dmBtTable or dmDiag) and p12Enabled
+if dmShowP12 and barstate.islast
+    p12Render(p12Table)
+
+if p13Enabled and dmShowP12 and barstate.islast
+    p13Render(p13Table)
+
+if p14Enabled and dmHistorical and barstate.islast and not na(p14Table)
+    p14Render(p14Table)

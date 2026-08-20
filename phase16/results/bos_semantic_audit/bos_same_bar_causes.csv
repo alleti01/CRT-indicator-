@@ -1,0 +1,5 @@
+cause,N,pct_same_bar,primary_cause
+"Setup trigger includes the same directional Phase 3 BOS, then WAIT_BOS consumes that still-true event on the same completed bar",664,100.0,True
+BOS reference was already crossed on the prior bar,0,0.0,False
+BOS level was derived from the setup candle,0,0.0,False
+Other,0,0.0,False

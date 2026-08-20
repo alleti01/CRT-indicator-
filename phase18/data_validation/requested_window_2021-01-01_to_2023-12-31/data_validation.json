@@ -1,0 +1,28 @@
+{
+  "coverage_left": true,
+  "coverage_right": false,
+  "development_overlap_rows": 0,
+  "downloaded_rows": 1090620,
+  "duplicate_5m_rows": 0,
+  "duplicate_download_rows": 0,
+  "final_5m_rows": 218163,
+  "first_1m_timestamp": "2020-11-30 18:00:00-06:00",
+  "first_oos_5m_timestamp": "2021-01-03 17:00:00-06:00",
+  "incomplete_5m_groups_retained": 178,
+  "input_files": [
+    "phase18/data/raw/nq_continuous_1m_raw.csv"
+  ],
+  "invalid_ohlc_rows": 0,
+  "last_1m_timestamp": "2023-12-29 15:59:00-06:00",
+  "last_oos_5m_timestamp": "2023-12-29 15:55:00-06:00",
+  "maximum_absolute_adjusted_roll_gap_points": 0.0,
+  "normalized_unique_1m_rows": 1090620,
+  "oos_5m_rows": 212211,
+  "potential_missing_5m_gaps": 121,
+  "potential_missing_raw_1m_gaps": 325,
+  "processed_gap_count": 895,
+  "raw_gap_count": 1121,
+  "roll_count": 13,
+  "strict_5m_rows": 217985,
+  "timezone": "America/Chicago"
+}

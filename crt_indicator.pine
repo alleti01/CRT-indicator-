@@ -1,6 +1,12 @@
 //@version=6
+indicator("CRT Indicator — Core", shorttitle = "CRT Core", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 500)
+
+// Hidden compiler anchor. This emits no visible chart value and ensures
+// TradingView recognizes the pasted source as an output-producing indicator.
+plot(na, "CRT compiler anchor", display = display.none)
+
 // ─────────────────────────────────────────────────────────────────────────────
-// CRT Indicator — Phases 1-13
+// CRT Indicator — Phases 1-14
 //
 // Phase 1 (CRT core):
 //   - CRT reference range (last confirmed source candle)
@@ -41,6 +47,11 @@
 //   - Win rate, expectancy, profit factor, max drawdown (R)
 //   - Performance by direction, score bucket, and setup type
 //
+// Phase 14 (Historical Validation):
+//   - Explicit inclusive date-range comparison of Control/BOS/Retest/Confirm
+//   - Exchange-timezone boundaries and FULL/PARTIAL chart-data coverage audit
+//   - Measurement only; no changes to Phase 1-13 signals or trade decisions
+//
 // Deliberately NOT included yet (future phases):
 //   position sizing, compounding, FVG, order blocks, optimization.
 //
@@ -52,11 +63,10 @@
 //   - Historical events stay fixed: per-range state latches and only the active
 //     box is mutated; older boxes are frozen once a new range starts.
 // ─────────────────────────────────────────────────────────────────────────────
-indicator("CRT Indicator — Core", shorttitle = "CRT Core", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 500)
 
 // ── Display mode (master visibility layer — does NOT affect calculations) ────
 string GRP_DM = "Display"
-string displayMode = input.string("Clean", "Display mode", options = ["Clean", "Structure", "Validation", "Backtest", "Walk-Forward", "Live", "Debug"], group = GRP_DM, tooltip = "Clean = minimal. Structure = market structure. Validation = Phase 5. Backtest = Phase 6+7+8. Walk-Forward = Phase 9. Live = Phase 10. Debug = everything.")
+string displayMode = input.string("Clean", "Display mode", options = ["Clean", "Structure", "Validation", "Backtest", "Walk-Forward", "Historical", "Live", "Debug"], group = GRP_DM, tooltip = "Clean = minimal. Structure = market structure. Validation = Phase 5. Backtest = Phase 6+7+8. Walk-Forward = Phase 9. Historical = Phase 14. Live = Phase 10. Debug = everything.")
 
 bool dmStructVis = displayMode == "Structure" or displayMode == "Debug"
 bool dmLiqVis    = displayMode == "Structure" or displayMode == "Debug"
@@ -66,6 +76,7 @@ bool dmLive      = displayMode == "Live"
 bool dmTrMarks   = displayMode == "Clean" or displayMode == "Live" or displayMode == "Backtest" or displayMode == "Debug"
 bool dmBiasTbl   = displayMode == "Clean" or displayMode == "Structure" or displayMode == "Debug"
 bool dmWalkFwd   = displayMode == "Walk-Forward"
+bool dmHistorical = displayMode == "Historical"
 bool dmDiag      = displayMode == "Debug"
 
 // ── Inputs: CRT range ────────────────────────────────────────────────────────
@@ -1421,7 +1432,7 @@ var array<int> p9Sc = array.new<int>()
 // Phase 12 — Entry Research inputs/state.
 string GRP_P12 = "Entry Research"
 bool   p12Enabled   = input.bool(false, "Enable Phase 12 research", group = GRP_P12)
-string p12Model     = input.string("Control", "Entry model", options = ["Control", "BOS", "Retest", "Retest+Confirm"], group = GRP_P12, tooltip = "Control = Phase 11 frozen rules. Other options test delayed entry after BOS confirmation.")
+string p12Model     = input.string("Control", "Entry model", options = ["Control", "BOS", "Retest", "Retest+Confirm"], group = GRP_P12, tooltip = "Display/selection only during Phase 12 research. The research funnel always evaluates the full Setup → BOS → Retest → Confirm sequence so every stage can be audited without changing Phase 11 live logic.")
 int    p12Expiry    = input.int(8, "Retest expiry bars", minval = 3, maxval = 20, group = GRP_P12)
 float  p12RetestTol = input.float(0.10, "Retest tolerance (x ATR)", minval = 0.0, step = 0.05, group = GRP_P12)
 
@@ -1498,6 +1509,270 @@ closeP13(int m, float rr) =>
     float pk = math.max(array.get(p13pk, m), eq)
     array.set(p13pk, m, pk)
     array.set(p13dd, m, math.max(array.get(p13dd, m), pk - eq))
+
+// Phase 14 — Date-scoped Historical Validation Engine.
+// Runs independently of Phase 13 trade state while consuming the same
+// Setup → BOS → Retest → Confirm stage events. It is measurement-only.
+string GRP_P14 = "Historical Validation"
+bool p14Enabled    = input.bool(false, "Enable Phase 14 validation", group = GRP_P14)
+int  p14StartYear  = input.int(2026, "Start year",  minval = 2000, maxval = 2100, group = GRP_P14, inline = "p14s")
+int  p14StartMonth = input.int(6,    "Month",      minval = 1,    maxval = 12,   group = GRP_P14, inline = "p14s")
+int  p14StartDay   = input.int(18,   "Day",        minval = 1,    maxval = 31,   group = GRP_P14, inline = "p14s")
+int  p14EndYear    = input.int(2026, "End year",    minval = 2000, maxval = 2100, group = GRP_P14, inline = "p14e")
+int  p14EndMonth   = input.int(8,    "Month",       minval = 1,    maxval = 12,   group = GRP_P14, inline = "p14e")
+int  p14EndDay     = input.int(18,   "Day",         minval = 1,    maxval = 31,   group = GRP_P14, inline = "p14e")
+
+// Integer timestamp construction uses the chart symbol's exchange timezone.
+// The end is represented as the next day's midnight, making the chosen end
+// date inclusive for every supported chart timeframe.
+int  p14StartTs      = timestamp(syminfo.timezone, p14StartYear, p14StartMonth, p14StartDay, 0, 0)
+int  p14EndExclusive = timestamp(syminfo.timezone, p14EndYear, p14EndMonth, p14EndDay + 1, 0, 0)
+bool p14RangeValid   = p14EndExclusive > p14StartTs
+bool p14InWindow     = p14RangeValid and time >= p14StartTs and time < p14EndExclusive
+
+// Loaded-chart coverage audit. A forming realtime bar does not count as
+// confirmed right-side coverage.
+var int p14FirstChartTs = na
+var int p14LastChartTs  = na
+if barstate.isfirst
+    p14FirstChartTs := time
+if barstate.isconfirmed
+    p14LastChartTs := time_close
+
+// Four independent model trackers: 0=Control, 1=BOS, 2=Retest, 3=Confirm.
+var array<int>   p14ent = array.new<int>(4, 0)
+var array<int>   p14n   = array.new<int>(4, 0)
+var array<int>   p14w   = array.new<int>(4, 0)
+var array<int>   p14l   = array.new<int>(4, 0)
+var array<float> p14rs  = array.new<float>(4, 0.0)
+var array<float> p14gp  = array.new<float>(4, 0.0)
+var array<float> p14gl  = array.new<float>(4, 0.0)
+var array<float> p14eq  = array.new<float>(4, 0.0)
+var array<float> p14pk  = array.new<float>(4, 0.0)
+var array<float> p14dd  = array.new<float>(4, 0.0)
+var array<float> p14lw  = array.new<float>(4, na)
+var array<float> p14ll  = array.new<float>(4, na)
+var array<int>   p14cw  = array.new<int>(4, 0)
+var array<int>   p14cl  = array.new<int>(4, 0)
+var array<int>   p14mcw = array.new<int>(4, 0)
+var array<int>   p14mcl = array.new<int>(4, 0)
+
+var array<bool>  p14act = array.new<bool>(4, false)
+var array<int>   p14dir = array.new<int>(4, 0)
+var array<int>   p14bar = array.new<int>(4, 0)
+var array<float> p14en  = array.new<float>(4, 0.0)
+var array<float> p14st  = array.new<float>(4, 0.0)
+var array<float> p14tg  = array.new<float>(4, 0.0)
+var array<float> p14rk  = array.new<float>(4, 0.0)
+var array<int>   p14sc  = array.new<int>(4, 0)
+var array<int>   p14reg = array.new<int>(4, 0)
+var array<int>   p14tmb = array.new<int>(4, 0)
+var array<int>   p14seg = array.new<int>(4, 0)
+
+// Breakdown layouts are model-major. Each bucket stores five floats:
+// N, wins, TotalR, gross profit, gross loss.
+var array<float> p14dst = array.new<float>(40, 0.0)   // 4 models × 2 directions × 5
+var array<float> p14rst = array.new<float>(60, 0.0)   // 4 models × 3 regimes × 5
+var array<float> p14tst = array.new<float>(140, 0.0)  // 4 models × 7 sessions × 5
+var array<float> p14bst = array.new<float>(120, 0.0)  // 4 models × 6 score bands × 5
+var array<float> p14xst = array.new<float>(60, 0.0)   // 4 models × 3 date thirds × 5
+
+// Date-scoped copy of the research funnel state. Arrays allow the function to
+// mutate its own state without touching Phase 12's persistent variables.
+var array<int>   p14fc  = array.new<int>(4, 0)  // Setup / BOS / Retest / Confirm
+var array<int>   p14fst = array.new<int>(1, 0)
+var array<int>   p14fdr = array.new<int>(1, 0)
+var array<int>   p14fsb = array.new<int>(1, 0)
+var array<int>   p14fbb = array.new<int>(1, 0)
+var array<int>   p14frb = array.new<int>(1, 0)
+var array<int>   p14fsc = array.new<int>(1, 0)
+var array<float> p14fbl = array.new<float>(1, na)
+// 0 Bars, 1 Canonical, 2 Control, 3 BOS, 4 Retest, 5 Confirm,
+// 6 Raw Long, 7 Raw Short, 8 Raw Total, 9 Variant-C qualified.
+var array<int>   p14dbg = array.new<int>(10, 0)
+var array<int>   p14dts = array.new<int>(1, na) // Last confirmed in-window bar timestamp
+// Per model: attempts / disabled / out-of-window / already-active / success.
+var array<int>   p14odbg = array.new<int>(20, 0)
+
+p14AddBreak(array<float> stats, int bucketIdx, float rr) =>
+    int base = bucketIdx * 5
+    array.set(stats, base, array.get(stats, base) + 1.0)
+    if rr > 0
+        array.set(stats, base + 1, array.get(stats, base + 1) + 1.0)
+        array.set(stats, base + 3, array.get(stats, base + 3) + rr)
+    else if rr < 0
+        array.set(stats, base + 4, array.get(stats, base + 4) + math.abs(rr))
+    array.set(stats, base + 2, array.get(stats, base + 2) + rr)
+
+p14TrackWindowBar(bool rawLong, bool rawShort, bool variantCSetup, bool canonicalSetup) =>
+    array.set(p14dbg, 0, array.get(p14dbg, 0) + 1)
+    array.set(p14dts, 0, time)
+    if rawLong
+        array.set(p14dbg, 6, array.get(p14dbg, 6) + 1)
+    if rawShort
+        array.set(p14dbg, 7, array.get(p14dbg, 7) + 1)
+    if rawLong or rawShort
+        array.set(p14dbg, 8, array.get(p14dbg, 8) + 1)
+    if variantCSetup
+        array.set(p14dbg, 9, array.get(p14dbg, 9) + 1)
+    if canonicalSetup
+        array.set(p14dbg, 1, array.get(p14dbg, 1) + 1)
+
+openP14(int m, int dir, int score) =>
+    int dbgBase = m * 5
+    array.set(p14odbg, dbgBase, array.get(p14odbg, dbgBase) + 1)
+    bool opened = false
+    if not p14Enabled
+        array.set(p14odbg, dbgBase + 1, array.get(p14odbg, dbgBase + 1) + 1)
+    else if not p14InWindow
+        array.set(p14odbg, dbgBase + 2, array.get(p14odbg, dbgBase + 2) + 1)
+    else if array.get(p14act, m)
+        array.set(p14odbg, dbgBase + 3, array.get(p14odbg, dbgBase + 3) + 1)
+    else
+        float atr = nz(seAtr14, 1.0)
+        float rsk = trStopATR * atr
+        float stp = dir == 1 ? close - rsk : close + rsk
+        float tgt = dir == 1 ? close + rsk * trTargetR : close - rsk * trTargetR
+        int hm = hour * 60 + minute
+        int tmb = hm >= 1080 or hm < 240 ? 0 : hm < 570 ? 1 : hm < 630 ? 2 : hm < 720 ? 3 : hm < 840 ? 4 : hm < 960 ? 5 : hm < 1080 ? 6 : 0
+        int span = p14EndExclusive - p14StartTs
+        int seg = span > 0 ? int(math.min(2.0, math.floor((time - p14StartTs) * 3.0 / span))) : 0
+        array.set(p14act, m, true)
+        array.set(p14dir, m, dir)
+        array.set(p14bar, m, bar_index)
+        array.set(p14en, m, close)
+        array.set(p14st, m, stp)
+        array.set(p14tg, m, tgt)
+        array.set(p14rk, m, rsk)
+        array.set(p14sc, m, score)
+        array.set(p14reg, m, p7HtfRegime)
+        array.set(p14tmb, m, tmb)
+        array.set(p14seg, m, seg)
+        array.set(p14ent, m, array.get(p14ent, m) + 1)
+        array.set(p14odbg, dbgBase + 4, array.get(p14odbg, dbgBase + 4) + 1)
+        opened := true
+    opened
+
+closeP14(int m, float rr) =>
+    array.set(p14act, m, false)
+    array.set(p14n, m, array.get(p14n, m) + 1)
+    if rr > 0
+        array.set(p14w, m, array.get(p14w, m) + 1)
+        array.set(p14gp, m, array.get(p14gp, m) + rr)
+        float oldLw = array.get(p14lw, m)
+        array.set(p14lw, m, na(oldLw) ? rr : math.max(oldLw, rr))
+        int winRun = array.get(p14cw, m) + 1
+        array.set(p14cw, m, winRun)
+        array.set(p14mcw, m, math.max(array.get(p14mcw, m), winRun))
+        array.set(p14cl, m, 0)
+    else if rr < 0
+        array.set(p14l, m, array.get(p14l, m) + 1)
+        array.set(p14gl, m, array.get(p14gl, m) + math.abs(rr))
+        float oldLl = array.get(p14ll, m)
+        array.set(p14ll, m, na(oldLl) ? rr : math.min(oldLl, rr))
+        int lossRun = array.get(p14cl, m) + 1
+        array.set(p14cl, m, lossRun)
+        array.set(p14mcl, m, math.max(array.get(p14mcl, m), lossRun))
+        array.set(p14cw, m, 0)
+    else
+        array.set(p14cw, m, 0)
+        array.set(p14cl, m, 0)
+    array.set(p14rs, m, array.get(p14rs, m) + rr)
+    float eq = array.get(p14eq, m) + rr
+    array.set(p14eq, m, eq)
+    float pk = math.max(array.get(p14pk, m), eq)
+    array.set(p14pk, m, pk)
+    array.set(p14dd, m, math.max(array.get(p14dd, m), pk - eq))
+
+    int dir = array.get(p14dir, m)
+    int reg = array.get(p14reg, m)
+    int tmb = array.get(p14tmb, m)
+    int score = array.get(p14sc, m)
+    int seg = array.get(p14seg, m)
+    int scoreBucket = score >= 95 ? 5 : score >= 90 ? 4 : score >= 85 ? 3 : score >= 80 ? 2 : score >= 75 ? 1 : 0
+    p14AddBreak(p14dst, m * 2 + (dir == 1 ? 0 : 1), rr)
+    p14AddBreak(p14rst, m * 3 + (reg == 1 ? 0 : reg == -1 ? 1 : 2), rr)
+    p14AddBreak(p14tst, m * 7 + tmb, rr)
+    if score >= 70
+        p14AddBreak(p14bst, m * 6 + scoreBucket, rr)
+    p14AddBreak(p14xst, m * 3 + seg, rr)
+
+p14ProcessFunnel(bool canonicalLong, bool canonicalShort, int canonicalScore) =>
+    int state = array.get(p14fst, 0)
+    int dir = array.get(p14fdr, 0)
+    int setupBar = array.get(p14fsb, 0)
+    int bosBar = array.get(p14fbb, 0)
+    int retestBar = array.get(p14frb, 0)
+    int score = array.get(p14fsc, 0)
+    float bosLvl = array.get(p14fbl, 0)
+    bool canonicalSetup = canonicalLong or canonicalShort
+    int canonicalDir = canonicalLong ? 1 : canonicalShort ? -1 : 0
+
+    if canonicalSetup and state == 0
+        state := 1
+        dir := canonicalDir
+        setupBar := bar_index
+        bosBar := na
+        retestBar := na
+        bosLvl := na
+        score := canonicalScore
+        array.set(p14fc, 0, array.get(p14fc, 0) + 1)
+        array.set(p14dbg, 2, array.get(p14dbg, 2) + 1)
+        openP14(0, dir, score)
+
+    if state == 1
+        bool bosOk = (dir == 1 and bullBreakEvent) or (dir == -1 and bearBreakEvent)
+        bool oppBos = (dir == 1 and bearBreakEvent) or (dir == -1 and bullBreakEvent)
+        if bosOk
+            float brokenLvl = dir == 1 ? activeStrHigh[1] : activeStrLow[1]
+            bosLvl := not na(brokenLvl) ? brokenLvl : (dir == 1 ? activeStrHigh : activeStrLow)
+            bosBar := bar_index
+            array.set(p14fc, 1, array.get(p14fc, 1) + 1)
+            array.set(p14dbg, 3, array.get(p14dbg, 3) + 1)
+            openP14(1, dir, score)
+            state := 2
+        else if oppBos or bar_index - setupBar > p12Expiry
+            state := 0
+
+    else if state == 2 and not na(bosLvl)
+        float tol = nz(seAtr14, 1.0) * p12RetestTol
+        bool eligibleRetest = not na(bosBar) and bar_index > bosBar
+        bool retestTouch = eligibleRetest and (dir == 1 ? low <= bosLvl + tol : high >= bosLvl - tol)
+        bool retInv = eligibleRetest and (dir == 1 ? close < bosLvl - tol : close > bosLvl + tol)
+        if retInv
+            state := 0
+        else if retestTouch
+            retestBar := bar_index
+            array.set(p14fc, 2, array.get(p14fc, 2) + 1)
+            array.set(p14dbg, 4, array.get(p14dbg, 4) + 1)
+            openP14(2, dir, score)
+            state := 3
+        else if not na(bosBar) and bar_index - bosBar > p12Expiry
+            state := 0
+
+    else if state == 3 and not na(bosLvl) and not na(retestBar)
+        float tol = nz(seAtr14, 1.0) * p12RetestTol
+        bool eligibleConfirm = bar_index > retestBar
+        bool confirmed = eligibleConfirm and (dir == 1 ? (close > open and close > bosLvl) : (close < open and close < bosLvl))
+        bool confInv = eligibleConfirm and (dir == 1 ? close < bosLvl - tol : close > bosLvl + tol)
+        if confirmed
+            array.set(p14fc, 3, array.get(p14fc, 3) + 1)
+            array.set(p14dbg, 5, array.get(p14dbg, 5) + 1)
+            openP14(3, dir, score)
+            state := 4
+        else if confInv or bar_index - retestBar > p12Expiry
+            state := 0
+
+    if state == 4
+        state := 0
+
+    array.set(p14fst, 0, state)
+    array.set(p14fdr, 0, dir)
+    array.set(p14fsb, 0, setupBar)
+    array.set(p14fbb, 0, bosBar)
+    array.set(p14frb, 0, retestBar)
+    array.set(p14fsc, 0, score)
+    array.set(p14fbl, 0, bosLvl)
 
 // Phase 11: count forward trading days.
 if fwdEnabled and fwdPeriod and processBar and dayofmonth != fwdPrevDom
@@ -2006,6 +2281,14 @@ bool  liveRegOk  = p7HtfRegime != 0
 bool  liveTimeOk = liveTmb != 6
 bool  liveFilter = liveRegOk and liveTimeOk
 
+// One canonical historical setup feed shared by Phase 12/12.5 and Phase 14.
+// Variant C remains the validated raw Phase 5 event plus the frozen liveFilter.
+bool p12VariantCSetupEvt = (seLongEvt or seShortEvt) and liveFilter
+bool canonicalLongSetup = p12VariantCSetupEvt and seLongEvt
+bool canonicalShortSetup = p12VariantCSetupEvt and not seLongEvt and seShortEvt
+bool p12CanonicalSetupEvt = canonicalLongSetup or canonicalShortSetup
+int  p12CanonicalSetupScore = canonicalLongSetup ? seLongScoreVal : canonicalShortSetup ? seShortScoreVal : 0
+
 // ── C. Decision state ────────────────────────────────────────────────────────
 var string liveDecision    = "WAIT"
 var int    liveDecBar      = na
@@ -2203,79 +2486,103 @@ if dmLive and showLiveDebug and barstate.islast and not na(liveDbgTbl)
     table.cell(liveDbgTbl, 0, 17, "Dir HTF filter?",    text_color = _hd, text_size = size.tiny, text_halign = text.align_left)
     table.cell(liveDbgTbl, 1, 17, "NO — C only blocks Neutral+AftHrs", text_color = #ff9800, text_size = size.tiny)
 
-// ── Phase 12 BOS + retest state machine (research, does not affect live) ─────
+// ── Phase 12 BOS + retest + confirmation state machine (research only) ───────
+// Full research funnel always runs:
+// SETUP → BOS → RETEST → CONFIRM.
+// Phase 13 hooks open each comparison model at the appropriate confirmed stage.
+// This does NOT change Phase 11 live logic.
 if processBar and p12Enabled
-    bool p12hasSetup = (seLongEvt or seShortEvt) and liveFilter
-    // New setup resets the state machine
+    bool p12hasSetup = p12CanonicalSetupEvt
+
+    // Start a new parent candidate only while the research funnel is idle.
     if p12hasSetup and p12State == 0
-        p12State    := 1
-        p12Dir      := seLongEvt ? 1 : -1
-        p12SetupBar := bar_index
-        p12BosLvl   := na
-        p12BosBar   := na
+        p12State     := 1   // WAIT_BOS
+        p12Dir       := seLongEvt ? 1 : -1
+        p12SetupBar  := bar_index
+        p12BosLvl    := na
+        p12BosBar    := na
         p12RetestBar := na
-        p12Setups   += 1
+        p12Setups    += 1
         if p13Enabled
-            openP13(0, p12Dir)
+            openP13(0, p12Dir)   // CONTROL entry
 
     if p12State == 1
-        // WAIT_BOS: check for structural break in the setup direction
-        bool bosOk = (p12Dir == 1 and bullBreakEvent) or (p12Dir == -1 and bearBreakEvent)
+        // WAIT_BOS: confirmed structure break in setup direction.
+        bool bosOk  = (p12Dir == 1 and bullBreakEvent) or (p12Dir == -1 and bearBreakEvent)
+        bool oppBos = (p12Dir == 1 and bearBreakEvent) or (p12Dir == -1 and bullBreakEvent)
+
         if bosOk
-            p12BosLvl  := p12Dir == 1 ? activeStrHigh : activeStrLow
+            // Preserve the structure level that was actually broken.
+            // Phase 3 can update activeStrHigh/Low later on this same bar,
+            // so [1] avoids accidentally storing a newly-confirmed pivot.
+            float brokenLvl = p12Dir == 1 ? activeStrHigh[1] : activeStrLow[1]
+            p12BosLvl  := not na(brokenLvl) ? brokenLvl : (p12Dir == 1 ? activeStrHigh : activeStrLow)
             p12BosBar  := bar_index
             p12BosConf += 1
             if p13Enabled
-                openP13(1, p12Dir)
-            p12State   := (p12Model == "BOS" and not p13Enabled) ? 4 : 2
-        else if bar_index - p12SetupBar > p12Expiry
-            p12ExpBos += 1
-            p12State  := 0
-        else if (p12Dir == 1 and bearBreakEvent) or (p12Dir == -1 and bullBreakEvent)
+                openP13(1, p12Dir)   // BOS entry
+            p12State := 2            // ALWAYS continue to WAIT_RETEST
+
+        else if oppBos
             p12InvBos += 1
             p12State  := 0
 
+        else if bar_index - p12SetupBar > p12Expiry
+            p12ExpBos += 1
+            p12State  := 0
+
     else if p12State == 2 and not na(p12BosLvl)
-        // WAIT_RETEST: price returns toward BOS level
+        // WAIT_RETEST: retest can only happen AFTER the BOS bar.
         float tol = nz(seAtr14, 1.0) * p12RetestTol
-        bool retestTouch = p12Dir == 1 ? low <= p12BosLvl + tol : high >= p12BosLvl - tol
-        bool retInv = p12Dir == 1 ? close < p12BosLvl - tol : close > p12BosLvl + tol
-        if retestTouch and not retInv
+        bool eligibleRetest = not na(p12BosBar) and bar_index > p12BosBar
+        bool retestTouch = eligibleRetest and (p12Dir == 1 ? low <= p12BosLvl + tol : high >= p12BosLvl - tol)
+        bool retInv      = eligibleRetest and (p12Dir == 1 ? close < p12BosLvl - tol : close > p12BosLvl + tol)
+
+        if retInv
+            p12InvRet += 1
+            p12State  := 0
+
+        else if retestTouch
             p12RetestOk  += 1
             p12RetestBar := bar_index
             if p13Enabled
-                openP13(2, p12Dir)
-            p12State     := (p12Model == "Retest" and not p13Enabled) ? 4 : 3
-        else if retInv
-            p12InvRet += 1
-            p12State  := 0
-        else if bar_index - p12BosBar > p12Expiry
+                openP13(2, p12Dir)   // RETEST entry
+            p12State := 3            // ALWAYS continue to WAIT_CONFIRM
+
+        else if not na(p12BosBar) and bar_index - p12BosBar > p12Expiry
             p12ExpRet += 1
             p12State  := 0
 
-    else if p12State == 3 and not na(p12BosLvl)
-        // WAIT_CONFIRM: require confirmed close in setup direction + above/below BOS level.
-        // Expiry counts from RETEST bar (not BOS bar) so confirmation gets its own window.
+    else if p12State == 3 and not na(p12BosLvl) and not na(p12RetestBar)
+        // WAIT_CONFIRM: confirmation must occur on a bar AFTER the retest.
+        // Long: bullish candle closing above BOS.
+        // Short: bearish candle closing below BOS.
         float cTol = nz(seAtr14, 1.0) * p12RetestTol
-        bool confirmed = p12Dir == 1 ? (close > open and close > nz(p12BosLvl)) : (close < open and close < nz(p12BosLvl))
-        bool confInv = p12Dir == 1 ? close < nz(p12BosLvl) - cTol : close > nz(p12BosLvl) + cTol
-        if confirmed and not confInv
+        bool eligibleConfirm = bar_index > p12RetestBar
+        bool confirmed = eligibleConfirm and (p12Dir == 1 ? (close > open and close > p12BosLvl) : (close < open and close < p12BosLvl))
+        bool confInv   = eligibleConfirm and (p12Dir == 1 ? close < p12BosLvl - cTol : close > p12BosLvl + cTol)
+
+        if confirmed
             p12ConfirmOk += 1
             if p13Enabled
-                openP13(3, p12Dir)
-            p12State     := 4
+                openP13(3, p12Dir)   // CONFIRM entry
+            p12State := 4
+
         else if confInv
             p12InvConf += 1
             p12State   := 0
-        else if not na(p12RetestBar) and bar_index - p12RetestBar > p12Expiry
+
+        else if bar_index - p12RetestBar > p12Expiry
             p12ExpConf += 1
             p12State   := 0
 
+    // READY = completed research candidate. Reset after counting/opening model.
     if p12State == 4
         p12State := 0
 
 // ── Phase 13 bar-by-bar trade simulation for all 4 models ────────────────────
-if processBar and p13Enabled
+// Wrapped in a function to keep Pine's main script body below compiler limits.
+p13ProcessTrades() =>
     for m = 0 to 3
         if array.get(p13act, m)
             int elapsed = bar_index - array.get(p13br, m)
@@ -2303,6 +2610,61 @@ if processBar and p13Enabled
                 if not na(rr)
                     closeP13(m, rr)
 
+if processBar and p13Enabled
+    p13ProcessTrades()
+
+// ── Phase 14 date-scoped bar-by-bar simulation ──────────────────────────────
+// Uses the same ATR entry/stop/target and duration rules as Phase 13. Stop is
+// checked before target on ambiguous bars. Any position still open at the
+// inclusive window end is marked to the final in-window close.
+p14ProcessTrades() =>
+    for m = 0 to 3
+        if array.get(p14act, m)
+            int elapsed = bar_index - array.get(p14bar, m)
+            int d = array.get(p14dir, m)
+            float r = array.get(p14rk, m)
+            float e = array.get(p14en, m)
+            float rr = na
+
+            // If the chart jumps across the end boundary (for example a
+            // session gap), use the preceding close and never the out-of-range
+            // bar's high/low.
+            if time >= p14EndExclusive
+                float endPx = nz(close[1], close)
+                rr := r > 0 ? (d == 1 ? (endPx - e) / r : (e - endPx) / r) : 0.0
+            else if elapsed >= 1
+                float s = array.get(p14st, m)
+                float t = array.get(p14tg, m)
+                if d == 1
+                    if low <= s
+                        rr := -1.0
+                    else if high >= t
+                        rr := trTargetR
+                    else if elapsed >= trMaxBarsCnt
+                        rr := r > 0 ? (close - e) / r : 0.0
+                    else if time_close >= p14EndExclusive
+                        rr := r > 0 ? (close - e) / r : 0.0
+                else
+                    if high >= s
+                        rr := -1.0
+                    else if low <= t
+                        rr := trTargetR
+                    else if elapsed >= trMaxBarsCnt
+                        rr := r > 0 ? (e - close) / r : 0.0
+                    else if time_close >= p14EndExclusive
+                        rr := r > 0 ? (e - close) / r : 0.0
+
+            if not na(rr)
+                closeP14(m, rr)
+
+if p14Enabled and barstate.isconfirmed
+    // Feed measurement and funnel consumption share one confirmed historical
+    // execution gate so a counted canonical event reaches the Control caller.
+    if p14InWindow
+        p14TrackWindowBar(seLongEvt, seShortEvt, p12VariantCSetupEvt, p12CanonicalSetupEvt)
+        p14ProcessFunnel(canonicalLongSetup, canonicalShortSetup, p12CanonicalSetupScore)
+    p14ProcessTrades()
+
 // ── G. Live alerts ───────────────────────────────────────────────────────────
 alertcondition(liveLongEvt,  title = "CRT LONG",  message = "CRT LONG — check chart for entry/stop/target")
 alertcondition(liveShortEvt, title = "CRT SHORT", message = "CRT SHORT — check chart for entry/stop/target")
@@ -2313,13 +2675,13 @@ if liveShortEvt
 
 // ============================================================================
 // PHASE 12 — ENTRY RESEARCH TABLE (score calibration + BOS funnel)
-// Computed at barstate.islast from Phase 9 per-trade arrays.
-// Does NOT change any live/historical trade decisions.
+// Heavy table/render logic is wrapped in functions to avoid Pine CE10295.
 // ============================================================================
-bool dmShowP12 = (dmBtTable or dmDiag) and p12Enabled
-if dmShowP12 and barstate.islast
+
+p12Render(table tbl) =>
     int p12total = array.size(p9R)
-    // Score calibration: 6 bands × 2 directions, C-filtered only
+
+    // Score calibration: 6 bands × 2 directions, C-filtered only.
     if p12total > 0 and array.size(p9Sc) == p12total
         for i = 0 to p12total - 1
             int reg = array.get(p9Reg, i)
@@ -2338,16 +2700,16 @@ if dmShowP12 and barstate.islast
                     array.set(p12cgl, idx, array.get(p12cgl, idx) + math.abs(rr))
                 array.set(p12cr, idx, array.get(p12cr, idx) + rr)
 
-    var table p12Table = table.new(position.middle_left, 6, 22, bgcolor = color.new(#1e1e1e, 15), border_color = color.new(#444444, 50), border_width = 1)
-    color _h12 = #cccccc
-    color _d12 = #aaaaaa
-    table.cell(p12Table, 0, 0, "SCORE CALIB", text_color = _h12, text_size = size.tiny, text_halign = text.align_left)
-    table.cell(p12Table, 1, 0, "N",    text_color = _h12, text_size = size.tiny)
-    table.cell(p12Table, 2, 0, "Win%", text_color = _h12, text_size = size.tiny)
-    table.cell(p12Table, 3, 0, "AvgR", text_color = _h12, text_size = size.tiny)
-    table.cell(p12Table, 4, 0, "TotR", text_color = _h12, text_size = size.tiny)
-    table.cell(p12Table, 5, 0, "PF",   text_color = _h12, text_size = size.tiny)
-    string[] p12sn = array.from("L 70-74", "L 75-79", "L 80-84", "L 85-89", "L 90-94", "L 95+", "S 70-74", "S 75-79", "S 80-84", "S 85-89", "S 90-94", "S 95+")
+    color h = #cccccc
+    color d = #aaaaaa
+    table.cell(tbl, 0, 0, "SCORE CALIB", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 0, "N",    text_color = h, text_size = size.tiny)
+    table.cell(tbl, 2, 0, "Win%", text_color = h, text_size = size.tiny)
+    table.cell(tbl, 3, 0, "AvgR", text_color = h, text_size = size.tiny)
+    table.cell(tbl, 4, 0, "TotR", text_color = h, text_size = size.tiny)
+    table.cell(tbl, 5, 0, "PF",   text_color = h, text_size = size.tiny)
+
+    string[] names = array.from("L 70-74", "L 75-79", "L 80-84", "L 85-89", "L 90-94", "L 95+", "S 70-74", "S 75-79", "S 80-84", "S 85-89", "S 90-94", "S 95+")
     for b = 0 to 11
         int   n  = array.get(p12cn, b)
         float sr = array.get(p12cr, b)
@@ -2357,73 +2719,72 @@ if dmShowP12 and barstate.islast
         float gp = array.get(p12cgp, b)
         float gl = array.get(p12cgl, b)
         float pf = gl > 0 ? gp / gl : (gp > 0 ? 99.9 : 0.0)
-        color  rc = b < 6 ? #089981 : #f23645
-        table.cell(p12Table, 0, b + 1, array.get(p12sn, b), text_color = rc, text_size = size.tiny, text_halign = text.align_left)
-        table.cell(p12Table, 1, b + 1, str.tostring(n), text_color = _d12, text_size = size.tiny)
-        table.cell(p12Table, 2, b + 1, str.tostring(math.round(wr)) + "%", text_color = wr >= 50 ? #089981 : #f23645, text_size = size.tiny)
-        table.cell(p12Table, 3, b + 1, str.tostring(math.round(ar * 100) / 100), text_color = ar >= 0 ? #089981 : #f23645, text_size = size.tiny)
-        table.cell(p12Table, 4, b + 1, str.tostring(math.round(sr * 100) / 100), text_color = sr >= 0 ? #089981 : #f23645, text_size = size.tiny)
-        table.cell(p12Table, 5, b + 1, str.tostring(math.round(pf * 10) / 10), text_color = pf >= 1 ? #089981 : #f23645, text_size = size.tiny)
-    // BOS + retest funnel with per-stage breakdown
-    table.cell(p12Table, 0, 13, "── BOS FUNNEL ──", text_color = _h12, text_size = size.tiny, text_halign = text.align_left)
-    table.cell(p12Table, 1, 13, "Model: " + p12Model, text_color = _d12, text_size = size.tiny)
-    table.cell(p12Table, 2, 13, "Exp: " + str.tostring(p12Expiry) + "b", text_color = _d12, text_size = size.tiny)
-    table.cell(p12Table, 0, 14, "Raw Setups",    text_color = _d12, text_size = size.tiny, text_halign = text.align_left)
-    table.cell(p12Table, 1, 14, str.tostring(p12Setups), text_color = _d12, text_size = size.tiny)
-    table.cell(p12Table, 0, 15, "→ BOS Conf",    text_color = _d12, text_size = size.tiny, text_halign = text.align_left)
-    table.cell(p12Table, 1, 15, str.tostring(p12BosConf), text_color = p12BosConf > 0 ? #089981 : _d12, text_size = size.tiny)
-    table.cell(p12Table, 2, 15, "Exp " + str.tostring(p12ExpBos) + " Inv " + str.tostring(p12InvBos), text_color = #ff9800, text_size = size.tiny)
-    table.cell(p12Table, 0, 16, "→ Retest OK",   text_color = _d12, text_size = size.tiny, text_halign = text.align_left)
-    table.cell(p12Table, 1, 16, str.tostring(p12RetestOk), text_color = p12RetestOk > 0 ? #089981 : _d12, text_size = size.tiny)
-    table.cell(p12Table, 2, 16, "Exp " + str.tostring(p12ExpRet) + " Inv " + str.tostring(p12InvRet), text_color = #ff9800, text_size = size.tiny)
-    table.cell(p12Table, 0, 17, "→ Confirm OK",  text_color = _d12, text_size = size.tiny, text_halign = text.align_left)
-    table.cell(p12Table, 1, 17, str.tostring(p12ConfirmOk), text_color = p12ConfirmOk > 0 ? #089981 : #f23645, text_size = size.tiny)
-    table.cell(p12Table, 2, 17, "Exp " + str.tostring(p12ExpConf) + " Inv " + str.tostring(p12InvConf), text_color = #ff9800, text_size = size.tiny)
-    // Trace: most recent setup state
-    string p12stTxt = p12State == 0 ? "IDLE" : p12State == 1 ? "WAIT_BOS" : p12State == 2 ? "WAIT_RET" : p12State == 3 ? "WAIT_CONF" : "READY"
-    string p12dirTxt = p12Dir == 1 ? "Long" : p12Dir == -1 ? "Short" : "—"
-    table.cell(p12Table, 0, 18, "── TRACE ──",   text_color = _h12, text_size = size.tiny, text_halign = text.align_left)
-    table.cell(p12Table, 0, 19, "State",         text_color = _d12, text_size = size.tiny, text_halign = text.align_left)
-    table.cell(p12Table, 1, 19, p12stTxt + " " + p12dirTxt, text_color = p12State > 0 ? #ff9800 : _d12, text_size = size.tiny)
-    table.cell(p12Table, 0, 20, "BOS Lvl",       text_color = _d12, text_size = size.tiny, text_halign = text.align_left)
-    table.cell(p12Table, 1, 20, not na(p12BosLvl) ? str.tostring(p12BosLvl) : "—", text_color = _d12, text_size = size.tiny)
-    table.cell(p12Table, 2, 20, not na(p12RetestBar) ? "Ret@" + str.tostring(p12RetestBar) : "—", text_color = _d12, text_size = size.tiny)
-    table.cell(p12Table, 0, 21, "Repaint: PASS", text_color = #089981, text_size = size.tiny, text_halign = text.align_left)
+        color rc = b < 6 ? #089981 : #f23645
+        table.cell(tbl, 0, b + 1, array.get(names, b), text_color = rc, text_size = size.tiny, text_halign = text.align_left)
+        table.cell(tbl, 1, b + 1, str.tostring(n), text_color = d, text_size = size.tiny)
+        table.cell(tbl, 2, b + 1, str.tostring(math.round(wr)) + "%", text_color = wr >= 50 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, 3, b + 1, str.tostring(math.round(ar * 100) / 100), text_color = ar >= 0 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, 4, b + 1, str.tostring(math.round(sr * 100) / 100), text_color = sr >= 0 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, 5, b + 1, str.tostring(math.round(pf * 10) / 10), text_color = pf >= 1 ? #089981 : #f23645, text_size = size.tiny)
 
-// ── Phase 13 Entry Model Comparison table ────────────────────────────────────
-if p13Enabled and dmShowP12 and barstate.islast
-    var table p13Table = table.new(position.bottom_right, 8, 7, bgcolor = color.new(#1e1e1e, 15), border_color = color.new(#444444, 50), border_width = 1)
-    color _h13 = #cccccc
-    color _d13 = #aaaaaa
-    table.cell(p13Table, 0, 0, "ENTRY TEST", text_color = _h13, text_size = size.tiny, text_halign = text.align_left)
-    table.cell(p13Table, 1, 0, "N",     text_color = _h13, text_size = size.tiny)
-    table.cell(p13Table, 2, 0, "Ret%",  text_color = _h13, text_size = size.tiny)
-    table.cell(p13Table, 3, 0, "Win%",  text_color = _h13, text_size = size.tiny)
-    table.cell(p13Table, 4, 0, "AvgR",  text_color = _h13, text_size = size.tiny)
-    table.cell(p13Table, 5, 0, "TotR",  text_color = _h13, text_size = size.tiny)
-    table.cell(p13Table, 6, 0, "PF",    text_color = _h13, text_size = size.tiny)
-    table.cell(p13Table, 7, 0, "MaxDD", text_color = _h13, text_size = size.tiny)
-    string[] p13names = array.from("Control", "BOS", "Retest", "Confirm")
+    table.cell(tbl, 0, 13, "── BOS FUNNEL ──", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 13, "Full funnel", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 2, 13, "Exp: " + str.tostring(p12Expiry) + "b", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 0, 14, "Raw Setups", text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 14, str.tostring(p12Setups), text_color = d, text_size = size.tiny)
+    table.cell(tbl, 0, 15, "→ BOS Conf", text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 15, str.tostring(p12BosConf), text_color = p12BosConf > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 2, 15, "Exp " + str.tostring(p12ExpBos) + " Inv " + str.tostring(p12InvBos), text_color = #ff9800, text_size = size.tiny)
+    table.cell(tbl, 0, 16, "→ Retest OK", text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 16, str.tostring(p12RetestOk), text_color = p12RetestOk > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 2, 16, "Exp " + str.tostring(p12ExpRet) + " Inv " + str.tostring(p12InvRet), text_color = #ff9800, text_size = size.tiny)
+    table.cell(tbl, 0, 17, "→ Confirm OK", text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 17, str.tostring(p12ConfirmOk), text_color = p12ConfirmOk > 0 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(tbl, 2, 17, "Exp " + str.tostring(p12ExpConf) + " Inv " + str.tostring(p12InvConf), text_color = #ff9800, text_size = size.tiny)
+
+    string stTxt = p12State == 0 ? "IDLE" : p12State == 1 ? "WAIT_BOS" : p12State == 2 ? "WAIT_RET" : p12State == 3 ? "WAIT_CONF" : "READY"
+    string dirTxt = p12Dir == 1 ? "Long" : p12Dir == -1 ? "Short" : "—"
+    table.cell(tbl, 0, 18, "── TRACE ──", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 0, 19, "State", text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 19, stTxt + " " + dirTxt, text_color = p12State > 0 ? #ff9800 : d, text_size = size.tiny)
+    table.cell(tbl, 0, 20, "BOS Lvl", text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 20, not na(p12BosLvl) ? str.tostring(p12BosLvl) : "—", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 2, 20, not na(p12RetestBar) ? "Ret@" + str.tostring(p12RetestBar) : "—", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 0, 21, "Repaint: PASS", text_color = #089981, text_size = size.tiny, text_halign = text.align_left)
+
+p13Render(table tbl) =>
+    color h = #cccccc
+    color d = #aaaaaa
+    table.cell(tbl, 0, 0, "ENTRY TEST", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 0, "N",     text_color = h, text_size = size.tiny)
+    table.cell(tbl, 2, 0, "Ret%",  text_color = h, text_size = size.tiny)
+    table.cell(tbl, 3, 0, "Win%",  text_color = h, text_size = size.tiny)
+    table.cell(tbl, 4, 0, "AvgR",  text_color = h, text_size = size.tiny)
+    table.cell(tbl, 5, 0, "TotR",  text_color = h, text_size = size.tiny)
+    table.cell(tbl, 6, 0, "PF",    text_color = h, text_size = size.tiny)
+    table.cell(tbl, 7, 0, "MaxDD", text_color = h, text_size = size.tiny)
+
+    string[] names = array.from("Control", "BOS", "Retest", "Confirm")
     for m = 0 to 3
-        int   n  = array.get(p13n, m)
+        int n = array.get(p13n, m)
         float sr = array.get(p13rs, m)
-        int   w  = array.get(p13w, m)
+        int w = array.get(p13w, m)
         float ar = n > 0 ? sr / n : 0.0
         float wr = n > 0 ? w * 100.0 / n : 0.0
         float gp = array.get(p13gp, m)
         float gl = array.get(p13gl, m)
         float pf = gl > 0 ? gp / gl : (gp > 0 ? 99.9 : 0.0)
         float dd = array.get(p13dd, m)
-        int   ret = p12Setups > 0 ? math.round(n * 100.0 / p12Setups) : 0
-        table.cell(p13Table, 0, m + 1, array.get(p13names, m), text_color = _d13, text_size = size.tiny, text_halign = text.align_left)
-        table.cell(p13Table, 1, m + 1, str.tostring(n), text_color = _d13, text_size = size.tiny)
-        table.cell(p13Table, 2, m + 1, str.tostring(ret) + "%", text_color = _d13, text_size = size.tiny)
-        table.cell(p13Table, 3, m + 1, str.tostring(math.round(wr)) + "%", text_color = wr >= 50 ? #089981 : #f23645, text_size = size.tiny)
-        table.cell(p13Table, 4, m + 1, str.tostring(math.round(ar * 100) / 100), text_color = ar >= 0 ? #089981 : #f23645, text_size = size.tiny)
-        table.cell(p13Table, 5, m + 1, str.tostring(math.round(sr * 100) / 100), text_color = sr >= 0 ? #089981 : #f23645, text_size = size.tiny)
-        table.cell(p13Table, 6, m + 1, str.tostring(math.round(pf * 10) / 10), text_color = pf >= 1 ? #089981 : #f23645, text_size = size.tiny)
-        table.cell(p13Table, 7, m + 1, str.tostring(math.round(dd * 100) / 100), text_color = #f23645, text_size = size.tiny)
-    // Verdict
+        int ret = p12Setups > 0 ? math.round(n * 100.0 / p12Setups) : 0
+        table.cell(tbl, 0, m + 1, array.get(names, m), text_color = d, text_size = size.tiny, text_halign = text.align_left)
+        table.cell(tbl, 1, m + 1, str.tostring(n), text_color = d, text_size = size.tiny)
+        table.cell(tbl, 2, m + 1, str.tostring(ret) + "%", text_color = d, text_size = size.tiny)
+        table.cell(tbl, 3, m + 1, str.tostring(math.round(wr)) + "%", text_color = wr >= 50 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, 4, m + 1, str.tostring(math.round(ar * 100) / 100), text_color = ar >= 0 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, 5, m + 1, str.tostring(math.round(sr * 100) / 100), text_color = sr >= 0 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, 6, m + 1, str.tostring(math.round(pf * 10) / 10), text_color = pf >= 1 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, 7, m + 1, str.tostring(math.round(dd * 100) / 100), text_color = #f23645, text_size = size.tiny)
+
     int bestM = 0
     float bestAvg = array.get(p13n, 0) > 0 ? array.get(p13rs, 0) / array.get(p13n, 0) : -999.0
     for m = 1 to 3
@@ -2432,8 +2793,192 @@ if p13Enabled and dmShowP12 and barstate.islast
         if mn >= 20 and ma > bestAvg
             bestAvg := ma
             bestM := m
-    string verdict = array.get(p13n, bestM) < 20 ? "INSUFFICIENT DATA" : array.get(p13names, bestM) + " (AvgR " + str.tostring(math.round(bestAvg * 100) / 100) + ")"
-    table.cell(p13Table, 0, 5, "Best",    text_color = _h13, text_size = size.tiny, text_halign = text.align_left)
-    table.cell(p13Table, 1, 5, verdict,   text_color = #ff9800, text_size = size.tiny)
-    table.cell(p13Table, 0, 6, "Repaint", text_color = _d13, text_size = size.tiny, text_halign = text.align_left)
-    table.cell(p13Table, 1, 6, "PASS",    text_color = #089981, text_size = size.tiny)
+    string verdict = array.get(p13n, bestM) < 20 ? "INSUFFICIENT DATA" : array.get(names, bestM) + " (AvgR " + str.tostring(math.round(bestAvg * 100) / 100) + ")"
+    table.cell(tbl, 0, 5, "Best", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 5, verdict, text_color = #ff9800, text_size = size.tiny)
+    table.cell(tbl, 0, 6, "Repaint", text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 6, "PASS", text_color = #089981, text_size = size.tiny)
+
+p14TimeText(int ts) =>
+    na(ts) ? "—" : str.format_time(ts, "yyyy-MM-dd HH:mm", syminfo.timezone)
+
+p14Fmt(float value) =>
+    str.tostring(math.round(value * 100.0) / 100.0)
+
+p14BreakRow(table tbl, int row, string name, array<float> stats, int bucketCount, int bucket) =>
+    color d = #aaaaaa
+    table.cell(tbl, 0, row, name, text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    for m = 0 to 3
+        int base = (m * bucketCount + bucket) * 5
+        int n = int(array.get(stats, base))
+        int wins = int(array.get(stats, base + 1))
+        float totalR = array.get(stats, base + 2)
+        float gp = array.get(stats, base + 3)
+        float gl = array.get(stats, base + 4)
+        float avgR = n > 0 ? totalR / n : 0.0
+        float winPct = n > 0 ? wins * 100.0 / n : 0.0
+        float pf = gl > 0 ? gp / gl : (gp > 0 ? 99.9 : 0.0)
+        string txt = n > 0 ? "N " + str.tostring(n) + " | W " + str.tostring(math.round(winPct)) + "% | A " + p14Fmt(avgR) + " | T " + p14Fmt(totalR) + " | PF " + str.tostring(math.round(pf * 10.0) / 10.0) : "N 0 | W — | A — | T 0 | PF —"
+        table.cell(tbl, m + 1, row, txt, text_color = totalR >= 0 ? #089981 : #f23645, text_size = size.tiny)
+
+p14OpenAuditRow(table tbl, int row, string name, int model) =>
+    color d = #aaaaaa
+    int base = model * 5
+    int attempts = array.get(p14odbg, base)
+    int disabled = array.get(p14odbg, base + 1)
+    int outWindow = array.get(p14odbg, base + 2)
+    int active = array.get(p14odbg, base + 3)
+    int success = array.get(p14odbg, base + 4)
+    int completed = array.get(p14n, model)
+    bool balanced = attempts == disabled + outWindow + active + success
+    table.cell(tbl, 0, row, name, text_color = d, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, row, "Attempts " + str.tostring(attempts), text_color = attempts > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 2, row, "Success " + str.tostring(success) + " | Done " + str.tostring(completed), text_color = success > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 3, row, "Already Active " + str.tostring(active), text_color = active > 0 ? #ff9800 : d, text_size = size.tiny)
+    table.cell(tbl, 4, row, "Disabled " + str.tostring(disabled) + " | Window " + str.tostring(outWindow) + (balanced ? " | BAL PASS" : " | BAL FAIL"), text_color = balanced ? d : #f23645, text_size = size.tiny)
+
+p14Render(table tbl) =>
+    color h = #cccccc
+    color d = #aaaaaa
+    string[] names = array.from("Control", "BOS", "Retest", "Confirm")
+    table.cell(tbl, 0, 0, "PHASE 14", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    for m = 0 to 3
+        table.cell(tbl, m + 1, 0, array.get(names, m), text_color = h, text_size = size.tiny)
+
+    string[] metrics = array.from("N", "Wins", "Losses", "Win %", "Avg R", "Total R", "Profit Factor", "Max Drawdown", "Largest Win", "Largest Loss", "Max Consecutive W", "Max Consecutive L", "Retention %", "Entries | Open")
+    for row = 1 to 14
+        table.cell(tbl, 0, row, array.get(metrics, row - 1), text_color = d, text_size = size.tiny, text_halign = text.align_left)
+
+    int controlEntries = array.get(p14ent, 0)
+    for m = 0 to 3
+        int n = array.get(p14n, m)
+        int wins = array.get(p14w, m)
+        int losses = array.get(p14l, m)
+        int entries = array.get(p14ent, m)
+        float totalR = array.get(p14rs, m)
+        float avgR = n > 0 ? totalR / n : 0.0
+        float winPct = n > 0 ? wins * 100.0 / n : 0.0
+        float gp = array.get(p14gp, m)
+        float gl = array.get(p14gl, m)
+        float pf = gl > 0 ? gp / gl : (gp > 0 ? 99.9 : 0.0)
+        float ret = m == 0 ? 100.0 : controlEntries > 0 ? entries * 100.0 / controlEntries : na
+        float largestWin = array.get(p14lw, m)
+        float largestLoss = array.get(p14ll, m)
+        int col = m + 1
+        table.cell(tbl, col, 1, str.tostring(n), text_color = d, text_size = size.tiny)
+        table.cell(tbl, col, 2, str.tostring(wins), text_color = #089981, text_size = size.tiny)
+        table.cell(tbl, col, 3, str.tostring(losses), text_color = #f23645, text_size = size.tiny)
+        table.cell(tbl, col, 4, n > 0 ? str.tostring(math.round(winPct)) + "%" : "—", text_color = winPct >= 50 ? #089981 : n > 0 ? #f23645 : d, text_size = size.tiny)
+        table.cell(tbl, col, 5, n > 0 ? p14Fmt(avgR) : "—", text_color = avgR >= 0 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, col, 6, p14Fmt(totalR), text_color = totalR >= 0 ? #089981 : #f23645, text_size = size.tiny)
+        table.cell(tbl, col, 7, n > 0 ? str.tostring(math.round(pf * 10.0) / 10.0) : "—", text_color = pf >= 1 ? #089981 : n > 0 ? #f23645 : d, text_size = size.tiny)
+        table.cell(tbl, col, 8, p14Fmt(array.get(p14dd, m)), text_color = #f23645, text_size = size.tiny)
+        table.cell(tbl, col, 9, na(largestWin) ? "—" : p14Fmt(largestWin), text_color = #089981, text_size = size.tiny)
+        table.cell(tbl, col, 10, na(largestLoss) ? "—" : p14Fmt(largestLoss), text_color = #f23645, text_size = size.tiny)
+        table.cell(tbl, col, 11, str.tostring(array.get(p14mcw, m)), text_color = #089981, text_size = size.tiny)
+        table.cell(tbl, col, 12, str.tostring(array.get(p14mcl, m)), text_color = #f23645, text_size = size.tiny)
+        table.cell(tbl, col, 13, na(ret) ? "—" : str.tostring(math.round(ret)) + "%", text_color = d, text_size = size.tiny)
+        table.cell(tbl, col, 14, str.tostring(entries) + " | " + str.tostring(entries - n), text_color = entries == n ? d : #ff9800, text_size = size.tiny)
+
+    table.cell(tbl, 0, 15, "── N | W% | AVG | TOTAL | PF ──", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    p14BreakRow(tbl, 16, "Long",        p14dst, 2, 0)
+    p14BreakRow(tbl, 17, "Short",       p14dst, 2, 1)
+    p14BreakRow(tbl, 18, "HTF Bull",    p14rst, 3, 0)
+    p14BreakRow(tbl, 19, "HTF Bear",    p14rst, 3, 1)
+    p14BreakRow(tbl, 20, "HTF Neutral", p14rst, 3, 2)
+    p14BreakRow(tbl, 21, "Overnight",   p14tst, 7, 0)
+    p14BreakRow(tbl, 22, "Premarket",   p14tst, 7, 1)
+    p14BreakRow(tbl, 23, "Open",        p14tst, 7, 2)
+    p14BreakRow(tbl, 24, "MidAM",       p14tst, 7, 3)
+    p14BreakRow(tbl, 25, "Midday",      p14tst, 7, 4)
+    p14BreakRow(tbl, 26, "PM",          p14tst, 7, 5)
+    p14BreakRow(tbl, 27, "After-hours", p14tst, 7, 6)
+    p14BreakRow(tbl, 28, "Score 70-74", p14bst, 6, 0)
+    p14BreakRow(tbl, 29, "Score 75-79", p14bst, 6, 1)
+    p14BreakRow(tbl, 30, "Score 80-84", p14bst, 6, 2)
+    p14BreakRow(tbl, 31, "Score 85-89", p14bst, 6, 3)
+    p14BreakRow(tbl, 32, "Score 90-94", p14bst, 6, 4)
+    p14BreakRow(tbl, 33, "Score 95+",   p14bst, 6, 5)
+    p14BreakRow(tbl, 34, "Early third", p14xst, 3, 0)
+    p14BreakRow(tbl, 35, "Middle third", p14xst, 3, 1)
+    p14BreakRow(tbl, 36, "Late third",  p14xst, 3, 2)
+
+    int dbgControl = array.get(p14ent, 0)
+    int dbgBos = array.get(p14ent, 1)
+    int dbgRetest = array.get(p14ent, 2)
+    int dbgConfirm = array.get(p14ent, 3)
+    int dbgRawTotal = array.get(p14dbg, 8)
+    int dbgVariantC = array.get(p14dbg, 9)
+    int dbgCanonical = array.get(p14dbg, 1)
+    bool dbgFeedOk = dbgRawTotal >= dbgVariantC and dbgVariantC == dbgCanonical
+    bool dbgOrderOk = dbgCanonical >= dbgControl and dbgControl >= dbgBos and dbgBos >= dbgRetest and dbgRetest >= dbgConfirm
+    string dbgFeedStatus = dbgRawTotal == 0 ? "RAW EMPTY" : dbgVariantC == 0 ? "VARIANT C ZERO" : dbgFeedOk ? "FEED PASS" : "FEED FAIL"
+    color dbgFeedColor = dbgRawTotal > 0 and dbgVariantC > 0 and dbgFeedOk ? #089981 : #f23645
+    string dbgControlStatus = dbgCanonical == 0 ? "NO CANONICAL" : dbgControl == 0 ? "CONTROL BLOCKED" : "CONTROL OK"
+    color dbgControlColor = dbgCanonical > 0 and dbgControl > 0 ? #089981 : #f23645
+    table.cell(tbl, 0, 37, "── SETUP FEED ──", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 37, "Bars In Window " + str.tostring(array.get(p14dbg, 0)), text_color = d, text_size = size.tiny)
+    table.cell(tbl, 2, 37, "Raw Long " + str.tostring(array.get(p14dbg, 6)), text_color = array.get(p14dbg, 6) > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 3, 37, "Raw Short " + str.tostring(array.get(p14dbg, 7)), text_color = array.get(p14dbg, 7) > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 4, 37, "Raw Total " + str.tostring(dbgRawTotal), text_color = dbgRawTotal > 0 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(tbl, 0, 38, "Variant C Feed", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 38, "Qualified " + str.tostring(dbgVariantC), text_color = dbgVariantC > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 2, 38, "Canonical Raw " + str.tostring(dbgCanonical), text_color = dbgCanonical > 0 ? #089981 : d, text_size = size.tiny)
+    table.cell(tbl, 3, 38, dbgFeedStatus, text_color = dbgFeedColor, text_size = size.tiny)
+    table.cell(tbl, 4, 38, dbgControlStatus, text_color = dbgControlColor, text_size = size.tiny)
+    p14OpenAuditRow(tbl, 39, "Control Open", 0)
+    p14OpenAuditRow(tbl, 40, "BOS Open", 1)
+    p14OpenAuditRow(tbl, 41, "Retest Open", 2)
+    p14OpenAuditRow(tbl, 42, "Confirm Open " + (dbgOrderOk ? "| ORDER PASS" : "| ORDER FAIL"), 3)
+
+    table.cell(tbl, 0, 43, "── DEBUG TIME ──", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 43, "First " + p14TimeText(p14FirstChartTs), text_color = d, text_size = size.tiny)
+    table.cell(tbl, 2, 43, "Last " + p14TimeText(p14LastChartTs), text_color = d, text_size = size.tiny)
+    table.cell(tbl, 3, 43, "Start " + p14TimeText(p14StartTs), text_color = d, text_size = size.tiny)
+    table.cell(tbl, 4, 43, "End " + p14TimeText(p14EndExclusive - 1), text_color = d, text_size = size.tiny)
+    table.cell(tbl, 0, 44, "Execution", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 44, "Last In-Window " + p14TimeText(array.get(p14dts, 0)), text_color = d, text_size = size.tiny)
+    table.cell(tbl, 2, 44, "Current/Last " + p14TimeText(time), text_color = d, text_size = size.tiny)
+    table.cell(tbl, 3, 44, "Bars In Window " + str.tostring(array.get(p14dbg, 0)), text_color = array.get(p14dbg, 0) > 0 ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(tbl, 4, 44, "Current InWindow " + (p14InWindow ? "YES" : "NO"), text_color = p14InWindow ? #089981 : d, text_size = size.tiny)
+
+    bool leftCovered = not na(p14FirstChartTs) and p14FirstChartTs <= p14StartTs
+    bool rightCovered = not na(p14LastChartTs) and p14LastChartTs >= p14EndExclusive
+    bool hasWindowBars = array.get(p14dbg, 0) > 0
+    bool fullData = p14RangeValid and leftCovered and rightCovered and hasWindowBars
+    string coverage = not p14RangeValid ? "INVALID RANGE" : fullData ? "FULL DATA" : "PARTIAL DATA"
+    color coverageColor = fullData ? #089981 : #ff9800
+    table.cell(tbl, 0, 45, "Coverage", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 45, coverage, text_color = coverageColor, text_size = size.tiny)
+    table.cell(tbl, 2, 45, leftCovered ? "Start OK" : "Start missing", text_color = leftCovered ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(tbl, 3, 45, rightCovered ? "End OK" : "End missing", text_color = rightCovered ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(tbl, 4, 45, hasWindowBars ? syminfo.timezone : "No in-window bars", text_color = hasWindowBars ? d : #f23645, text_size = size.tiny)
+
+    string startTxt = str.tostring(p14StartYear) + "-" + str.tostring(p14StartMonth) + "-" + str.tostring(p14StartDay)
+    string endTxt = str.tostring(p14EndYear) + "-" + str.tostring(p14EndMonth) + "-" + str.tostring(p14EndDay)
+    table.cell(tbl, 0, 46, "Window", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 46, startTxt, text_color = d, text_size = size.tiny)
+    table.cell(tbl, 2, 46, "through", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 3, 46, endTxt, text_color = d, text_size = size.tiny)
+    table.cell(tbl, 4, 46, "Inclusive", text_color = d, text_size = size.tiny)
+
+    table.cell(tbl, 0, 47, "Rules", text_color = h, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl, 1, 47, "STOP first", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 2, 47, "ATR model", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 3, 47, "Date thirds", text_color = d, text_size = size.tiny)
+    table.cell(tbl, 4, 47, "No lookahead", text_color = #089981, text_size = size.tiny)
+
+// Tables are created once; functions only mutate their cells.
+var table p12Table = table.new(position.middle_left, 6, 22, bgcolor = color.new(#1e1e1e, 15), border_color = color.new(#444444, 50), border_width = 1)
+var table p13Table = table.new(position.bottom_right, 8, 7, bgcolor = color.new(#1e1e1e, 15), border_color = color.new(#444444, 50), border_width = 1)
+var table p14Table = (p14Enabled and dmHistorical) ? table.new(position.top_left, 5, 48, bgcolor = color.new(#1e1e1e, 10), border_color = color.new(#444444, 50), border_width = 1) : na
+
+bool dmShowP12 = (dmBtTable or dmDiag) and p12Enabled
+if dmShowP12 and barstate.islast
+    p12Render(p12Table)
+
+if p13Enabled and dmShowP12 and barstate.islast
+    p13Render(p13Table)
+
+if p14Enabled and dmHistorical and barstate.islast and not na(p14Table)
+    p14Render(p14Table)

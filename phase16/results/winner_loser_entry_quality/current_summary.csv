@@ -1,0 +1,2 @@
+N,wins,losses,win_pct,avg_R,total_R,profit_factor,max_drawdown_R,largest_win_R,largest_loss_R,max_consecutive_wins,max_consecutive_losses,bars_in_window,evidence,round_turn_cost_USD,numeric_feature_count,logical_interaction_count
+42,17,25,40.476190476190474,-0.008455272926675073,-0.35512146292035307,0.9836932374533185,8.37128128797455,1.9927957671063168,-1.0461806034103125,5,5,10164,WEAK,14.5,52,10

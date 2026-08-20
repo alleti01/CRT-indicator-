@@ -1,0 +1,6 @@
+condition,true_count,false_count
+directional_candle,21,14
+close_beyond_bos_level,28,7
+confirmed,21,14
+invalid_condition,5,30
+opposite_bos,0,35

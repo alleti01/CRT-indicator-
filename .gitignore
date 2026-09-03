@@ -25,3 +25,8 @@ phase27/data/raw/nq_trades_pilot_202401.csv
 phase27/data/raw/nq_trades_pilot_202401.csv.parts/
 phase53/results/opportunity_discovery/event_dataset.parquet
 
+# Forward rehearsal / trader runtime logs (do not auto-sync)
+forward_rehearsal/sessions/
+phase73/logs/
+phase74/logs/
+

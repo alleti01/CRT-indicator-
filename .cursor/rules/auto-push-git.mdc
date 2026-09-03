@@ -1,0 +1,32 @@
+---
+description: Auto-commit and push to git after agent makes project changes
+alwaysApply: true
+---
+
+# Auto-push after changes
+
+When you modify files in this repository, **commit and push to git before ending your turn**, unless the user explicitly says not to.
+
+## Protocol
+
+1. After completing code changes, run in parallel:
+   - `git status`
+   - `git diff` (staged and unstaged)
+   - `git log -1 --oneline` (match commit message style)
+2. Stage relevant files with `git add` (never `.env`, credentials, or gitignored runtime logs).
+3. Commit with a concise message focused on **why**.
+4. Push: `git push origin HEAD`
+5. Confirm clean sync with `git status`.
+
+## Safety
+
+- NEVER update git config
+- NEVER force-push to main/master
+- NEVER commit secrets (`.env`, API keys)
+- NEVER skip hooks
+- If push fails (offline/auth), report the error; do not force-push
+
+## Also runs automatically
+
+- Cursor `stop` hook: `.cursor/hooks/auto-push.sh`
+- Git `post-commit` hook (after local commits): run `bash scripts/install-auto-push.sh` once per machine

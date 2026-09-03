@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 from typing import Callable
+from urllib.parse import parse_qs, urlparse
 
 from phase73.config.loader import Phase73Config
 from phase73.webhook.deduplicator import SignalDeduplicator
@@ -57,19 +58,29 @@ class SecureWebhookReceiver:
         self._server: HTTPServer | None = None
         self._thread: Thread | None = None
 
-    def _auth_ok(self, headers) -> bool:
+    def _auth_ok(self, headers, query_token: str = "") -> bool:
         if not self.secret:
             return False  # require secret in production dress rehearsal
         auth = headers.get("Authorization", "")
         if auth.startswith("Bearer "):
             return auth[7:] == self.secret
-        return headers.get("X-Webhook-Secret", "") == self.secret
+        if headers.get("X-Webhook-Secret", "") == self.secret:
+            return True
+        # TradingView webhooks cannot set Authorization; accept ?token= on URL (ngrok-compatible).
+        return bool(query_token) and query_token == self.secret
 
-    def handle_payload(self, payload: dict, *, headers: dict | None = None, received_at: datetime | None = None) -> tuple[bool, WebhookReason, str]:
+    def handle_payload(
+        self,
+        payload: dict,
+        *,
+        headers: dict | None = None,
+        query_token: str = "",
+        received_at: datetime | None = None,
+    ) -> tuple[bool, WebhookReason, str]:
         received_at = received_at or datetime.now(timezone.utc)
         tracker = LatencyTracker(webhook_received_at=received_at)
 
-        if headers is not None and not self._auth_ok(headers):
+        if headers is not None and not self._auth_ok(headers, query_token=query_token):
             self.on_reject(payload, WebhookReason.WEBHOOK_INVALID, "auth failed")
             return False, WebhookReason.WEBHOOK_INVALID, "auth failed"
 
@@ -108,10 +119,12 @@ class SecureWebhookReceiver:
                 return
 
             def do_POST(self) -> None:  # noqa: N802
-                if self.path != path:
+                parsed = urlparse(self.path)
+                if parsed.path != path:
                     self.send_response(404)
                     self.end_headers()
                     return
+                query_token = parse_qs(parsed.query).get("token", [""])[0]
                 length = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(length)
                 try:
@@ -123,7 +136,7 @@ class SecureWebhookReceiver:
                     self.wfile.write(b'{"ok":false}')
                     return
                 hdrs = {k: v for k, v in self.headers.items()}
-                ok, reason, _ = receiver.handle_payload(payload, headers=hdrs)
+                ok, reason, _ = receiver.handle_payload(payload, headers=hdrs, query_token=query_token)
                 self.send_response(200 if ok else 409)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()

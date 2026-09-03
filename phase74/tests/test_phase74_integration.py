@@ -52,6 +52,16 @@ class Phase74IntegrationTests(unittest.TestCase):
         self.assertFalse(recv.handle_payload(p, headers=hdrs)[0])
         td.cleanup()
 
+    def test_p74_02b_query_token_auth(self):
+        """TradingView/ngrok: secret via ?token= when Authorization header unavailable."""
+        cfg = load_phase74_config().to_phase73_config()
+        td = tempfile.TemporaryDirectory()
+        recv = SecureWebhookReceiver(cfg, "secret", lambda s, r, t: None, deduplicator=__import__("phase73.webhook.deduplicator", fromlist=["SignalDeduplicator"]).SignalDeduplicator(Path(td.name) / "ids.jsonl"))
+        p = make_test_signal().to_dict()
+        self.assertTrue(recv.handle_payload(p, headers={}, query_token="secret")[0])
+        self.assertFalse(recv.handle_payload(p, headers={}, query_token="wrong")[0])
+        td.cleanup()
+
     def test_p74_03_stale_webhook(self):
         cfg = load_phase74_config().to_phase73_config()
         old = datetime.now(timezone.utc) - timedelta(seconds=500)

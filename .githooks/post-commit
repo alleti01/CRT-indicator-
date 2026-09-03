@@ -1,0 +1,6 @@
+#!/bin/bash
+# Push to origin after every local commit.
+set -euo pipefail
+
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+git push origin "$BRANCH" || true

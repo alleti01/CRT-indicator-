@@ -1,0 +1,14 @@
+{
+  "phase69_buggy_count": 26481,
+  "phase69_buggy_pct": 0.7320451152761652,
+  "true_2p5_winners": 10432,
+  "true_2p5_pct": 0.2883839221540333,
+  "m0_target_exits": 10432,
+  "m0_target_pct": 0.2883839221540333,
+  "root_cause": "phase69/python/path_audit.py counterfactual_after_r() computed UNCONDITIONAL cumulative MFE from entry bar without stop ordering. 'Stop held' was never implemented \u2014 any trade whose price eventually touched +2.5R counted, even if -1R stop occurred first.",
+  "post_stop_contamination": true,
+  "post_stop_fake_n": 15894,
+  "post_stop_fake_pct_of_buggy": 0.6002039197915486,
+  "post_stop_fake_pct_of_all": 0.4393763476530104,
+  "indexing_note": "Phase69 slice hi[ei:end] includes entry bar; M0 walks from ei+1"
+}

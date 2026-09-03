@@ -1,0 +1,5 @@
+{
+  "status": "SPOT_CHECK",
+  "pass": true,
+  "note": "bar-index T5 avoids DST ambiguity"
+}

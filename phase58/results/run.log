@@ -1,0 +1,49 @@
+Config hash: facad8ebfae648be
+S54 hash OK: bccf4277f3d44d13
+Building market arrays...
+  Precompute: 36.1s, 3075087 bars
+Running trader engine...
+  Engine: 33.6s
+  Decisions: 3074926
+  Trades: 223162
+  Decision breakdown: {'WATCH': 1037481, 'HOLD': 1017758, 'ARMED': 458803, 'EXIT_STOP': 144099, 'TAKE_LONG': 114748, 'TAKE_SHORT': 108414, 'EXIT_TARGET': 78781, 'WAIT': 78224, 'INVALIDATED': 21951, 'MISSED_NO_CHASE': 14385, 'EXIT_TIME': 282}
+
+--- TRADE RESULTS ---
+  N=223162 AvgR=-0.1163 PF=0.867 WR=0.352
+  TotalR=-25962.3 MaxDD=29582.0
+  Exit reasons: {'STOP': 144099, 'TARGET': 78781, 'TIME': 282}
+  LONG: N=114748 AvgR=-0.1152
+  SHORT: N=108414 AvgR=-0.1176
+  Cost 1.5x: AvgR=-0.2934
+  Cost 2x: AvgR=-0.4704
+
+--- YEAR TABLE ---
+  2017: N=5775 AvgR=-1.2109 PF=0.262
+  2018: N=25185 AvgR=-0.3577 PF=0.654
+  2019: N=24823 AvgR=-0.3944 PF=0.625
+  2020: N=25291 AvgR=-0.0287 PF=0.965
+  2021: N=25671 AvgR=-0.0460 PF=0.945
+  2022: N=26035 AvgR=0.0451 PF=1.059
+  2023: N=25643 AvgR=-0.0837 PF=0.901
+  2024: N=26101 AvgR=-0.0140 PF=0.983
+  2025: N=25866 AvgR=0.0678 PF=1.089
+  2026: N=12772 AvgR=0.1033 PF=1.142
+
+--- DIRECTIONAL ACCURACY ---
+  5m: 76.8%
+  10m: 84.5%
+  15m: 87.6%
+  30m: 91.4%
+  60m: 94.1%
+
+--- MOVE CAPTURE ---
+  Median capture: 98.3%
+  Mean capture: 90.6%
+
+--- TIMING ---
+  Median arm-to-entry: 2 bars
+
+--- MISSED MOVES ---
+  Missed significant moves (sampled): 2048
+
+Phase58 complete in 1.5 min

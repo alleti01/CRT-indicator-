@@ -1,0 +1,28 @@
+config_key,config_value,frozen,source
+BREAK_THRESHOLD_ATR,0.1,YES,phase57d/config.py
+COST_MULTIPLIERS,"(1.0, 1.5, 2.0)",YES,phase57d/config.py
+DISTANCE_BINS,"((0, 0.25), (0.25, 0.5), (0.5, 1.0), (1.0, 2.0), (2.0, inf))",YES,phase57d/config.py
+ENTRY_STAGES,"('E0', 'E1', 'E2', 'E3', 'E4')",YES,phase57d/config.py
+EPISODE_RESET_ATR,1.0,YES,phase57d/config.py
+EPISODE_WINDOW_MIN,30,YES,phase57d/config.py
+EXPIRATION_AGGREGATES,"('0DTE', '0-5D', '0-14D', '<=30D')",YES,phase57d/config.py
+HOLDOUT_END,2026-06-26,YES,phase57d/config.py
+HOLDOUT_START,2025-01-01,YES,phase57d/config.py
+INTERACTION_FAMILIES,"('W1_REJECTION', 'W2_BREAKOUT', 'W3_BREAK_ACCEPTANCE', 'W4_BREAK_RETEST', 'W5_SWEEP_RECLAIM', 'W6_PINNING', 'W7_ROLE_FLIP', 'W8_DECELERATION', 'W9_ACCELERATION', 'W10_MIGRATION', 'W11_CLUSTER', 'W12_VACUUM')",YES,phase57d/config.py
+MAPPINGS,"('MAP_NQ_NQOPT', 'MAP_NQ_NDX', 'MAP_NQ_QQQ')",YES,phase57d/config.py
+MAX_HOLD_MIN,60,YES,phase57d/config.py
+METHOD_VERSION,phase57d_v1.0.0,YES,phase57d/config.py
+OUTCOME_HORIZONS,"(5, 10, 15, 30, 60)",YES,phase57d/config.py
+REQUIRED_OPTIONS_FIELDS,"('option_symbol', 'underlying', 'timestamp', 'expiration', 'strike', 'call_put', 'bid', 'ask', 'mid', 'last', 'iv', 'oi', 'volume', 'delta', 'gamma', 'vega', 'theta', 'underlying_price', 'multiplier')",YES,phase57d/config.py
+S54_MODEL_HASH,bccf4277f3d44d13,YES,phase57d/config.py
+STOP_ATR,0.75,YES,phase57d/config.py
+STOP_ATR_GRID,"(0.5, 0.75, 1.0)",YES,phase57d/config.py
+TARGET_R,2.5,YES,phase57d/config.py
+TARGET_R_GRID,"(2.0, 2.5, 3.0)",YES,phase57d/config.py
+TIMEZONE,America/Chicago,YES,phase57d/config.py
+TOUCH_PROXIMITY_ATR,0.25,YES,phase57d/config.py
+TRUNCATION_SAMPLE_SIZE,10000,YES,phase57d/config.py
+WALK_FORWARD_FOLDS,"(('2018-01-01', '2019-12-31', '2020-01-01', '2020-12-31'), ('2018-01-01', '2020-12-31', '2021-01-01', '2021-12-31'), ('2018-01-01', '2021-12-31', '2022-01-01', '2022-12-31'), ('2018-01-01', '2022-12-31', '2023-01-01', '2023-12-31'), ('2018-01-01', '2023-12-31', '2024-01-01', '2024-12-31'))",YES,phase57d/config.py
+WALL_FAMILIES,"('CALL_WALL', 'PUT_WALL', 'GAMMA_WALL', 'IV_WALL', 'OI_WALL', 'ZERO_GAMMA', 'MULTI_EXP')",YES,phase57d/config.py
+WALL_MIN_STRENGTH_PERCENTILE,90.0,YES,phase57d/config.py
+WALL_TOP_N,5,YES,phase57d/config.py

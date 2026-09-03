@@ -1,0 +1,175 @@
+/Users/anishalleti/CRT indicator/phase53/research/features.py:74: RuntimeWarning: divide by zero encountered in divide
+  "dist_swing_high_atr": (cl[ii] - sh_arr[ii]) / atr,
+/Users/anishalleti/CRT indicator/phase53/research/features.py:75: RuntimeWarning: divide by zero encountered in divide
+  "dist_swing_low_atr": (sl_arr[ii] - cl[ii]) / atr,
+/Users/anishalleti/CRT indicator/phase53/research/features.py:76: RuntimeWarning: divide by zero encountered in divide
+  "break_dist_atr": (cl[ii] - lvl) / atr * d,
+/Users/anishalleti/CRT indicator/phase53/research/features.py:77: RuntimeWarning: invalid value encountered in divide
+  "body_atr": body[ii] / atr,
+/Users/anishalleti/CRT indicator/phase53/research/features.py:78: RuntimeWarning: invalid value encountered in divide
+  "range_atr": (hi[ii] - lo[ii]) / atr,
+/Users/anishalleti/CRT indicator/phase53/research/features.py:79: RuntimeWarning: invalid value encountered in divide
+  "body_vs_avg": body[ii] / avg_body[ii],
+/Users/anishalleti/CRT indicator/phase53/research/features.py:81: RuntimeWarning: divide by zero encountered in divide
+  "mom_1": (cl[ii] - cl[np.maximum(ii - 1, 0)]) / atr,
+/Users/anishalleti/CRT indicator/phase53/research/features.py:82: RuntimeWarning: divide by zero encountered in divide
+  "mom_3": (cl[ii] - cl[np.maximum(ii - 3, 0)]) / atr,
+/Users/anishalleti/CRT indicator/phase53/research/features.py:83: RuntimeWarning: divide by zero encountered in divide
+  "mom_5": (cl[ii] - cl[np.maximum(ii - 5, 0)]) / atr,
+/Users/anishalleti/CRT indicator/phase53/research/features.py:84: RuntimeWarning: divide by zero encountered in divide
+  "mom_10": (cl[ii] - cl[np.maximum(ii - 10, 0)]) / atr,
+/Users/anishalleti/CRT indicator/phase53/research/features.py:86: RuntimeWarning: invalid value encountered in divide
+  "atr_ratio": atr / atr_mean[ii],
+/Users/anishalleti/CRT indicator/phase53/research/features.py:87: RuntimeWarning: divide by zero encountered in divide
+  "m5_mom": (m5_cl[j5] - m5_cl[np.maximum(j5 - 3, 0)]) / m5_atr[j5],
+/Users/anishalleti/CRT indicator/phase53/research/features.py:90: RuntimeWarning: divide by zero encountered in divide
+  "ext_30min_atr": np.abs(cl[ii] - cl[np.maximum(ii - 30, 0)]) / atr,
+/Users/anishalleti/CRT indicator/phase53/research/features.py:91: RuntimeWarning: divide by zero encountered in divide
+  "ext_60min_atr": np.abs(cl[ii] - cl[np.maximum(ii - 60, 0)]) / atr,
+Loading markets...
+Generating structural events E1–E16...
+  925,486 events
+Building CORE / Phase44 context...
+Attaching causal features...
+Attaching outcomes + standardized trade R (this may take several minutes)...
+Event type base rates...
+Traceback (most recent call last):
+  File "/Users/anishalleti/CRT indicator/phase53/run.py", line 303, in <module>
+    main()
+  File "/Users/anishalleti/CRT indicator/phase53/run.py", line 88, in main
+    uni_parts.append(univariate_bins(wf_df, f, train_df.iloc[: len(train_df) // 3], n_bins=10))
+UnboundLocalError: local variable 'wf_df' referenced before assignment
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2922: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2923: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2922: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2923: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2922: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2923: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2922: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2923: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2922: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2923: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2922: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2923: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2767: RuntimeWarning: invalid value encountered in subtract
+  X -= avg[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2922: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2923: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+Resuming from event_dataset.parquet...
+Event type base rates...
+Walk-forward logistic models...
+# Phase53 Opportunity Discovery Report
+
+## Summary
+- Total structural events: **925,486**
+- Walk-forward OOS scored events: **542,462**
+- Holdout high-score AvgR: **0.1532**
+
+## G3/C4 mechanism
+- Smooth range-location effect: **NO**
+- Explanation: **C** — isolated threshold artifact / selection noise
+
+## Key finding
+Raw micro-BOS (E1/E2) AvgR: **-0.422** (confirms Phase52)
+
+## Verdict
+- CAN GOOD EVENTS BE DISTINGUISHED OOS: **YES**
+- SCORE MONOTONICITY: **PASS**
+- PARAMETER STABILITY: **PASS**
+- FINAL HOLDOUT: **PASS**
+- SHOULD PHASE53 ADVANCE: **NO**
+
+Runtime: 1.0 min
+

@@ -1,0 +1,24 @@
+{
+  "freeze_id": "PHASE73_ENGINE_FREEZE",
+  "freeze_timestamp_utc": "2026-09-03T04:00:00Z",
+  "rule": "Phase73 TraderEngine must not be rewritten for Phase74; use adapters only",
+  "pine_hash_required": "d75ff747a491c176eda588efc945822b8bd4a6aeaaeaf1d2bdea2b7a8e32cc1f",
+  "critical_modules": {
+    "phase73/trader/engine.py": "36926eee365a49269ab1c8185a0c3f8945ebadbe626d7a4df5bd38c4144d07c0",
+    "phase73/trader/fsm.py": "1edf3554a656cd06aa8a038d4df2da13368f3420bb0bfd88fc22d16baf98c189",
+    "phase73/trader/entry_quality.py": "1408f72a38c442cf0ae825057ebc8add035c8fe40f311c1ee6eeb293d2b66eeb",
+    "phase73/trader/management.py": "4631ffe4061c7d5fd8ed26f605579815b9a19ccad5062e6953e72d9818738961",
+    "phase73/market_data/provider.py": "cdec45ae97f77602638f1d5fbabe30d98b5a7bbd1b5380fddfcc5f8769ed09d9",
+    "phase73/market_data/base.py": "fd69b7a7bc93bd7b5742623230b865129e20dfaa924c544b6c932ce0664f36d7",
+    "phase73/market_data/cache.py": "f5354c0522462d09a9ae6434c33272ce3d08bb69e4b49280f0a25ceb6a8eb91e",
+    "phase73/webhook/receiver.py": "eed03b1a582161498054863aa364311428f98b436e7f8e578d374e5477c06f72",
+    "phase73/webhook/validator.py": "cf5a47148050268ed971472e4af7476ec793c3b385ec34afc6add701f3ffe913",
+    "phase73/webhook/schemas.py": "bc70cfe7313f8e41f2ffbd138df7e04d3e3f57c587831575ad796a26bfadc120",
+    "phase73/execution/sim_router.py": "c20a14e659c0c48bb0e57c280045f93d19f9c49439fbc36c4e9bf0fb053e5280",
+    "phase73/execution/base.py": "6d6b881583729c2c5d5cbc4c4051ab9ef38dbf621e6b27f735aa8da715c912a5",
+    "phase73/risk/reconciliation.py": "7831b33f2bbf66eec200f8a08932a8de647872d10577d251f1556eab03c65067",
+    "phase73/risk/safety.py": "d7c9c11abb85e39643d3eda2fafc1b73590c1161b2d05d7503010a85165f3f20",
+    "phase73/persistence/state.py": "f3e12296daa163ae0ccba1608f0554dfb127fa61da60725514f0078d944a561b",
+    "phase73/replay/runner.py": "575ef794c1fb2c034a987c868ccad762588ba96ef508be09b284a827fc1fa204"
+  }
+}

@@ -1,0 +1,84 @@
+//@version=5
+indicator("Phase58H Surgical Filter Audit", overlay=true, max_labels_count=150)
+
+// Diagnostic overlay — P4 + Phase58H surgical abstention (H1-H4)
+// Does NOT modify Phase58D canonical logic
+
+showP4Abstain = input.bool(true, "Show P4 abstain")
+showHAbstain = input.bool(true, "Show Phase58H additional abstain")
+showDebugTable = input.bool(true, "Show debug table")
+hRule = input.string("H1", "Phase58H rule", options=["H1", "H2", "H3", "H4"])
+
+atr1 = ta.atr(14)
+p15 = request.security(syminfo.tickerid, "15", close - close[4], barmerge.gaps_off, barmerge.lookahead_off)
+p5 = request.security(syminfo.tickerid, "5", close - close[5], barmerge.gaps_off, barmerge.lookahead_off)
+p1 = close - close[8]
+
+state15 = p15 > atr1 ? "BULLISH" : p15 < -atr1 ? "BEARISH" : "NEUTRAL"
+state5 = p5 > atr1 * 0.5 ? "UP" : p5 < -atr1 * 0.5 ? "DOWN" : "NEUTRAL"
+domActive = math.abs(p1) > atr1 * 1.0 ? (p1 > 0 ? "STRONG_UP" : "STRONG_DOWN") : (p1 > atr1 * 0.3 ? "UP" : p1 < -atr1 * 0.3 ? "DOWN" : "NEUTRAL")
+
+body = math.abs(close - open)
+longCand = close > open and body > atr1 * 0.3
+shortCand = close < open and body > atr1 * 0.3
+
+var string origDir = na
+if longCand or shortCand
+    origDir := longCand ? "LONG" : "SHORT"
+
+// Confidence proxy
+conf = 0
+if origDir == "LONG"
+    conf += domActive == "STRONG_UP" or domActive == "UP" ? 2 : domActive == "STRONG_DOWN" or domActive == "DOWN" ? -2 : 0
+    htfContra = state15 == "BEARISH"
+else if origDir == "SHORT"
+    conf += domActive == "STRONG_DOWN" or domActive == "DOWN" ? 2 : domActive == "STRONG_UP" or domActive == "UP" ? -2 : 0
+    htfContra = state15 == "BULLISH"
+else
+    htfContra = false
+
+band = conf >= 4 ? "VERY_HIGH" : conf >= 2 ? "HIGH" : conf >= 0 ? "MEDIUM" : "LOW"
+highConflict = band == "HIGH" and conf >= 2 and conf < 4
+
+// P4
+p4Abstain = false
+if origDir == "LONG"
+    p4Abstain := state15 == "BEARISH" and (domActive == "DOWN" or domActive == "STRONG_DOWN")
+else if origDir == "SHORT"
+    p4Abstain := state15 == "BULLISH" and (domActive == "UP" or domActive == "STRONG_UP")
+
+// Phase58H H1: HIGH_CONFLICTED + HTF contradiction
+hAbstain = highConflict and htfContra
+if hRule == "H2"
+    hAbstain := hAbstain  // weak rev proxy omitted in Pine simplification
+if hRule == "H3"
+    hAbstain := hAbstain
+if hRule == "H4"
+    hAbstain := hAbstain and (domActive == "STRONG_UP" or domActive == "STRONG_DOWN")
+
+phase58hAbstain = (p4Abstain or hAbstain) and not (p4Abstain and not hAbstain and false)
+hOnly = hAbstain and not p4Abstain
+
+plotshape(showP4Abstain and p4Abstain, title="P4 Abstain", location=location.abovebar, style=shape.xcross, color=color.orange, size=size.tiny)
+plotshape(showHAbstain and hOnly, title="Phase58H Abstain", location=location.abovebar, style=shape.xcross, color=color.red, size=size.small)
+
+var table dbg = table.new(position.bottom_right, 2, 12, bgcolor=color.new(color.black, 80))
+if barstate.islast and showDebugTable
+    table.cell(dbg, 0, 0, "ORIG DIR", text_color=color.gray)
+    table.cell(dbg, 1, 0, str.tostring(origDir), text_color=color.white)
+    table.cell(dbg, 0, 1, "15M", text_color=color.gray)
+    table.cell(dbg, 1, 1, state15, text_color=color.white)
+    table.cell(dbg, 0, 2, "5M", text_color=color.gray)
+    table.cell(dbg, 1, 2, state5, text_color=color.white)
+    table.cell(dbg, 0, 3, "1M ACTIVE", text_color=color.gray)
+    table.cell(dbg, 1, 3, domActive, text_color=color.white)
+    table.cell(dbg, 0, 4, "HIGH_CONFLICTED", text_color=color.gray)
+    table.cell(dbg, 1, 4, highConflict ? "YES" : "NO", text_color=color.white)
+    table.cell(dbg, 0, 5, "HTF CONTRA", text_color=color.gray)
+    table.cell(dbg, 1, 5, htfContra ? "YES" : "NO", text_color=color.white)
+    table.cell(dbg, 0, 6, "P4", text_color=color.gray)
+    table.cell(dbg, 1, 6, p4Abstain ? "ABSTAIN" : "KEEP", text_color=p4Abstain ? color.red : color.green)
+    table.cell(dbg, 0, 7, "PHASE58H", text_color=color.gray)
+    table.cell(dbg, 1, 7, hAbstain or p4Abstain ? "ABSTAIN" : "KEEP", text_color=hAbstain ? color.red : color.green)
+    table.cell(dbg, 0, 8, "RULE", text_color=color.gray)
+    table.cell(dbg, 1, 8, hRule, text_color=color.white)

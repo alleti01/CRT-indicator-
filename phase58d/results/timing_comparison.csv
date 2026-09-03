@@ -1,0 +1,4 @@
+metric,median,mean
+detect_vs_first_1m,0.0,0.0
+arm_vs_first_1m,0.0,0.0
+take_vs_first_1m,0.0,-456518.6263367081

@@ -1,0 +1,7 @@
+window,timestamp,signal_type,raw_match,fixed_score,wf_reference_score,fixed_tier,wf_reference_tier,fixed_accepted,wf_reference_accepted,tier_match_fixed,pass
+A+ L,2020-01-31 16:45:00+00:00,L,True,61.12925690944402,67.52794765122539,A,A+,True,True,True,True
+A+ S,2020-01-30 15:45:00+00:00,S,True,82.32709898271288,93.37128796535362,A+,A+,True,True,True,True
+A RL,2020-02-26 19:15:00+00:00,RL,True,50.74714125419867,54.87059568437167,A,A,True,True,True,True
+A RS,2020-02-03 21:00:00+00:00,RS,True,49.03636625972346,52.78490506405723,A,A,True,True,True,True
+B accepted,2020-01-02 16:00:00+00:00,L,True,36.029676466075536,36.92780463205524,REJECTED,B,False,True,False,True
+quality rejected,2020-01-14 17:00:00+00:00,L,True,33.244186076366,33.531875186304056,REJECTED,C,False,False,True,True

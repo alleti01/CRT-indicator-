@@ -1,0 +1,50 @@
+{
+  "status": "PENDING_MANUAL",
+  "windows": [
+    {
+      "year": "2018",
+      "start_chicago": "2018-06-15 09:30",
+      "end_chicago": "2018-06-15 12:00"
+    },
+    {
+      "year": "2019",
+      "start_chicago": "2019-03-20 14:00",
+      "end_chicago": "2019-03-20 16:00"
+    },
+    {
+      "year": "2020",
+      "start_chicago": "2020-07-29 13:00",
+      "end_chicago": "2020-07-29 15:00"
+    },
+    {
+      "year": "2021",
+      "start_chicago": "2021-11-05 10:00",
+      "end_chicago": "2021-11-05 12:00"
+    },
+    {
+      "year": "2022",
+      "start_chicago": "2022-02-24 09:30",
+      "end_chicago": "2022-02-24 11:30"
+    },
+    {
+      "year": "2023",
+      "start_chicago": "2023-08-15 13:00",
+      "end_chicago": "2023-08-15 15:00"
+    },
+    {
+      "year": "2024",
+      "start_chicago": "2024-01-19 09:30",
+      "end_chicago": "2024-01-19 11:30"
+    },
+    {
+      "year": "2025",
+      "start_chicago": "2025-07-21 15:00",
+      "end_chicago": "2025-07-21 17:00"
+    },
+    {
+      "year": "2026",
+      "start_chicago": "2026-06-22 04:00",
+      "end_chicago": "2026-06-22 06:00"
+    }
+  ]
+}

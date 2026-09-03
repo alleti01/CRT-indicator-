@@ -1,0 +1,92 @@
+{
+  "phase": "45_1m_execution",
+  "parity_pass": true,
+  "best_price_rule_full_sample": {
+    "rule": "B3",
+    "window_min": 5
+  },
+  "model_A_1m_sim": {
+    "N": 1759,
+    "WinRate": 0.5213189312109153,
+    "AvgR": 0.8550448318857489,
+    "TotalR": 1504.0238592870323,
+    "PF": 2.8068497616234547,
+    "MaxDD": 13.191520409244276,
+    "ReturnMaxDD": 114.01444356884376
+  },
+  "model_A_phase44_ref": {
+    "N": 1759,
+    "WinRate": 0.5616827743035816,
+    "AvgR": 0.5655645781342158,
+    "TotalR": 994.8280929380855,
+    "PF": 2.442146494802671,
+    "MaxDD": 15.563767849085934,
+    "ReturnMaxDD": 63.91948932831918
+  },
+  "model_B_OOS": {
+    "N": 1135,
+    "WinRate": 0.866079295154185,
+    "AvgR": 1.6483731365801972,
+    "TotalR": 1870.9035100185238,
+    "PF": 17.77573512839063,
+    "MaxDD": 8.38599731970504,
+    "ReturnMaxDD": 223.09851037304276
+  },
+  "model_C_OOS": {
+    "N": 466,
+    "WinRate": 0.8476394849785408,
+    "AvgR": 1.5614831019204278,
+    "TotalR": 727.6511254949194,
+    "PF": 14.951169750821462,
+    "MaxDD": 4.205097677676008,
+    "ReturnMaxDD": 173.04024335935605
+  },
+  "fill_rate": 0.6452529846503695,
+  "median_entry_delay_min": 1.0,
+  "unfilled_N": 624,
+  "unfilled_phase44_avgr": -0.02495825515259554,
+  "price_incremental": {
+    "comparison": "B_minus_A",
+    "AvgR_delta": 0.7933283046944484,
+    "PF_delta": 14.968885366767175,
+    "MAE_delta": 7.4199773433585,
+    "wrong_direction_delta": -0.0026431718061673964,
+    "matched_AvgR_delta": 0.6050148024011666,
+    "N_A": 1759.0,
+    "N_B": 1135,
+    "A_phase44_ref_AvgR": 0.5655645781342158,
+    "N_C": NaN
+  },
+  "volume_incremental": {
+    "comparison": "C_minus_B",
+    "AvgR_delta": -0.08689003465976941,
+    "PF_delta": -2.824565377569167,
+    "MAE_delta": 0.0,
+    "wrong_direction_delta": 0.0,
+    "matched_AvgR_delta": NaN,
+    "N_A": NaN,
+    "N_B": 1135,
+    "A_phase44_ref_AvgR": NaN,
+    "N_C": 466.0
+  },
+  "success_gates": {
+    "N_filled_ge_500": true,
+    "fill_rate_ge_50pct": true,
+    "matched_avgr_delta_ge_0.10": true,
+    "pf_improvement_ge_0.15": true,
+    "mae_reduction_ge_10pct": true,
+    "wrong_direction_reduced": true,
+    "y2024_positive": true,
+    "y2025_positive": true,
+    "y2026_positive": true,
+    "cost_1.5x_positive": true,
+    "cost_2.0x_positive": true,
+    "ex_top1pct_positive": true,
+    "execution_improves_all_gates": true,
+    "volume_useful": false,
+    "matched_avgr_delta": 0.6050148024011666,
+    "mae_reduction_pct": 97.51476635852666
+  },
+  "1m_execution_improves": true,
+  "volume_useful": false
+}

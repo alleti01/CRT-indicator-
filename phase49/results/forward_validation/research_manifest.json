@@ -1,0 +1,142 @@
+{
+  "phase": 49,
+  "model_hash": "27cf15e89e2d546ff1e10f745c88b062817ac7bc824a4681076efa2c7c03c0c7",
+  "metrics": {
+    "phase44_signals": 0,
+    "b1_fills": 0,
+    "b1_unfilled": 0,
+    "fill_rate": 0.0,
+    "closed_trades": 0,
+    "AvgR": 0.0,
+    "PF": 0.0,
+    "TotalR": 0.0,
+    "MaxDD": 0.0,
+    "WinRate": 0.0,
+    "WrongDir": 0.0,
+    "MedianDelay": NaN,
+    "MAE": NaN,
+    "MFE": NaN,
+    "AvgHold": NaN
+  },
+  "status": {
+    "forward_start": "2026-06-29 00:00:00",
+    "latest_processed_timestamp": "2026-06-29 00:00:00-05:00",
+    "latest_forward_1m": null,
+    "latest_forward_15m": null,
+    "forward_1m_rows": 0,
+    "forward_15m_rows": 0,
+    "phase44_signals": 0,
+    "b1_fills": 0,
+    "trades_closed": 0,
+    "trades_open": 0,
+    "cumulative_r": 0.0,
+    "avg_r": 0.0,
+    "pf": 0.0,
+    "max_dd": 0.0,
+    "fill_rate": 0.0,
+    "wrong_direction": 0.0,
+    "model_hash": "27cf15e89e2d546ff1e10f745c88b062817ac7bc824a4681076efa2c7c03c0c7",
+    "model_drift": false,
+    "parity_status": "PASS",
+    "data_quality_status": "PASS",
+    "next_checkpoint": 20,
+    "sample_status": "TOO EARLY",
+    "performance_status": "INSUFFICIENT SAMPLE"
+  },
+  "meta": {
+    "cutoff": "2026-06-28 23:45:00-05:00",
+    "forward_start": "2026-06-29 00:00:00-05:00",
+    "forward_bars": 0,
+    "total_candidates": 0,
+    "forward_start_frozen": "2026-06-29 00:00:00-05:00",
+    "development_cutoff_frozen": "2026-06-28 23:45:00-05:00"
+  },
+  "ingest_manifest": {
+    "ingestion_timestamp_utc": "2026-08-25T13:44:29.547353+00:00",
+    "timezone": "America/Chicago",
+    "development_cutoff": "2026-06-28 23:45:00-05:00",
+    "forward_start": "2026-06-29 00:00:00-05:00",
+    "1m": {
+      "sources": [
+        "phase16/data/raw/nq_continuous_1m_postwindow_to_20260629T0000CT.csv",
+        "phase16/data/raw/nq_continuous_1m_postwindow_to_20260629T0000CT.csv.parts/part_20260627T000000_20260628T000000.csv",
+        "phase16/data/raw/nq_continuous_1m_postwindow_to_20260629T0000CT.csv.parts/part_20260628T000000_20260629T000000.csv",
+        "phase16/data/raw/nq_continuous_1m_postwindow_to_20260629T0000CT.csv.parts/part_20260629T000000_20260629T050000.csv"
+      ],
+      "processed_path": "phase49/data/forward/nq_continuous_1m_forward.csv",
+      "first_timestamp": null,
+      "last_timestamp": null,
+      "row_count": 0,
+      "checksum_sha256": "8c16152e4bd556aa7ba69aead7982b82cc8f295ef97ea18da2ced47a86975d0b",
+      "new_rows_ingested": 0,
+      "bridge_rows_seen": 406
+    },
+    "5m": {
+      "source": "derived_from_forward_1m",
+      "processed_path": "phase49/data/forward/nq_continuous_5m_forward.csv",
+      "first_timestamp": null,
+      "last_timestamp": null,
+      "row_count": 0,
+      "checksum_sha256": "8c16152e4bd556aa7ba69aead7982b82cc8f295ef97ea18da2ced47a86975d0b"
+    },
+    "15m": {
+      "source": "derived_from_forward_1m",
+      "processed_path": "phase49/data/forward/nq_continuous_15m_forward.csv",
+      "first_timestamp": null,
+      "last_timestamp": null,
+      "row_count": 0,
+      "checksum_sha256": "8c16152e4bd556aa7ba69aead7982b82cc8f295ef97ea18da2ced47a86975d0b"
+    }
+  },
+  "data_quality": {
+    "pass": true,
+    "issues": [
+      "no_forward_15m_bars",
+      "no_forward_1m_bars"
+    ],
+    "checks": [
+      {
+        "label": "development_15m",
+        "row_count": 205223,
+        "first_timestamp": "2017-10-01 17:00:00-05:00",
+        "last_timestamp": "2026-06-28 23:45:00-05:00",
+        "timezone": "America/Chicago",
+        "issues": [],
+        "pass": true
+      },
+      {
+        "label": "development_1m",
+        "row_count": 3075493,
+        "first_timestamp": "2017-10-01 17:00:00-05:00",
+        "last_timestamp": "2026-06-28 23:45:00-05:00",
+        "timezone": "America/Chicago",
+        "issues": [],
+        "pass": true
+      },
+      {
+        "label": "forward_1m",
+        "row_count": 0,
+        "first_timestamp": null,
+        "last_timestamp": null,
+        "timezone": "America/Chicago",
+        "issues": [],
+        "pass": true
+      },
+      {
+        "label": "forward_15m",
+        "row_count": 0,
+        "first_timestamp": null,
+        "last_timestamp": null,
+        "timezone": "America/Chicago",
+        "issues": [],
+        "pass": true
+      }
+    ],
+    "aggregation_issues": [],
+    "forward_15m_bars": 0,
+    "forward_1m_bars": 0,
+    "development_cutoff": "2026-06-28 23:45:00-05:00",
+    "forward_start": "2026-06-29 00:00:00-05:00",
+    "timezone": "America/Chicago"
+  }
+}

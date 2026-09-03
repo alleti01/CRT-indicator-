@@ -1,0 +1,2 @@
+schema_version,strategy,pine_hash,signal_id,event,symbol,timeframe,signal_time_utc,signal_bar_time_utc,signal_price,atr,evidence,context,state,received_at_utc
+1.0,Phase72A,d75ff747a491c176eda588efc945822b8bd4a6aeaaeaf1d2bdea2b7a8e32cc1f,1077a43a-3628-4b2b-839c-fa090ff68891,SIGNAL_LONG,NQ,1m,2026-08-30T17:00:00+00:00,2026-08-30T17:00:00+00:00,20002.5,10.0,5,BULLISH,IN_LONG,2026-09-03T03:05:02.574308+00:00

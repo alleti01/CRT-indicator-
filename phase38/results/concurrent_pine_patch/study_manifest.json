@@ -1,0 +1,59 @@
+{
+  "phase": "Phase 38 \u2014 NQ 15M Concurrent Reversal Pine Patch",
+  "authoritative_reference": "/Users/anishalleti/CRT indicator/phase37/results/concurrent_reversal_parity/pine_reference_map.csv",
+  "conflict_policy": "INDEPENDENT",
+  "pine_pool_capacity": 8,
+  "historical_max_concurrent": 5,
+  "continuation": {
+    "expected_L": 2075,
+    "expected_S": 1836,
+    "reference_L": 2075,
+    "reference_S": 1836,
+    "parity_pass": true
+  },
+  "reversal": {
+    "expected_RL": 976,
+    "expected_RS": 925,
+    "expected_total": 1901,
+    "reference_RL": 976,
+    "reference_RS": 925,
+    "restored_vs_single_tracker": 684,
+    "parity_pass": true
+  },
+  "pine_equivalent_sim_match_rate": 1.0,
+  "parity_diagnostics": {
+    "continuation_parity": true,
+    "reversal_parity": true,
+    "sim_vs_ref_match_rate": 1.0,
+    "restored_reversals": 684,
+    "wrong_bar": 0,
+    "wrong_entry": 0,
+    "wrong_stop": 0,
+    "wrong_target": 0,
+    "missing": 0,
+    "extra": 0
+  },
+  "lookahead_audit": "PASS",
+  "deterministic": "PASS",
+  "pine_files": [
+    "NQ_15M_COMBINED_INDICATOR_CONCURRENT.pine",
+    "NQ_15M_COMBINED_STRATEGY_CONCURRENT.pine"
+  ],
+  "markers": "size.tiny L S RL RS",
+  "debug_default": "OFF",
+  "pine_compiles": "NEEDS_TRADINGVIEW_CONFIRMATION",
+  "ready_for_tradingview_validation": true,
+  "phase37_performance_reference": {
+    "N": 1901,
+    "WinRate": 0.5207785376117833,
+    "AvgR": 0.24015436843894927,
+    "TotalR": 456.53345440244254,
+    "PF": 1.5876136381299153,
+    "MaxDD": 21.073909327248856,
+    "ReturnMaxDD": 21.66344399195732,
+    "implementation": "PHASE37_CONCURRENT",
+    "signals_day": 0.8441385435168739,
+    "RL": 976,
+    "RS": 925
+  }
+}

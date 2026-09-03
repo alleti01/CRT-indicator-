@@ -1,0 +1,4 @@
+signal_id,date,phase44_timestamp,b1_timestamp,entry_timestamp,direction,phase44_class,setup_type,note
+# MANUAL TV TESTS SUSPENDED — no overlap between python_reference_signals.csv (ends 2026-06-25) and accessible TradingView 1m history.
+# Use Debug dashboard functional counters on YOUR loaded bars instead. See ACCESSIBLE_HISTORY_STATUS.md.
+# Forward parity: forward_pine_python_comparison.csv after Phase49 forward fills exist.

@@ -1,0 +1,27 @@
+{
+  "model_version": "phase51_frozen_v1",
+  "phase44_version": "phase44_quality_filtered_pine",
+  "phase45_version": "phase45_b1_wf_stitched",
+  "m0_version": "phase45_simulate_1m",
+  "b1_rule": "B1",
+  "b1_window_min": 10,
+  "symbol": "NQ1!",
+  "chart_timeframe": "1m",
+  "context_timeframe": "15m",
+  "timezone": "America/Chicago",
+  "transaction_cost_assumption": "signals_only_no_auto_execution",
+  "git_commit": "defa0fa2a7ad501c66d2d9786bed0d2bfd47b9f9",
+  "file_hashes": {
+    "phase45/execution/confirm.py": "803bd75498e253bb",
+    "phase45/execution/simulate.py": "ea97da0c3f14a324",
+    "phase45/execution/config.py": "52f9d972103ac44f",
+    "phase45/frozen.py": "bb7760f85a953e01",
+    "phase48/simulate_mgmt.py": "c60bfa0da1eac693",
+    "phase50/pine/phase50_nq_indicator.pine": "d9126e54047d8f1e",
+    "phase51/pine/phase51_nq_live_indicator.pine": "703293242db98da8"
+  },
+  "pine_frozen_logic_sha256": "8c267c6909f1724654b9dcec3509edfd51d5fe17a179d79833f530b3ddbbae11",
+  "forward_start_ct": "2026-08-26 11:30:00",
+  "forward_start_note": "Must match Pine input 'Forward start (CT)'. Do not move backward.",
+  "model_hash": "f29e61a82ef19fe21e13aa040035ca7bcabf7504f0477ebc4643253f7fd6f1f0"
+}

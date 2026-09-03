@@ -1,0 +1,2 @@
+max_concurrent,median_concurrent,p95_concurrent,overlapping_pairs,accounting_mode
+3,1.0,1.0,560,INDEPENDENT_TRADE_SUM

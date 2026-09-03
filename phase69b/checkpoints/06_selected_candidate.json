@@ -1,0 +1,53 @@
+{
+  "config_id": "80/20_1.5R_4R_h60",
+  "config": {
+    "split": "80/20",
+    "main_frac": 0.8,
+    "runner_frac": 0.2,
+    "protection_r": 1.5,
+    "runner_target_r": 4.0,
+    "max_hold": 60,
+    "optional": false
+  },
+  "full_sample": {
+    "N": 36174,
+    "AvgR": -0.010213922869419832,
+    "PF": 0.9855685967669808,
+    "TotalR": -369.47844587839296,
+    "WinRate": 0.2914800685575275,
+    "MaxDD": 602.0425969259943,
+    "avg_winner": 2.393106389949041,
+    "avg_loser": -0.9989228334569287,
+    "incremental_AvgR": -0.02620595746150249,
+    "incremental_TotalR": -947.9743052123911,
+    "m0_AvgR": 0.01599203459208266,
+    "m0_TotalR": 578.4958593339982,
+    "m0_PF": 1.0225953830536263,
+    "median_hold": 3.0,
+    "true_winner_N": 10432,
+    "runner_target_hit": 0.2160659509202454,
+    "runner_protection_hit": 0.7791411042944786,
+    "runner_timeout": 0.004792944785276074,
+    "damage_lt_2P4": 0.7797162576687117,
+    "damage_lt_2P25": 0.0,
+    "damage_lt_2P0": 0.0,
+    "pct_gt_2P5": 0.21884585889570551,
+    "pct_gte_3": 0.0,
+    "pct_gte_3P5": 0.0,
+    "pct_gte_4": 0.0,
+    "tw_mean_R": 2.4090675694470884,
+    "tw_median_R": 2.299929596677095,
+    "tw_p25": 2.299901797279027,
+    "tw_p75": 2.29995902533351,
+    "non_winner_parity": true,
+    "config": {
+      "split": "80/20",
+      "main_frac": 0.8,
+      "runner_frac": 0.2,
+      "protection_r": 1.5,
+      "runner_target_r": 4.0,
+      "max_hold": 60,
+      "optional": false
+    }
+  }
+}

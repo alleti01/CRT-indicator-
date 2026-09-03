@@ -1,0 +1,141 @@
+{
+  "phase": "Phase 34 \u2014 NQ 15M Combined Continuation + Reversal Pine",
+  "conflict_policy": "INDEPENDENT",
+  "p31_wf_benchmark": {
+    "N": 2873,
+    "trades_day": 1.22,
+    "AvgR": 0.233,
+    "PF": 1.47,
+    "MaxDD": 15.1
+  },
+  "p33_wf_benchmark": {
+    "N": 1031,
+    "trades_day": 0.44,
+    "AvgR": 0.185,
+    "PF": 1.46,
+    "MaxDD": 21.2
+  },
+  "combined_benchmark": {
+    "trades_day": 1.78,
+    "AvgR": 0.22,
+    "PF": 1.47,
+    "MaxDD": 16.8
+  },
+  "p31_full_history_N": 3801,
+  "p33_full_history_N": 1841,
+  "combined_N": 5642,
+  "p31_meta": {
+    "N": 3801,
+    "WinRate": 0.4533017626940279,
+    "AvgR": 0.2253511292047928,
+    "TotalR": 856.5596421074174,
+    "PF": 1.4425817192728367,
+    "MaxDD": 16.53897268613565,
+    "ReturnMaxDD": 51.790377695312195,
+    "daily_full_history": {
+      "total_rth_days": 2188,
+      "days_0": 120,
+      "days_1": 846,
+      "days_2": 992,
+      "days_3plus": 230,
+      "mean_signals_day": 1.6110603290676417,
+      "median_signals_day": 2.0,
+      "p90_signals_day": 3.0,
+      "mean_trades_week": 8.055301645338208,
+      "longest_no_signal_stretch": 2,
+      "pct_days_0": 0.054844606946983544,
+      "pct_days_1": 0.386654478976234,
+      "pct_days_2": 0.453382084095064,
+      "pct_days_gt2": 0.10511882998171847
+    },
+    "dry_stretch_audit": {
+      "phase31_reported": 515,
+      "full_frozen_fills": {
+        "longest_dry_stretch": 2,
+        "eligible_rth_days": 2188,
+        "zero_signal_days": 48,
+        "mean_trades_day": 1.7353747714808043
+      },
+      "wf_eligible_period_2020_plus": {
+        "longest_dry_stretch": 2,
+        "eligible_rth_days": 1673,
+        "zero_signal_days": 40,
+        "mean_trades_day": 1.7220561864913329
+      },
+      "buggy_wf_trades_vs_full_calendar": {
+        "longest_dry_stretch": 515,
+        "eligible_rth_days": 2188,
+        "zero_signal_days": 560,
+        "mean_trades_day": 1.3121572212065813
+      },
+      "cause": "Phase 31 daily_distribution counted stitched WF fills (2020-2026 test folds only) against the full 2018-2026 RTH calendar. The ~515-day stretch is almost entirely the 2018-2019 pre-test period with zero WF trades, not a strategy dry spell.",
+      "correct_full_frozen_longest_dry": 2,
+      "correct_wf_period_longest_dry": 2
+    }
+  },
+  "p33_net_performance": {
+    "N": 1841,
+    "WinRate": 0.5225420966865834,
+    "AvgR": 0.24954557417112647,
+    "TotalR": 459.41340204904384,
+    "PF": 1.6139272858387002,
+    "MaxDD": 21.073909327248657,
+    "ReturnMaxDD": 21.80010338447363
+  },
+  "signal_counts": [
+    {
+      "architecture": "MOMENTUM_DISPLACEMENT",
+      "signal_type": "CONTINUATION_LONG",
+      "direction": "Long",
+      "python_count": 2010,
+      "pine_equivalent_expected": 2010,
+      "difference": 0,
+      "notes": "Pine state machines mirror Python; TV feed may differ"
+    },
+    {
+      "architecture": "MOMENTUM_DISPLACEMENT",
+      "signal_type": "CONTINUATION_SHORT",
+      "direction": "Short",
+      "python_count": 1791,
+      "pine_equivalent_expected": 1791,
+      "difference": 0,
+      "notes": "Pine state machines mirror Python; TV feed may differ"
+    },
+    {
+      "architecture": "DISPLACEMENT_FAILURE_REVERSAL",
+      "signal_type": "REVERSAL_LONG",
+      "direction": "Long",
+      "python_count": 948,
+      "pine_equivalent_expected": 948,
+      "difference": 0,
+      "notes": "Pine state machines mirror Python; TV feed may differ"
+    },
+    {
+      "architecture": "DISPLACEMENT_FAILURE_REVERSAL",
+      "signal_type": "REVERSAL_SHORT",
+      "direction": "Short",
+      "python_count": 893,
+      "pine_equivalent_expected": 893,
+      "difference": 0,
+      "notes": "Pine state machines mirror Python; TV feed may differ"
+    },
+    {
+      "architecture": "COMBINED",
+      "signal_type": "ALL",
+      "direction": "Both",
+      "python_count": 5642,
+      "pine_equivalent_expected": 5642,
+      "difference": 0,
+      "notes": "Independent architectures \u2014 overlaps preserved"
+    }
+  ],
+  "visual_regression_rows": 0,
+  "pine_files": [
+    "NQ_15M_COMBINED_INDICATOR.pine",
+    "NQ_15M_COMBINED_STRATEGY.pine"
+  ],
+  "timezone": "America/Chicago",
+  "rth_session": "0930-1600",
+  "lookahead_audit": "PASS",
+  "non_repaint": "barstate.isconfirmed only"
+}

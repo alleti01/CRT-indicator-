@@ -1,0 +1,11 @@
+// Phase55 S54 Parity Indicator — NOT FOR PRODUCTION
+// Historical parity testing artifact only. No live alerts.
+//@version=5
+indicator("Phase55 S54 Parity [DEBUG]", overlay=true, max_labels_count=500)
+
+// FROZEN S54 MODEL HASH — update from phase55/frozen/model_hash.txt
+const string S54_MODEL_HASH = "PLACEHOLDER"
+
+var string lastSignal = na
+if barstate.islast
+    label.new(bar_index, high, "S54 MODEL HASH: " + S54_MODEL_HASH + "\nParity indicator stub — implement after Python parity PASS", style=label.style_label_down)

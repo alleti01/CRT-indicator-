@@ -1,0 +1,10 @@
+{
+  "pine_security": {
+    "request_security_count": 0,
+    "calls": [],
+    "pass": true,
+    "note": "phase71_unified_trader.pine is management-only; no HTF security calls"
+  },
+  "manual_sample_N": 100,
+  "tv_automated": "BLOCKED \u2014 no TV API; manual review required"
+}

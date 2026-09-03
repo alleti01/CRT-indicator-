@@ -1,0 +1,11 @@
+analysis,horizon,bin_0,bin_1,bin_2,bin_3,bin_4,monotonic_increasing,dur_0,dur_1,dur_2,dur_3,dur_4
+shock_extremeness,1,,0.5284184918371214,0.5679037402026501,0.720213699965833,1.1562753790635767,False,,,,,
+shock_extremeness,3,,0.9209944044772739,0.956604949996689,1.1815422821209853,1.7442449344918178,False,,,,,
+shock_extremeness,6,,1.3292715876676282,1.3849802171052656,1.6035516827415695,2.283085028433678,False,,,,,
+shock_extremeness,12,,1.935898611771652,1.9971060803895613,2.2402167799946433,3.0563520448949095,False,,,,,
+shock_extremeness,24,,2.883816168392647,2.990320887714214,3.2376927435633807,4.218954202471195,False,,,,,
+compression_duration,1,,,,,,False,,,,,
+compression_duration,3,,,,,,False,,,,,
+compression_duration,6,,,,,,False,,,,,
+compression_duration,12,,,,,,False,,,,,
+compression_duration,24,,,,,,False,,,,,

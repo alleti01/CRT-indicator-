@@ -1,0 +1,9 @@
+{
+  "phase": 50,
+  "model": "Phase44 + B1@10min + M0",
+  "pine_indicator": "phase50/pine/phase50_nq_indicator.pine",
+  "python_reference_n": 1212,
+  "python_reference_window_min": 10,
+  "phase49_unchanged": true,
+  "strategy_changes": "NONE"
+}

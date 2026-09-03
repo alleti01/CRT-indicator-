@@ -1,0 +1,7 @@
+{
+  "family": "A",
+  "window_min": 30,
+  "same_direction_rule": "gap_minutes <= window suppresses",
+  "opposite_direction": "independent_per_direction",
+  "entry": "FIRST_QUALIFYING_EVENT"
+}

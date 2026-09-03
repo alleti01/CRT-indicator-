@@ -1,0 +1,59 @@
+{
+  "session_id": "20260903T034844Z-4526c1df",
+  "stage": "infra-test",
+  "tv_signals": 0,
+  "synthetic_signals": 0,
+  "long_signals": 0,
+  "short_signals": 0,
+  "processed_signals": 0,
+  "reconciliation": {
+    "total": 0,
+    "by_status": {},
+    "unique_signals": 0,
+    "duplicates": 0,
+    "missing": 0
+  },
+  "would_enter": 0,
+  "passes": 0,
+  "state_errors": 0,
+  "data_errors": 0,
+  "execution_errors": 0,
+  "latency": {
+    "pine_to_webhook_ms": {
+      "count": 0,
+      "median": null,
+      "p90": null,
+      "p95": null,
+      "max": null
+    },
+    "webhook_to_decision_ms": {
+      "count": 0,
+      "median": null,
+      "p90": null,
+      "p95": null,
+      "max": null
+    },
+    "signal_to_fill_ms": {
+      "count": 0,
+      "median": null,
+      "p90": null,
+      "p95": null,
+      "max": null
+    }
+  },
+  "restarts": 1,
+  "disconnects": 1,
+  "position_mismatches": 0,
+  "state_auditor": {
+    "shadow_state": "SHADOW_FLAT",
+    "engine_state": "FLAT",
+    "state_invariant_failures": 0,
+    "halted": false
+  },
+  "entry_price_audit": {
+    "count": 0
+  },
+  "real_orders_sent": true,
+  "verdict": "INFRA_TEST_COMPLETE",
+  "gate_failures": []
+}

@@ -1,0 +1,199 @@
+{
+  "scan_root": "/Users/anishalleti/CRT indicator",
+  "timezone": "America/Chicago",
+  "underlying_datasets": [
+    {
+      "dataset": "phase49/data/forward/nq_continuous_1m_forward.csv",
+      "type": "underlying_ohlc",
+      "provider": "project_internal",
+      "underlying": "NQ",
+      "format": "csv",
+      "columns": [
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume"
+      ],
+      "path": "/Users/anishalleti/CRT indicator/phase49/data/forward/nq_continuous_1m_forward.csv"
+    },
+    {
+      "dataset": "phase18/data/raw/nq_continuous_1m_raw.csv",
+      "type": "underlying_ohlc",
+      "provider": "project_internal",
+      "underlying": "NQ",
+      "format": "csv",
+      "columns": [
+        "timestamp",
+        "rtype",
+        "publisher_id",
+        "instrument_id",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "symbol"
+      ],
+      "path": "/Users/anishalleti/CRT indicator/phase18/data/raw/nq_continuous_1m_raw.csv"
+    },
+    {
+      "dataset": "phase16/data/nq_continuous_1m_raw.csv",
+      "type": "underlying_ohlc",
+      "provider": "project_internal",
+      "underlying": "NQ",
+      "format": "csv",
+      "columns": [
+        "timestamp",
+        "rtype",
+        "publisher_id",
+        "instrument_id",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "symbol"
+      ],
+      "path": "/Users/anishalleti/CRT indicator/phase16/data/nq_continuous_1m_raw.csv"
+    },
+    {
+      "dataset": "phase16/data/raw/nq_continuous_1m_postwindow_to_20260629T0000CT.csv",
+      "type": "underlying_ohlc",
+      "provider": "project_internal",
+      "underlying": "NQ",
+      "format": "csv",
+      "columns": [
+        "timestamp",
+        "rtype",
+        "publisher_id",
+        "instrument_id",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "symbol"
+      ],
+      "path": "/Users/anishalleti/CRT indicator/phase16/data/raw/nq_continuous_1m_postwindow_to_20260629T0000CT.csv"
+    },
+    {
+      "dataset": "phase16/data/raw/nq_continuous_1m_oos_20171001_20201201.csv",
+      "type": "underlying_ohlc",
+      "provider": "project_internal",
+      "underlying": "NQ",
+      "format": "csv",
+      "columns": [
+        "timestamp",
+        "rtype",
+        "publisher_id",
+        "instrument_id",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "symbol"
+      ],
+      "path": "/Users/anishalleti/CRT indicator/phase16/data/raw/nq_continuous_1m_oos_20171001_20201201.csv"
+    },
+    {
+      "dataset": "phase16/data/raw/nq_continuous_1m_20260627T0000_0500Z.csv",
+      "type": "underlying_ohlc",
+      "provider": "project_internal",
+      "underlying": "NQ",
+      "format": "csv",
+      "columns": [
+        "timestamp",
+        "rtype",
+        "publisher_id",
+        "instrument_id",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "symbol"
+      ],
+      "path": "/Users/anishalleti/CRT indicator/phase16/data/raw/nq_continuous_1m_20260627T0000_0500Z.csv"
+    },
+    {
+      "dataset": "phase16/data/raw/nq_continuous_1m_20231201_20260626.csv",
+      "type": "underlying_ohlc",
+      "provider": "project_internal",
+      "underlying": "NQ",
+      "format": "csv",
+      "columns": [
+        "timestamp",
+        "rtype",
+        "publisher_id",
+        "instrument_id",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "symbol"
+      ],
+      "path": "/Users/anishalleti/CRT indicator/phase16/data/raw/nq_continuous_1m_20231201_20260626.csv"
+    },
+    {
+      "dataset": "phase49/data/forward/nq_continuous_5m_forward.csv",
+      "type": "underlying_ohlc",
+      "provider": "project_internal",
+      "underlying": "NQ",
+      "format": "csv",
+      "columns": [
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume"
+      ],
+      "path": "/Users/anishalleti/CRT indicator/phase49/data/forward/nq_continuous_5m_forward.csv"
+    },
+    {
+      "dataset": "phase49/data/forward/nq_continuous_15m_forward.csv",
+      "type": "underlying_ohlc",
+      "provider": "project_internal",
+      "underlying": "NQ",
+      "format": "csv",
+      "columns": [
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume"
+      ],
+      "path": "/Users/anishalleti/CRT indicator/phase49/data/forward/nq_continuous_15m_forward.csv"
+    }
+  ],
+  "options_datasets": [],
+  "options_count": 0,
+  "underlying_count": 9,
+  "required_options_fields": [
+    "option_symbol",
+    "underlying",
+    "timestamp",
+    "expiration",
+    "strike",
+    "call_put",
+    "bid",
+    "ask",
+    "mid",
+    "last",
+    "iv",
+    "oi",
+    "volume",
+    "delta",
+    "gamma",
+    "vega",
+    "theta",
+    "underlying_price",
+    "multiplier"
+  ],
+  "has_point_in_time_options": false
+}

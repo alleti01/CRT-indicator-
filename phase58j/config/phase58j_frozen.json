@@ -1,0 +1,24 @@
+{
+  "version": "j1",
+  "frozen_before_evaluation": true,
+  "phase58_v1_hash": "facad8ebfae648be",
+  "phase58d_config_hash": "3c25fbacad3fff92",
+  "phase58f_config_hash": "956f66036a568820",
+  "phase58h_config_hash": "4db76ffe5f9b701d",
+  "phase58i_config_hash": "c104ebd37590db03",
+  "s54_model_hash": "bccf4277f3d44d13",
+  "m0_stop_atr": 0.75,
+  "m1_stop_atr": 1.0,
+  "target_r": 2.5,
+  "max_hold_min": 60,
+  "train_end_frac": 0.6,
+  "valid_end_frac": 0.8,
+  "phase58i_expected": {
+    "trades": 60118,
+    "m0_total_r": 11581.43,
+    "m1_total_r": 31788.95,
+    "m0_max_dd": 2866.91,
+    "m1_max_dd": 26.50
+  },
+  "review_seed": 58
+}

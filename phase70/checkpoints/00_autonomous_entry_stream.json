@@ -1,0 +1,18 @@
+{
+  "verdict": "ENTRY_STREAM_MISMATCH",
+  "autonomous_pine_file": "TV_REVIEW/phase72a_autonomous_trader.pine",
+  "autonomous_pine_hash": "ce23967b0db3a100",
+  "ghost_pine_file": "TV_REVIEW/phase72a_python_review_ghosts.pine",
+  "ghost_is_diagnostic_only": true,
+  "python_mirror_management": "phase72a/python/pine_mirror.py (management only, not signals)",
+  "frozen_python_source": "phase60/diagnostics/cache/canon_full_phase60.parquet",
+  "frozen_signal_hash": "0da41f282174679f",
+  "frozen_python_N": 36174,
+  "frozen_python_long": 19510,
+  "frozen_python_short": 16664,
+  "frozen_python_first": "2017-10-01 19:03:00-05:00",
+  "frozen_python_last": "2026-08-28 14:18:00-05:00",
+  "autonomous_export_exists": false,
+  "phase72a_signal_parity_status": "PENDING_TV (see phase72a/checkpoints/10_signal_parity.json)",
+  "reason": "Phase72A Autonomous Trader (Pine) signal stream is not byte-identical to frozen Python Phase60 H1 KEEP stream (hash 0da41f282174679f, N=36,174). Python Review Ghosts are diagnostic-only (frozen Python timestamps). No automated Pine\u2192Python signal export exists. Phase70 on the ACTUAL TV autonomous stream cannot proceed until entry events are exported or signal parity is proven."
+}

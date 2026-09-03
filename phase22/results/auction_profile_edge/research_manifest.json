@@ -1,0 +1,107 @@
+{
+  "phase": "Strategy Research V4 \u2014 Auction / Market-Profile Directional Edge",
+  "profile_method": "Prior RTH 5m volume distributed across fixed 0.25-point bins; 70% value area expanded from POC",
+  "data_range": {
+    "start": "2017-10-01 17:00:00-05:00",
+    "end": "2026-06-28 23:55:00-05:00",
+    "bars_5m": 615898
+  },
+  "profiles": 2252,
+  "events": 143601,
+  "events_by_era": {
+    "era1": 48398,
+    "era2": 51640,
+    "era3": 43563
+  },
+  "baselines": [
+    {
+      "horizon": 1,
+      "minutes_approx": 5,
+      "N": 169337,
+      "mean_signed_return_atr": 0.008702950473617164,
+      "median_signed_return_atr": 0.013914825033682554,
+      "positive_rate": 0.5057666074159811,
+      "mean_mfe_atr": 0.45405927438930516,
+      "mean_mae_atr": 0.4575712421859095
+    },
+    {
+      "horizon": 3,
+      "minutes_approx": 15,
+      "N": 169335,
+      "mean_signed_return_atr": 0.025339152118511687,
+      "median_signed_return_atr": 0.043801518923524844,
+      "positive_rate": 0.5172527829450497,
+      "mean_mfe_atr": 0.8861202626265013,
+      "mean_mae_atr": 0.9033373002713158
+    },
+    {
+      "horizon": 6,
+      "minutes_approx": 30,
+      "N": 169332,
+      "mean_signed_return_atr": 0.04696391110849698,
+      "median_signed_return_atr": 0.08892229186506147,
+      "positive_rate": 0.526214773344672,
+      "mean_mfe_atr": 1.345368053034193,
+      "mean_mae_atr": 1.3788726249854724
+    },
+    {
+      "horizon": 12,
+      "minutes_approx": 60,
+      "N": 169326,
+      "mean_signed_return_atr": 0.09057474413086493,
+      "median_signed_return_atr": 0.176311685251811,
+      "positive_rate": 0.5341117134994036,
+      "mean_mfe_atr": 2.0344686235989418,
+      "mean_mae_atr": 2.0896595467520283
+    },
+    {
+      "horizon": 24,
+      "minutes_approx": 120,
+      "N": 169314,
+      "mean_signed_return_atr": 0.17829505729415793,
+      "median_signed_return_atr": 0.35691329808048466,
+      "positive_rate": 0.5480999799189671,
+      "mean_mfe_atr": 3.097472222140117,
+      "mean_mae_atr": 3.1755863953775543
+    }
+  ],
+  "primary_questions": {
+    "acceptance_above_vah": {
+      "N": 35172,
+      "effect": 0.06939475846143475,
+      "era1": 0.06358500823831467,
+      "era2": 0.12693838830630846,
+      "era3": 0.012680582577941505,
+      "classification": "ERA_DEPENDENT"
+    },
+    "acceptance_below_val": {
+      "N": 26088,
+      "effect": -0.010846601241860784,
+      "era1": 0.04503279443851928,
+      "era2": -0.019524972737669857,
+      "era3": -0.05735181622822994,
+      "classification": "NO_INFORMATION"
+    },
+    "rejection_above_vah": {
+      "N": 968,
+      "effect": -0.17336008440314335,
+      "era1": -0.06265629404240404,
+      "era2": -0.3151880653147081,
+      "era3": -0.07997185989761282,
+      "classification": "ERA_DEPENDENT"
+    },
+    "rejection_below_val": {
+      "N": 815,
+      "effect": 0.016472882770148804,
+      "era1": 0.10744935596727682,
+      "era2": -0.047484803516208415,
+      "era3": 0.0049162268274861205,
+      "classification": "NO_INFORMATION"
+    }
+  },
+  "fdr_survivors": 54,
+  "cross_era_replicated": 57,
+  "session_control_survivors": 0,
+  "final_classification": "B",
+  "lookahead_audit": "PASS"
+}

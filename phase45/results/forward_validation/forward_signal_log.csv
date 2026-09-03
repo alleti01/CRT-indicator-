@@ -1,0 +1,1 @@
+signal_id,timestamp,session_date,signal_type,direction,entry_candidate_price,ATR,impulse_3bar,impulse_filter_pass,ret_1,ret_2,ret_3,simple_raw,quality_score,confidence_tier,quality_filter_pass,accepted,rejection_reason,entry,stop,target,architecture,dataset_tag

@@ -1,0 +1,31 @@
+{
+  "version": "d1",
+  "frozen_before_evaluation": true,
+  "phase58_v1_hash": "facad8ebfae648be",
+  "phase58b_config_hash": "321a158a0ce9a58e",
+  "s54_model_hash": "bccf4277f3d44d13",
+  "structural_gap_bars": 30,
+  "opportunity_expire_bars": 45,
+  "take_threshold": 4,
+  "armed_min_score": 2,
+  "wait_variant_default": "W1",
+  "max_wait_bars": 2,
+  "max_chase_atr": 1.5,
+  "stop_atr": 0.75,
+  "target_r": 2.5,
+  "max_hold_min": 60,
+  "strong_contra_penalty": 3,
+  "hard_filter_enabled": false,
+  "swing_period": 5,
+  "body_threshold_atr": 0.3,
+  "wick_rejection_pct": 0.5,
+  "deceleration_lookback": 3,
+  "micro_shift_bars": 2,
+  "score_weights": {
+    "ctx_15m_max": 2,
+    "ctx_5m_max": 2,
+    "loc_5m_max": 2,
+    "react_1m_max": 3,
+    "contra_max": 0
+  }
+}

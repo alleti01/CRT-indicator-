@@ -1,0 +1,8 @@
+metric,value,benchmark
+forward_accepted_N,0,1750
+forward_AvgR,,0.566
+forward_PF,,2.44
+trades_per_day,0,3.19
+mean_quality_score,,
+warnings,NONE,
+signal_mix,{},

@@ -1,0 +1,13 @@
+{
+  "forward_start_timestamp": "2026-06-29 00:00:00",
+  "timezone": "America/Chicago",
+  "instrument": "NQ",
+  "data_source": "phase36 15m replay + phase45 stitched 1m",
+  "model_version": "phase49_frozen_v1",
+  "phase44_version": "phase44_quality_filtered_pine",
+  "phase45_version": "phase45_b1_wf_stitched",
+  "m0_version": "phase45_simulate_1m",
+  "git_commit": "defa0fa2a7ad501c66d2d9786bed0d2bfd47b9f9",
+  "model_hash": "27cf15e89e2d546ff1e10f745c88b062817ac7bc824a4681076efa2c7c03c0c7",
+  "frozen_b1_window_min": 10
+}

@@ -1,0 +1,11 @@
+{
+  "signal_hash": "0da41f282174679f",
+  "N": 36174,
+  "long": 19510,
+  "short": 16664,
+  "start": "2017-10-01 19:03:00-05:00",
+  "end": "2026-08-28 14:18:00-05:00",
+  "signal_timestamp": "signal bar T close (signal_i)",
+  "entry_timestamp": "next 1M open T+1 (entry_i)",
+  "management": "M0: 1ATR stop, 2.5R target, 60m, STOP_FIRST"
+}

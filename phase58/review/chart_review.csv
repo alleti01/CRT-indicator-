@@ -1,0 +1,1 @@
+date,symbol,time,direction,state_before_move,armed_time,take_time,entry,was_direction_correct,entry_timing_rating,move_capture_rating,missed_move,late_entry,false_signal,should_not_chase,reason_code,category,notes

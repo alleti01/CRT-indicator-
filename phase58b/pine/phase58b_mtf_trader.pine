@@ -1,0 +1,285 @@
+//@version=5
+// Phase58B — Multi-Timeframe Trader
+// 15M context → 5M decision → 1M execution
+// NO repainting — completed HTF bars only
+indicator("Phase58B MTF Trader", overlay=true, max_labels_count=500, max_bars_back=5000)
+
+// ── Display toggles ─────────────────────────────────────────────────
+show15MContext  = input.bool(true, "Show 15M Context BG")
+show5MState     = input.bool(false, "Show 5M State BG")
+showArmed       = input.bool(true, "Show 5M Armed")
+showTake        = input.bool(true, "Show 5M Take")
+showExecution   = input.bool(true, "Show 1M Entry")
+showPass        = input.bool(true, "Show Pass")
+showInvalidated = input.bool(true, "Show Invalidated")
+showExits       = input.bool(true, "Show Exits")
+showDebug       = input.bool(false, "Show Debug Table")
+
+// ── Parameters (frozen Phase58B defaults) ───────────────────────────
+swingPeriod   = input.int(5, "5M Swing Period", minval=2)
+takeThreshold = input.int(4, "Take Threshold", minval=1)
+armedMinScore = input.int(2, "Armed Min Score", minval=1)
+maxChaseATR   = input.float(1.5, "Max Chase ATR")
+stopATR       = input.float(0.75, "Stop ATR")
+targetR       = input.float(2.5, "Target R")
+maxHoldBars   = input.int(60, "Max Hold Bars (1M)")
+bodyThreshATR = input.float(0.3, "Body Threshold ATR")
+wickRejectPct = input.float(0.5, "Wick Rejection %")
+cooldownBars  = input.int(3, "Cooldown 5M bars")
+armedTimeout  = input.int(15, "Armed Timeout 5M bars")
+maxExecBars   = input.int(2, "Max 1M Exec Delay")
+
+// ── 5M data (causal, no lookahead) ──────────────────────────────────
+[m5Open, m5High, m5Low, m5Close] = request.security(syminfo.tickerid, "5", [open, high, low, close], lookahead=barmerge.lookahead_off)
+[m15Open, m15High, m15Low, m15Close] = request.security(syminfo.tickerid, "15", [open, high, low, close], lookahead=barmerge.lookahead_off)
+
+m5NewBar = ta.change(time("5")) != 0
+m5Atr = request.security(syminfo.tickerid, "5", ta.atr(14), lookahead=barmerge.lookahead_off)
+m15Atr = request.security(syminfo.tickerid, "15", ta.atr(14), lookahead=barmerge.lookahead_off)
+atr1m = ta.atr(14)
+
+// 5M swings on 5M series
+m5PivotHigh = request.security(syminfo.tickerid, "5", ta.pivothigh(high, swingPeriod, swingPeriod), lookahead=barmerge.lookahead_off)
+m5PivotLow  = request.security(syminfo.tickerid, "5", ta.pivotlow(low, swingPeriod, swingPeriod), lookahead=barmerge.lookahead_off)
+
+var float m5LastSH = na
+var float m5LastSL = na
+var float m5PrevSH = na
+var float m5PrevSL = na
+if m5NewBar and not na(m5PivotHigh)
+    m5PrevSH := m5LastSH
+    m5LastSH := m5PivotHigh
+if m5NewBar and not na(m5PivotLow)
+    m5PrevSL := m5LastSL
+    m5LastSL := m5PivotLow
+
+// ── 15M Context (soft) ──────────────────────────────────────────────
+ctx15Bull = 0.0
+ctx15Bear = 0.0
+if not na(m5LastSH) and not na(m5PrevSH)
+    ctx15Bull += m5LastSH > m5PrevSH ? 0.5 : 0
+    ctx15Bear += m5LastSH < m5PrevSH ? 0.5 : 0
+if not na(m5LastSL) and not na(m5PrevSL)
+    ctx15Bull += m5LastSL > m5PrevSL ? 0.5 : 0
+    ctx15Bear += m5LastSL < m5PrevSL ? 0.5 : 0
+m15Mom = (m15Close - m15Close[3]) / m15Atr
+if m15Mom > 0.5
+    ctx15Bull += 1.0
+else if m15Mom < -0.5
+    ctx15Bear += 1.0
+ctx15Net = ctx15Bull - ctx15Bear
+ctx15Strength = math.max(-2, math.min(2, ctx15Net))
+ctx15State = ctx15Strength >= 1 ? "BULL" : ctx15Strength <= -1 ? "BEAR" : math.abs(ctx15Strength) < 0.5 ? "NEUT" : "TRANS"
+
+// ── 5M Structure ────────────────────────────────────────────────────
+bull5 = 0
+bear5 = 0
+if not na(m5LastSH) and not na(m5PrevSH)
+    bull5 += m5LastSH > m5PrevSH ? 1 : 0
+    bear5 += m5LastSH < m5PrevSH ? 1 : 0
+if not na(m5LastSL) and not na(m5PrevSL)
+    bull5 += m5LastSL > m5PrevSL ? 1 : 0
+    bear5 += m5LastSL < m5PrevSL ? 1 : 0
+m5Mom = (m5Close - m5Close[5]) / m5Atr
+if m5Mom > 0.3
+    bull5 += 1
+else if m5Mom < -0.3
+    bear5 += 1
+ctx5Net = bull5 - bear5
+ctx5Dir = ctx5Net >= 2 ? 1 : ctx5Net <= -2 ? -1 : 0
+
+// ── State machine (5M decisions, 1M execution) ──────────────────────
+var int   state5m = 0      // 0=WATCH 1=ARM_L -1=ARM_S 2=TAKE_L -2=TAKE_S 3=EXEC 4=COOL
+var int   tradeDir = 0
+var float armedPrice = na
+var int   armedBar = 0
+var float pbExtreme = na
+var int   setupId = 0
+var int   takeBar = 0
+var float takePrice = na
+var float entryPrice = na
+var float stopPrice = na
+var float targetPrice = na
+var int   entryBar = 0
+var int   execWindow = 0
+var int   cooldown = 0
+
+// Scores (computed each 1M bar using last completed 5M data)
+locScore = 0
+if tradeDir == 1 and not na(m5LastSL)
+    if math.abs(close - m5LastSL) / atr1m < 0.5
+        locScore += 1
+else if tradeDir == -1 and not na(m5LastSH)
+    if math.abs(close - m5LastSH) / atr1m < 0.5
+        locScore += 1
+
+reactScore = 0
+body = close - open
+if tradeDir == 1 and low < low[1] and (low[1]-low)/atr1m < 0.15 and close > close[1]
+    reactScore += 1
+else if tradeDir == -1 and high > high[1] and (high-high[1])/atr1m < 0.15 and close < close[1]
+    reactScore += 1
+if tradeDir == 1 and body > 0 and math.abs(body)/atr1m >= bodyThreshATR
+    reactScore += 1
+else if tradeDir == -1 and body < 0 and math.abs(body)/atr1m >= bodyThreshATR
+    reactScore += 1
+
+ctx15Score = tradeDir == 1 ? (ctx15Strength > 0 ? int(math.min(ctx15Strength, 2)) : ctx15Strength < -1 ? -2 : 0) :
+     tradeDir == -1 ? (ctx15Strength < 0 ? int(math.min(math.abs(ctx15Strength), 2)) : ctx15Strength > 1 ? -2 : 0) : 0
+structScore = tradeDir == 1 ? math.min(bull5, 2) : tradeDir == -1 ? math.min(bear5, 2) : 0
+totalScore = ctx15Score + structScore + locScore + math.min(reactScore, 3)
+
+detATR = tradeDir == 1 ? (close - armedPrice) / atr1m : tradeDir == -1 ? (armedPrice - close) / atr1m : 0
+
+// ── Transitions on 5M bar close ─────────────────────────────────────
+if barstate.isconfirmed and m5NewBar
+    if state5m == 4
+        cooldown -= 1
+        if cooldown <= 0
+            state5m := 0
+            tradeDir := 0
+    else if state5m == 3  // IN TRADE (1M managed)
+        if bar_index > entryBar
+            d = tradeDir
+            if d == 1
+                if low <= stopPrice
+                    state5m := 4
+                    cooldown := cooldownBars
+                    if showExits
+                        label.new(bar_index, low, "STOP", style=label.style_circle, color=color.red, textcolor=color.white, size=size.tiny)
+                else if high >= targetPrice
+                    state5m := 4
+                    cooldown := cooldownBars
+                    if showExits
+                        label.new(bar_index, high, "TGT", style=label.style_circle, color=color.green, textcolor=color.white, size=size.tiny)
+                else if bar_index - entryBar >= maxHoldBars
+                    state5m := 4
+                    cooldown := cooldownBars
+                    if showExits
+                        label.new(bar_index, close, "TIME", style=label.style_circle, color=color.gray, textcolor=color.white, size=size.tiny)
+            else if d == -1
+                if high >= stopPrice
+                    state5m := 4
+                    cooldown := cooldownBars
+                    if showExits
+                        label.new(bar_index, high, "STOP", style=label.style_circle, color=color.red, textcolor=color.white, size=size.tiny)
+                else if low <= targetPrice
+                    state5m := 4
+                    cooldown := cooldownBars
+                    if showExits
+                        label.new(bar_index, low, "TGT", style=label.style_circle, color=color.green, textcolor=color.white, size=size.tiny)
+                else if bar_index - entryBar >= maxHoldBars
+                    state5m := 4
+                    cooldown := cooldownBars
+                    if showExits
+                        label.new(bar_index, close, "TIME", style=label.style_circle, color=color.gray, textcolor=color.white, size=size.tiny)
+    else if state5m == 0
+        if ctx5Dir == 1
+            tradeDir := 1
+            if structScore + locScore >= armedMinScore
+                setupId += 1
+                state5m := 1
+                armedPrice := m5Close
+                armedBar := bar_index
+                pbExtreme := m5Close
+                if showArmed
+                    label.new(bar_index, low, "5M ▲ARM", style=label.style_triangleup, color=color.blue, textcolor=color.white, size=size.small)
+        else if ctx5Dir == -1
+            tradeDir := -1
+            if structScore + locScore >= armedMinScore
+                setupId += 1
+                state5m := -1
+                armedPrice := m5Close
+                armedBar := bar_index
+                pbExtreme := m5Close
+                if showArmed
+                    label.new(bar_index, high, "5M ▼ARM", style=label.style_triangledown, color=color.orange, textcolor=color.white, size=size.small)
+    else if state5m == 1 or state5m == -1
+        if state5m == 1
+            pbExtreme := math.min(pbExtreme, m5Low)
+        else
+            pbExtreme := math.max(pbExtreme, m5High)
+        barsSinceArm = bar_index - armedBar
+        if barsSinceArm > armedTimeout * 5
+            state5m := 0
+            tradeDir := 0
+            if showInvalidated
+                label.new(bar_index, close, "5M TO", style=label.style_xcross, color=color.gray, size=size.tiny)
+        else if (state5m == 1 and ctx5Dir == -1) or (state5m == -1 and ctx5Dir == 1)
+            state5m := 0
+            tradeDir := 0
+            if showInvalidated
+                label.new(bar_index, close, "5M INV", style=label.style_xcross, color=color.gray, size=size.tiny)
+        else if detATR > maxChaseATR and reactScore >= 1
+            state5m := 0
+            tradeDir := 0
+            if showPass
+                label.new(bar_index, close, "MISS", style=label.style_diamond, color=color.purple, textcolor=color.white, size=size.tiny)
+        else if totalScore >= takeThreshold
+            takeBar := bar_index
+            takePrice := m5Close
+            state5m := 2
+            execWindow := maxExecBars
+            if showTake
+                lbl = (tradeDir == 1 ? "5M ▲TAKE" : "5M ▼TAKE") + "\nS:" + str.tostring(totalScore)
+                label.new(bar_index, tradeDir == 1 ? low : high, lbl,
+                     style=tradeDir == 1 ? label.style_label_up : label.style_label_down,
+                     color=tradeDir == 1 ? color.teal : color.maroon, textcolor=color.white, size=size.normal)
+
+// ── 1M execution window after 5M TAKE ─────────────────────────────
+if barstate.isconfirmed and state5m == 2
+    execWindow -= 1
+    favorable = tradeDir == 1 ? close > open and (close-open)/atr1m >= bodyThreshATR*0.5 : close < open and (open-close)/atr1m >= bodyThreshATR*0.5
+    chase = tradeDir == 1 ? (close - takePrice)/atr1m : (takePrice - close)/atr1m
+    if chase > maxChaseATR
+        state5m := 0
+        tradeDir := 0
+        if showPass
+            label.new(bar_index, close, "1M MISS", style=label.style_diamond, color=color.purple, size=size.tiny)
+    else if favorable or execWindow <= 0
+        entryPrice := close
+        risk2 = stopATR * atr1m
+        d2 = tradeDir
+        stopPrice := entryPrice - risk2 * d2
+        targetPrice := entryPrice + targetR * risk2 * d2
+        entryBar := bar_index
+        state5m := 3
+        if showExecution
+            elbl = (tradeDir == 1 ? "1M ▲ENTRY" : "1M ▼ENTRY") + "\n#" + str.tostring(setupId)
+            label.new(bar_index, tradeDir == 1 ? low : high, elbl,
+                 style=tradeDir == 1 ? label.style_label_up : label.style_label_down,
+                 color=tradeDir == 1 ? color.lime : color.fuchsia, textcolor=color.black, size=size.small)
+
+// ── Background ──────────────────────────────────────────────────────
+bgcolor(show15MContext and ctx15State == "BULL" ? color.new(color.green, 96) :
+     show15MContext and ctx15State == "BEAR" ? color.new(color.red, 96) :
+     show15MContext and ctx15State == "TRANS" ? color.new(color.orange, 97) : na)
+bgcolor(show5MState and ctx5Dir == 1 ? color.new(color.teal, 97) :
+     show5MState and ctx5Dir == -1 ? color.new(color.maroon, 97) : na)
+
+// ── Debug table ─────────────────────────────────────────────────────
+if showDebug and barstate.islast
+    var table tbl = table.new(position.top_right, 2, 10, bgcolor=color.new(color.black, 80))
+    table.cell(tbl, 0, 0, "15M STATE", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 0, ctx15State, text_color=color.yellow, text_size=size.small)
+    table.cell(tbl, 0, 1, "15M STR", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 1, str.tostring(ctx15Strength, "#.##"), text_color=color.yellow, text_size=size.small)
+    table.cell(tbl, 0, 2, "5M STATE", text_color=color.white, text_size=size.small)
+    s5 = state5m == 0 ? "WATCH" : state5m == 1 ? "ARM_L" : state5m == -1 ? "ARM_S" : state5m == 2 ? "TAKE" : state5m == 3 ? "IN" : "COOL"
+    table.cell(tbl, 1, 2, s5, text_color=color.yellow, text_size=size.small)
+    table.cell(tbl, 0, 3, "5M DIR", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 3, ctx5Dir == 1 ? "BULL" : ctx5Dir == -1 ? "BEAR" : "NEUT", text_color=color.yellow, text_size=size.small)
+    table.cell(tbl, 0, 4, "5M SCORE", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 4, str.tostring(totalScore), text_color=color.yellow, text_size=size.small)
+    table.cell(tbl, 0, 5, "SETUP ID", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 5, str.tostring(setupId), text_color=color.yellow, text_size=size.small)
+    table.cell(tbl, 0, 6, "1M EXEC", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 6, state5m == 2 ? "WINDOW" : state5m == 3 ? "IN" : "-", text_color=color.yellow, text_size=size.small)
+    table.cell(tbl, 0, 7, "DELAY", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 7, state5m == 3 ? str.tostring(bar_index - takeBar) : "-", text_color=color.yellow, text_size=size.small)
+    table.cell(tbl, 0, 8, "CHASE", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 8, str.tostring(detATR, "#.##"), text_color=color.yellow, text_size=size.small)
+
+alertcondition(state5m == 1 or state5m == -1, "5M Armed", "Phase58B 5M ARMED")
+alertcondition(state5m == 2, "5M Take", "Phase58B 5M TAKE")
+alertcondition(state5m == 3 and bar_index == entryBar, "1M Entry", "Phase58B 1M ENTRY")

@@ -1,0 +1,20 @@
+{
+  "freeze": true,
+  "python_repro": true,
+  "independent_sim": 1.0,
+  "prefix": true,
+  "future_mutation": true,
+  "htf": true,
+  "atr": true,
+  "entry": true,
+  "stop_target": true,
+  "t5": true,
+  "restart": true,
+  "rejected_logic_clean": true,
+  "pine_security": true,
+  "tv_parity_automated": false,
+  "tests_pass": true,
+  "trader_hash": "b6adfc04e8885a3d",
+  "killed_winners": 243,
+  "elapsed_s": 376.5342710018158
+}

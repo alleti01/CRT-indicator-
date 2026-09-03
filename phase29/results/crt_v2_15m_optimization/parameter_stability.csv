@@ -1,0 +1,9 @@
+parameter,value,count,folds
+entry_model,BOS_RETEST,7,7
+stop_atr,0.75,5,7
+stop_atr,1.25,2,7
+target_r,3.0,7,7
+max_bars,4,7,7
+management,FIXED,7,7
+trail_atr,1.0,7,7
+hold_minutes,60,7,7

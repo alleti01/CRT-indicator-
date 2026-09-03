@@ -1,0 +1,2 @@
+trade_id,entry_time,direction,entry_price,ATR,t_2p5_bar,partial_realized_R,runner_stop,runner_target,runner_exit,runner_exit_reason,weighted_final_R,M0_R,incremental_R
+P60-001555,2018-02-20 08:35:00-06:00,LONG,6766.0,4.910714285714286,133772,2.0,1.5,4.0,1.5,RUNNER_PROTECTION,2.3,2.5,-0.20000000000000018

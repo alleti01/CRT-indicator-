@@ -1,0 +1,25 @@
+{
+  "pass": 1.0,
+  "divergences_sample": 0,
+  "bar_level": {
+    "checked": 36174,
+    "divergences": [],
+    "pass": true
+  },
+  "t5_manual": {
+    "far_below_1r": 25,
+    "near_fail_0.9_1.0": 25,
+    "near_pass_1.0_1.1": 0,
+    "pass": true
+  },
+  "duplicate": {
+    "trials": 50,
+    "failures": 0,
+    "pass": true
+  },
+  "missing": {
+    "policy": "Batch backtest uses complete parquet; live must halt on gap > 1 bar",
+    "t5_timer": "bar-index minutes_in_trade; missing bar skips index \u2192 timer stalls (safe)",
+    "pass": true
+  }
+}

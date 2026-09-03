@@ -1,0 +1,46 @@
+{
+  "regret": {
+    "M0_2P5_runner_gt_2P5": {
+      "N": 2283,
+      "pct": 0.21884585889570551,
+      "incremental_TotalR": 679.4047634714462
+    },
+    "M0_2P5_runner_2P25_2P5": {
+      "N": 8149,
+      "pct": 0.7811541411042945,
+      "incremental_TotalR": -1627.3790686838347
+    },
+    "M0_2P5_runner_2P0_2P25": {
+      "N": 0,
+      "pct": 0.0,
+      "incremental_TotalR": 0.0
+    },
+    "M0_2P5_runner_lt_2P0": {
+      "N": 0,
+      "pct": 0.0,
+      "incremental_TotalR": 0.0
+    }
+  },
+  "benefit": {
+    "RUNNER_ADDS_PROFIT": {
+      "N": 2283,
+      "pct": 0.21884585889570551,
+      "TotalR_contribution": 6386.767456555875
+    },
+    "RUNNER_SAME": {
+      "N": 2,
+      "pct": 0.00019171779141104295,
+      "TotalR_contribution": 4.9837691621319165
+    },
+    "RUNNER_GIVES_BACK_SMALL": {
+      "N": 8147,
+      "pct": 0.7809624233128835,
+      "TotalR_contribution": 18739.641658754033
+    },
+    "RUNNER_GIVES_BACK_LARGE": {
+      "N": 0,
+      "pct": 0.0,
+      "TotalR_contribution": 0.0
+    }
+  }
+}

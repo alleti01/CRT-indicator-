@@ -1,0 +1,179 @@
+//@version=6
+// Momentum Displacement @ 15m — Frozen Phase 32 Strategy
+// NOTE: Pine forbids modifying global `var` inside user functions (CE10088).
+
+strategy(
+     "Momentum Displacement 15M FINAL",
+     shorttitle = "MD_15M",
+     overlay = true,
+     pyramiding = 0,
+     initial_capital = 100000,
+     default_qty_type = strategy.fixed,
+     default_qty_value = 1,
+     commission_type = strategy.commission.cash_per_order,
+     commission_value = 0,
+     process_orders_on_close = true,
+     calc_on_every_tick = false,
+     max_labels_count = 500,
+     max_lines_count = 500)
+
+bool is15m = timeframe.period == "15"
+bool tfOk = is15m
+
+const float FROZEN_BODY_MULT       = 1.5
+const int   FROZEN_BODY_AVG_LEN    = 20
+const float FROZEN_CL_LONG         = 0.80
+const float FROZEN_CL_SHORT        = 0.20
+const float FROZEN_BOS_RETEST_TOL  = 0.10
+const int   FROZEN_BOS_RETEST_WIN  = 2
+const float FROZEN_STOP_ATR        = 0.75
+const float FROZEN_TARGET_R        = 3.0
+const int   FROZEN_MAX_HOLD_BARS   = 4
+const int   FROZEN_ATR_LEN         = 14
+const string FROZEN_RTH            = "0930-1600"
+const int   FROZEN_DEDUPE_ACTIVE   = 6
+const int   FROZEN_DEDUPE_SAME_DIR = 4
+const int   FROZEN_DEDUPE_DAY_CAP  = 2
+
+const int ST_IDLE         = 0
+const int ST_WAIT_RETEST  = 1
+const int ST_TRADE_ACTIVE = 2
+
+inRth(string sess) =>
+    int sh = int(str.tonumber(str.substring(sess, 0, 2)))
+    int sm = int(str.tonumber(str.substring(sess, 2, 4)))
+    int eh = int(str.tonumber(str.substring(sess, 5, 7)))
+    int em = int(str.tonumber(str.substring(sess, 7, 9)))
+    int startM = sh * 60 + sm
+    int endM = eh * 60 + em
+    int curM = hour * 60 + minute
+    startM <= endM ? curM >= startM and curM < endM : curM >= startM or curM < endM
+
+cmeDayKey() =>
+    str.format("{0,number,0000}-{1,number,00}-{2,number,00}", year, month, dayofmonth)
+
+dedupePass(int dir, int activeUntil, int lastLongBar, int lastShortBar, string dayKey, int dayCount) =>
+    bool sameDirOk = dir == 1 ? bar_index - lastLongBar >= FROZEN_DEDUPE_SAME_DIR : bar_index - lastShortBar >= FROZEN_DEDUPE_SAME_DIR
+    bool activeOk = bar_index > activeUntil
+    string dk = cmeDayKey()
+    bool dayOk = dk != dayKey ? true : dayCount < FROZEN_DEDUPE_DAY_CAP
+    activeOk and sameDirOk and dayOk
+
+tryRetestFill(int dir, float bosLevel, float dispTol) =>
+    bool filled = false
+    float fillPx = na
+    if dir == 1 and low <= bosLevel + dispTol
+        fillPx := math.min(bosLevel + dispTol, close)
+        filled := true
+    if dir == -1 and high >= bosLevel - dispTol
+        fillPx := math.max(bosLevel - dispTol, close)
+        filled := true
+    [filled, fillPx]
+
+float atrVal = ta.atr(FROZEN_ATR_LEN)
+float barBody = math.abs(close - open)
+float avgBody = ta.sma(barBody, FROZEN_BODY_AVG_LEN)
+float barRange = high - low
+float closeLoc = barRange > 0 ? (close - low) / barRange : na
+
+bool rthOk = inRth(FROZEN_RTH)
+bool bodyReady = bar_index >= FROZEN_BODY_AVG_LEN
+bool longDisp = tfOk and rthOk and bodyReady and not na(avgBody) and barBody > FROZEN_BODY_MULT * avgBody and closeLoc >= FROZEN_CL_LONG
+bool shortDisp = tfOk and rthOk and bodyReady and not na(avgBody) and barBody > FROZEN_BODY_MULT * avgBody and closeLoc <= FROZEN_CL_SHORT
+
+var int   smState = ST_IDLE
+var int   smDir = 0
+var float smBosLevel = na
+var float smDispTol = na
+var int   smDispBar = na
+var int   smRetestDeadline = na
+var float smEntry = na
+var float smStop = na
+var float smTarget = na
+var int   smBarsHeld = 0
+var string smExitReason = ""
+
+var int ddActiveUntil = -1
+var int ddLastLongBar = -999
+var int ddLastShortBar = -999
+var string ddDayKey = ""
+var int ddDayCount = 0
+
+if barstate.isconfirmed and tfOk
+    string dk = cmeDayKey()
+    if dk != ddDayKey
+        ddDayKey := dk
+        ddDayCount := 0
+
+    if smState == ST_TRADE_ACTIVE
+        smBarsHeld += 1
+        bool hitStop = smDir == 1 ? low <= smStop : high >= smStop
+        bool hitTarget = smDir == 1 ? high >= smTarget : low <= smTarget
+        if hitStop
+            smExitReason := "STOP"
+            strategy.close("MD", comment = "STOP")
+            smState := ST_IDLE
+            smDir := 0
+        else if hitTarget
+            smExitReason := "TARGET"
+            strategy.close("MD", comment = "TARGET")
+            smState := ST_IDLE
+            smDir := 0
+        else if smBarsHeld >= FROZEN_MAX_HOLD_BARS
+            smExitReason := "TIME"
+            strategy.close("MD", comment = "TIME")
+            smState := ST_IDLE
+            smDir := 0
+
+    else if smState == ST_WAIT_RETEST
+        if bar_index > smRetestDeadline
+            smState := ST_IDLE
+            smDir := 0
+        else if bar_index > smDispBar
+            [filled, fillPx] = tryRetestFill(smDir, smBosLevel, smDispTol)
+            if filled
+                smEntry := fillPx
+                smBarsHeld := 0
+                smExitReason := ""
+                float risk = FROZEN_STOP_ATR * atrVal
+                smStop := smDir == 1 ? smEntry - risk : smEntry + risk
+                smTarget := smDir == 1 ? smEntry + FROZEN_TARGET_R * risk : smEntry - FROZEN_TARGET_R * risk
+                smState := ST_TRADE_ACTIVE
+                if smDir == 1
+                    strategy.entry("MD", strategy.long, limit = smEntry, comment = "LONG")
+                else
+                    strategy.entry("MD", strategy.short, limit = smEntry, comment = "SHORT")
+
+    else if smState == ST_IDLE
+        if longDisp and dedupePass(1, ddActiveUntil, ddLastLongBar, ddLastShortBar, ddDayKey, ddDayCount)
+            smDir := 1
+            smBosLevel := high
+            smDispTol := FROZEN_BOS_RETEST_TOL * atrVal
+            smDispBar := bar_index
+            smRetestDeadline := bar_index + FROZEN_BOS_RETEST_WIN
+            smState := ST_WAIT_RETEST
+            ddActiveUntil := bar_index + FROZEN_DEDUPE_ACTIVE
+            ddLastLongBar := bar_index
+            string dkLong = cmeDayKey()
+            if dkLong != ddDayKey
+                ddDayKey := dkLong
+                ddDayCount := 1
+            else
+                ddDayCount += 1
+        else if shortDisp and dedupePass(-1, ddActiveUntil, ddLastLongBar, ddLastShortBar, ddDayKey, ddDayCount)
+            smDir := -1
+            smBosLevel := low
+            smDispTol := FROZEN_BOS_RETEST_TOL * atrVal
+            smDispBar := bar_index
+            smRetestDeadline := bar_index + FROZEN_BOS_RETEST_WIN
+            smState := ST_WAIT_RETEST
+            ddActiveUntil := bar_index + FROZEN_DEDUPE_ACTIVE
+            ddLastShortBar := bar_index
+            string dkShort = cmeDayKey()
+            if dkShort != ddDayKey
+                ddDayKey := dkShort
+                ddDayCount := 1
+            else
+                ddDayCount += 1
+
+plot(not tfOk and barstate.islast ? na : na, title = "TF Warning (use label only)", display = display.none)

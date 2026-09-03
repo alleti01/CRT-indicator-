@@ -1,0 +1,401 @@
+//@version=6
+// NQ 15m Combined Strategy — Phase 40 Impulse Filter
+// Same frozen state machines as NQ_15M_COMBINED_INDICATOR_CONCURRENT.pine
+
+strategy(
+     "NQ 15M Combined Phase 40 Impulse Filter Strategy",
+     shorttitle = "NQ15_P40_ST",
+     overlay = true,
+     pyramiding = 10,
+     initial_capital = 100000,
+     default_qty_type = strategy.fixed,
+     default_qty_value = 1,
+     commission_type = strategy.commission.cash_per_order,
+     commission_value = 0,
+     process_orders_on_close = true,
+     calc_on_every_tick = false,
+     max_labels_count = 500,
+     max_lines_count = 500)
+
+bool tfOk = timeframe.period == "15"
+
+const float FZ_BODY_MULT = 1.5
+const int FZ_BODY_AVG_LEN = 20
+const float FZ_CL_LONG = 0.80
+const float FZ_CL_SHORT = 0.20
+const float FZ_BOS_RETEST_TOL = 0.10
+const int FZ_BOS_RETEST_WIN = 2
+const int FZ_ATR_LEN = 14
+const string FZ_RTH = "0930-1600"
+const int FZ_DEDUPE_ACTIVE = 6
+const int FZ_DEDUPE_SAME_DIR = 4
+const int FZ_DEDUPE_DAY_CAP = 2
+const float FZ_P31_STOP_ATR = 0.75
+const float FZ_P31_TARGET_R = 3.0
+const int FZ_P31_MAX_HOLD = 4
+const int FZ_P33_FAIL_WIN = 4
+const int FZ_P33_RETEST_WIN = 2
+const float FZ_P33_STOP_ATR = 0.75
+const float FZ_P33_TARGET_R = 2.5
+const int FZ_P33_MAX_HOLD = 3
+const int FZ_RV_POOL_CAP = 8
+const float FZ_IMPULSE_MIN = 0.65
+
+const int ST_IDLE = 0
+const int ST_WAIT = 1
+const int ST_ACTIVE = 2
+const int RV_ST_RECLAIM = 1
+const int RV_ST_RETEST = 2
+
+type ReversalCand
+    int state
+    int dispDir
+    int revDir
+    float mid
+    int dispBar
+    int expiryBar
+    int confirmBar
+    float reclaim
+    float tol
+    int retestDeadline
+    bool dedupeOk
+    int candId
+    int dispTime
+
+type RvOpenTrade
+    int dir
+    float entry
+    float stop
+    float target
+    int held
+    int entryBar
+    string oid
+
+inRth(string sess) =>
+    int sh = int(str.tonumber(str.substring(sess, 0, 2)))
+    int sm = int(str.tonumber(str.substring(sess, 2, 4)))
+    int eh = int(str.tonumber(str.substring(sess, 5, 7)))
+    int em = int(str.tonumber(str.substring(sess, 7, 9)))
+    int startM = sh * 60 + sm
+    int endM = eh * 60 + em
+    int curM = hour * 60 + minute
+    startM <= endM ? curM >= startM and curM < endM : curM >= startM or curM < endM
+
+cmeDayKey() =>
+    str.format("{0,number,0000}-{1,number,00}-{2,number,00}", year, month, dayofmonth)
+
+dedupePass(int dir, int activeUntil, int lastLongBar, int lastShortBar, string dayKey, int dayCount) =>
+    bool sameDirOk = dir == 1 ? bar_index - lastLongBar >= FZ_DEDUPE_SAME_DIR : bar_index - lastShortBar >= FZ_DEDUPE_SAME_DIR
+    bool activeOk = bar_index > activeUntil
+    string dk = cmeDayKey()
+    bool dayOk = dk != dayKey ? true : dayCount < FZ_DEDUPE_DAY_CAP
+    activeOk and sameDirOk and dayOk
+
+tryBosRetestFill(int dir, float level, float tol) =>
+    bool filled = false
+    float px = na
+    if dir == 1 and low <= level + tol
+        px := math.min(level + tol, close)
+        filled := true
+    if dir == -1 and high >= level - tol
+        px := math.max(level - tol, close)
+        filled := true
+    [filled, px]
+
+midpointReclaimed(int dispDir, float mid) =>
+    dispDir == -1 ? close > mid : close < mid
+
+tryReclaimRetestFill(int dir, float level, float tol) =>
+    bool filled = false
+    float px = na
+    if dir == 1 and low <= level + tol
+        px := math.min(level + tol, close)
+        filled := true
+    if dir == -1 and high >= level - tol
+        px := math.max(level - tol, close)
+        filled := true
+    [filled, px]
+
+newReversalCand(int dispDir, float mid, int dBar, int cid) =>
+    int rDir = dispDir == -1 ? 1 : -1
+    ReversalCand.new(RV_ST_RECLAIM, dispDir, rDir, mid, dBar, dBar + FZ_P33_FAIL_WIN, -1, na, na, -1, false, cid, int(time))
+
+float atrVal = ta.atr(FZ_ATR_LEN)
+impulse3Bar() =>
+    atrVal > 0 ? math.abs(close - close[3]) / atrVal : na
+bool impulsePass = not na(impulse3Bar()) and impulse3Bar() >= FZ_IMPULSE_MIN
+float barBody = math.abs(close - open)
+float avgBody = ta.sma(barBody, FZ_BODY_AVG_LEN)
+float barRange = high - low
+float closeLoc = barRange > 0 ? (close - low) / barRange : na
+bool rthOk = inRth(FZ_RTH)
+bool bodyReady = bar_index >= FZ_BODY_AVG_LEN
+bool longDisp = tfOk and rthOk and bodyReady and not na(avgBody) and barBody > FZ_BODY_MULT * avgBody and closeLoc >= FZ_CL_LONG
+bool shortDisp = tfOk and rthOk and bodyReady and not na(avgBody) and barBody > FZ_BODY_MULT * avgBody and closeLoc <= FZ_CL_SHORT
+
+var int p31State = ST_IDLE
+var int p31Dir = 0
+var float p31Bos = na
+var float p31Tol = na
+var int p31DispBar = na
+var int p31Deadline = na
+var float p31Stop = na
+var float p31Target = na
+var int p31Held = 0
+var int p31DdActive = -1
+var int p31DdLong = -999
+var int p31DdShort = -999
+var string p31DdDay = ""
+var int p31DdCount = 0
+
+var array<ReversalCand> rvPool = array.new<ReversalCand>()
+var array<RvOpenTrade> rvOpen = array.new<RvOpenTrade>()
+var int rvCandSeq = 0
+var int rvDdActive = -1
+var int rvDdLong = -999
+var int rvDdShort = -999
+var string rvDdDay = ""
+var int rvDdCount = 0
+
+if barstate.isconfirmed and tfOk
+    if p31State == ST_ACTIVE
+        p31Held += 1
+        bool hitStop = p31Dir == 1 ? low <= p31Stop : high >= p31Stop
+        bool hitTgt = p31Dir == 1 ? high >= p31Target : low <= p31Target
+        if hitStop
+            strategy.close("P31", comment = "P31 STOP")
+            p31State := ST_IDLE
+            p31Dir := 0
+        else if hitTgt
+            strategy.close("P31", comment = "P31 TARGET")
+            p31State := ST_IDLE
+            p31Dir := 0
+        else if p31Held >= FZ_P31_MAX_HOLD
+            strategy.close("P31", comment = "P31 TIME")
+            p31State := ST_IDLE
+            p31Dir := 0
+    else if p31State == ST_WAIT
+        if bar_index > p31Deadline
+            p31State := ST_IDLE
+            p31Dir := 0
+        else if bar_index > p31DispBar
+            [filled, px] = tryBosRetestFill(p31Dir, p31Bos, p31Tol)
+            if filled
+                if impulsePass
+                    float risk = FZ_P31_STOP_ATR * atrVal
+                    p31Stop := p31Dir == 1 ? px - risk : px + risk
+                    p31Target := p31Dir == 1 ? px + FZ_P31_TARGET_R * risk : px - FZ_P31_TARGET_R * risk
+                    p31Held := 0
+                    p31State := ST_ACTIVE
+                    if p31Dir == 1
+                        strategy.entry("P31", strategy.long, comment = "L")
+                    else
+                        strategy.entry("P31", strategy.short, comment = "S")
+                else
+                    p31State := ST_IDLE
+                    p31Dir := 0
+    else if p31State == ST_IDLE
+        string p31Dk = cmeDayKey()
+        if p31Dk != p31DdDay
+            p31DdDay := p31Dk
+            p31DdCount := 0
+        if longDisp and dedupePass(1, p31DdActive, p31DdLong, p31DdShort, p31DdDay, p31DdCount)
+            p31Dir := 1
+            p31Bos := high
+            p31Tol := FZ_BOS_RETEST_TOL * atrVal
+            p31DispBar := bar_index
+            p31Deadline := bar_index + FZ_BOS_RETEST_WIN
+            p31State := ST_WAIT
+            p31DdActive := bar_index + FZ_DEDUPE_ACTIVE
+            p31DdLong := bar_index
+            p31DdCount := cmeDayKey() != p31DdDay ? 1 : p31DdCount + 1
+            p31DdDay := cmeDayKey()
+        else if shortDisp and dedupePass(-1, p31DdActive, p31DdLong, p31DdShort, p31DdDay, p31DdCount)
+            p31Dir := -1
+            p31Bos := low
+            p31Tol := FZ_BOS_RETEST_TOL * atrVal
+            p31DispBar := bar_index
+            p31Deadline := bar_index + FZ_BOS_RETEST_WIN
+            p31State := ST_WAIT
+            p31DdActive := bar_index + FZ_DEDUPE_ACTIVE
+            p31DdShort := bar_index
+            p31DdCount := cmeDayKey() != p31DdDay ? 1 : p31DdCount + 1
+            p31DdDay := cmeDayKey()
+
+    if array.size(rvOpen) > 0
+        for ti = array.size(rvOpen) - 1 to 0
+            RvOpenTrade tr = array.get(rvOpen, ti)
+            tr.held += 1
+            bool trStop = tr.dir == 1 ? low <= tr.stop : high >= tr.stop
+            bool trTgt = tr.dir == 1 ? high >= tr.target : low <= tr.target
+            if trStop
+                strategy.close(tr.oid, comment = "RV STOP")
+                array.remove(rvOpen, ti)
+            else if trTgt
+                strategy.close(tr.oid, comment = "RV TARGET")
+                array.remove(rvOpen, ti)
+            else if tr.held >= FZ_P33_MAX_HOLD
+                strategy.close(tr.oid, comment = "RV TIME")
+                array.remove(rvOpen, ti)
+            else
+                array.set(rvOpen, ti, tr)
+
+    if longDisp and array.size(rvPool) < FZ_RV_POOL_CAP
+        rvCandSeq += 1
+        array.push(rvPool, newReversalCand(1, (high + low) / 2.0, bar_index, rvCandSeq))
+    if shortDisp and array.size(rvPool) < FZ_RV_POOL_CAP
+        rvCandSeq += 1
+        array.push(rvPool, newReversalCand(-1, (high + low) / 2.0, bar_index, rvCandSeq))
+
+    string rvDk = cmeDayKey()
+    if rvDk != rvDdDay
+        rvDdDay := rvDk
+        rvDdCount := 0
+
+    array<ReversalCand> nextPool = array.new<ReversalCand>()
+    array<int> reclaimIdx = array.new_int()
+    array<int> reclaimDispBar = array.new_int()
+    array<int> reclaimCandId = array.new_int()
+    array<int> fireIdx = array.new_int()
+    array<int> fireDispBar = array.new_int()
+    array<int> fireCandId = array.new_int()
+    array<float> firePx = array.new_float()
+    array<float> fireStop = array.new_float()
+    array<float> fireTarget = array.new_float()
+    array<int> fireRevDir = array.new_int()
+
+    if array.size(rvPool) > 0
+        for ci = 0 to array.size(rvPool) - 1
+            ReversalCand c = array.get(rvPool, ci)
+            if c.state == RV_ST_RECLAIM
+                if bar_index > c.expiryBar
+                    continue
+                if bar_index > c.dispBar and midpointReclaimed(c.dispDir, c.mid)
+                    array.push(reclaimIdx, ci)
+                    array.push(reclaimDispBar, c.dispBar)
+                    array.push(reclaimCandId, c.candId)
+                else
+                    array.push(nextPool, c)
+            else if c.state == RV_ST_RETEST and c.dedupeOk
+                if bar_index > c.retestDeadline
+                    continue
+                if bar_index > c.confirmBar
+                    [rvFill, rvPx] = tryReclaimRetestFill(c.revDir, c.reclaim, c.tol)
+                    if rvFill
+                        float rvRisk = FZ_P33_STOP_ATR * atrVal
+                        float rvSt = c.revDir == 1 ? rvPx - rvRisk : rvPx + rvRisk
+                        float rvTg = c.revDir == 1 ? rvPx + FZ_P33_TARGET_R * rvRisk : rvPx - FZ_P33_TARGET_R * rvRisk
+                        array.push(fireIdx, ci)
+                        array.push(fireDispBar, c.dispBar)
+                        array.push(fireCandId, c.candId)
+                        array.push(firePx, rvPx)
+                        array.push(fireStop, rvSt)
+                        array.push(fireTarget, rvTg)
+                        array.push(fireRevDir, c.revDir)
+                    else
+                        array.push(nextPool, c)
+                else
+                    array.push(nextPool, c)
+
+    int nReclaim = array.size(reclaimIdx)
+    if nReclaim > 0
+        for ri = 0 to nReclaim - 1
+            int best = ri
+            if ri + 1 <= nReclaim - 1
+                for rj = ri + 1 to nReclaim - 1
+                    int dbj = array.get(reclaimDispBar, rj)
+                    int dbi = array.get(reclaimDispBar, best)
+                    int idj = array.get(reclaimCandId, rj)
+                    int idi = array.get(reclaimCandId, best)
+                    if dbj < dbi or (dbj == dbi and idj < idi)
+                        best := rj
+            if best != ri
+                int tIdx = array.get(reclaimIdx, ri)
+                int tDb = array.get(reclaimDispBar, ri)
+                int tId = array.get(reclaimCandId, ri)
+                array.set(reclaimIdx, ri, array.get(reclaimIdx, best))
+                array.set(reclaimDispBar, ri, array.get(reclaimDispBar, best))
+                array.set(reclaimCandId, ri, array.get(reclaimCandId, best))
+                array.set(reclaimIdx, best, tIdx)
+                array.set(reclaimDispBar, best, tDb)
+                array.set(reclaimCandId, best, tId)
+            int ci = array.get(reclaimIdx, ri)
+            ReversalCand c = array.get(rvPool, ci)
+            bool dedupeOk = dedupePass(c.revDir, rvDdActive, rvDdLong, rvDdShort, rvDdDay, rvDdCount)
+            if dedupeOk
+                rvDdActive := bar_index + FZ_DEDUPE_ACTIVE
+                if c.revDir == 1
+                    rvDdLong := bar_index
+                else
+                    rvDdShort := bar_index
+                if cmeDayKey() != rvDdDay
+                    rvDdDay := cmeDayKey()
+                    rvDdCount := 1
+                else
+                    rvDdCount += 1
+                c.confirmBar := bar_index
+                c.reclaim := c.mid
+                c.tol := FZ_BOS_RETEST_TOL * atrVal
+                c.retestDeadline := bar_index + FZ_P33_RETEST_WIN
+                c.dedupeOk := true
+                c.state := RV_ST_RETEST
+                array.push(nextPool, c)
+
+    rvPool := nextPool
+
+    bool seenRl = false
+    bool seenRs = false
+    int nFire = array.size(fireIdx)
+    if nFire > 0
+        for fi = 0 to nFire - 1
+            int best = fi
+            if fi + 1 <= nFire - 1
+                for fj = fi + 1 to nFire - 1
+                    int dbj = array.get(fireDispBar, fj)
+                    int dbi = array.get(fireDispBar, best)
+                    int idj = array.get(fireCandId, fj)
+                    int idi = array.get(fireCandId, best)
+                    if dbj < dbi or (dbj == dbi and idj < idi)
+                        best := fj
+            if best != fi
+                int tI = array.get(fireIdx, fi)
+                int tD = array.get(fireDispBar, fi)
+                int tC = array.get(fireCandId, fi)
+                float tP = array.get(firePx, fi)
+                float tS = array.get(fireStop, fi)
+                float tT = array.get(fireTarget, fi)
+                int tR = array.get(fireRevDir, fi)
+                array.set(fireIdx, fi, array.get(fireIdx, best))
+                array.set(fireDispBar, fi, array.get(fireDispBar, best))
+                array.set(fireCandId, fi, array.get(fireCandId, best))
+                array.set(firePx, fi, array.get(firePx, best))
+                array.set(fireStop, fi, array.get(fireStop, best))
+                array.set(fireTarget, fi, array.get(fireTarget, best))
+                array.set(fireRevDir, fi, array.get(fireRevDir, best))
+                array.set(fireIdx, best, tI)
+                array.set(fireDispBar, best, tD)
+                array.set(fireCandId, best, tC)
+                array.set(firePx, best, tP)
+                array.set(fireStop, best, tS)
+                array.set(fireTarget, best, tT)
+                array.set(fireRevDir, best, tR)
+            int rDir = array.get(fireRevDir, fi)
+            if rDir == 1 and seenRl
+                continue
+            if rDir == -1 and seenRs
+                continue
+            float px = array.get(firePx, fi)
+            float st = array.get(fireStop, fi)
+            float tg = array.get(fireTarget, fi)
+            int cid = array.get(fireCandId, fi)
+            string oid = "RV" + str.tostring(cid)
+            if impulsePass
+                if rDir == 1
+                    seenRl := true
+                    strategy.entry(oid, strategy.long, comment = "RL")
+                else
+                    seenRs := true
+                    strategy.entry(oid, strategy.short, comment = "RS")
+                strategy.exit("X" + oid, oid, stop = st, limit = tg)
+                array.push(rvOpen, RvOpenTrade.new(rDir, px, st, tg, 0, bar_index, oid))
+

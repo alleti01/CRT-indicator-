@@ -1,0 +1,29 @@
+{
+  "family": "F",
+  "n": 0,
+  "path": {
+    "n": 0
+  },
+  "sim_net": {
+    "N": 0,
+    "AvgR": 0,
+    "PF": 0,
+    "TotalR": 0
+  },
+  "sim_gross": {
+    "N": 0,
+    "AvgR": 0,
+    "PF": 0,
+    "TotalR": 0
+  },
+  "controls": {
+    "original": {
+      "n": 0
+    },
+    "random_dir": {
+      "n": 0
+    }
+  },
+  "early_gate": false,
+  "verdict": "REJECT"
+}

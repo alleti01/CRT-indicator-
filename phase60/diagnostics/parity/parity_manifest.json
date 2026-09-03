@@ -1,0 +1,6 @@
+{
+  "positive_count": 40,
+  "negative_count": 0,
+  "note": "Negative references require decision stream export \u2014 extend with Phase58D shadow rows.",
+  "positive_path": "/Users/anishalleti/CRT indicator/phase60/diagnostics/parity/phase60_positive_references.csv"
+}

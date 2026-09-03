@@ -1,0 +1,28 @@
+{
+  "consolidation_families": 7,
+  "parameter_combinations": 17,
+  "wf_train_selections": 68,
+  "families": {
+    "consolidation_families": [
+      "E0",
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F"
+    ],
+    "time_windows": [
+      5,
+      10,
+      15,
+      20,
+      30
+    ],
+    "atr_separations": [
+      0.5,
+      1.0,
+      1.5
+    ]
+  }
+}

@@ -1,0 +1,118 @@
+// VISUAL_DIAGNOSTIC_ONLY — Phase58J-TV11 all 11 frozen last-week review trades
+// Source: phase58j/review/last_week_tradingview_review_corrected.csv
+// NO strategy logic. Absolute Unix ms timestamps only.
+
+//@version=5
+indicator("Phase58J TV11 Review", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=50)
+
+N = 11
+HOLD_MIN = 60
+
+grpDisp = "Display"
+showEntries    = input.bool(true,  "Show entries", group=grpDisp)
+showM0Stop     = input.bool(true,  "Show M0 stop", group=grpDisp)
+showM1Stop     = input.bool(true,  "Show M1 stop", group=grpDisp)
+showM0Target   = input.bool(true,  "Show M0 target", group=grpDisp)
+showM1Target   = input.bool(true,  "Show M1 target", group=grpDisp)
+showOutcomes   = input.bool(true,  "Show outcomes", group=grpDisp)
+showTradeNums  = input.bool(true,  "Show trade numbers", group=grpDisp)
+showDebug      = input.bool(true,  "Show debug table", group=grpDisp)
+
+// --- frozen trade data (11 trades) ---
+var int[]   tradeNum   = array.from(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
+var string[] tradeId   = array.from("LW-063138", "LW-063184", "LW-063187", "LW-063188", "LW-063190", "LW-063191", "LW-063192", "LW-063193", "LW-063194", "LW-063195", "LW-063196")
+var string[] grpLetter = array.from("A", "C", "B", "C", "B", "D", "B", "D", "C", "A", "D")
+var string[] direction = array.from("LONG", "LONG", "SHORT", "LONG", "SHORT", "LONG", "LONG", "LONG", "SHORT", "SHORT", "SHORT")
+var bool[]  focusTrade = array.from(false, false, true, false, false, false, false, false, true, true, true)
+var int[]   entryMs    = array.from(1787769660000, 1787905860000, 1787911140000, 1787912880000, 1787918100000, 1787919000000, 1787924340000, 1787927100000, 1787931540000, 1787936220000, 1787940900000)
+var int[]   m0ExitMs   = array.from(1787769780000, 1787905980000, 1787911620000, 1787913060000, 1787918220000, 1787919060000, 1787924460000, 1787927160000, 1787931600000, 1787936280000, 1787940960000)
+var int[]   m1ExitMs   = array.from(1787769900000, 1787906040000, 1787912520000, 1787913060000, 1787918700000, 1787919060000, 1787925600000, 1787927160000, 1787931600000, 1787936400000, 1787940960000)
+var float[] entryPx    = array.from(29293.25, 29610.25, 29606.0, 29611.0, 29611.75, 29627.5, 29648.5, 29643.5, 29732.75, 29506.25, 29489.25)
+var float[] m0StopPx   = array.from(29288.241071428572, 29604.04910714286, 29609.92410714286, 29607.504464285714, 29616.45089285714, 29622.584821428572, 29629.026785714286, 29618.83035714286, 29742.620535714286, 29520.995535714286, 29499.133928571428)
+var float[] m0TgtPx    = array.from(29305.772321428572, 29625.75223214286, 29596.18973214286, 29619.738839285714, 29599.99776785714, 29639.787946428572, 29697.183035714286, 29705.17410714286, 29708.073660714286, 29469.386160714286, 29464.540178571428)
+var float[] m1StopPx   = array.from(29286.571428571428, 29601.98214285714, 29611.23214285714, 29606.339285714286, 29618.01785714286, 29620.946428571428, 29622.535714285714, 29610.60714285714, 29745.910714285714, 29525.910714285714, 29502.428571428572)
+var float[] m1TgtPx    = array.from(29309.946428571428, 29630.91964285714, 29592.91964285714, 29622.651785714286, 29596.08035714286, 29643.883928571428, 29713.410714285714, 29725.73214285714, 29699.848214285714, 29457.098214285714, 29456.303571428572)
+var string[] m0Outcome = array.from("STOP", "TARGET", "TARGET", "TARGET", "TARGET", "STOP", "TARGET", "STOP", "TARGET", "STOP", "STOP")
+var string[] m1Outcome = array.from("TARGET", "TARGET", "STOP", "TARGET", "STOP", "STOP", "STOP", "STOP", "TARGET", "TARGET", "STOP")
+var float[] m0NetR     = array.from(-1.144741532976857, 2.3830813534916913, 2.315244596132042, 2.2925925925926234, 2.345773979107262, -1.1475022706630649, 2.462769371847775, -1.0293883460007258, 2.4265490728177332, -1.049167423554343, -1.073351400180676)
+var float[] m1NetR     = array.from(2.4999752446269867, 2.4999755083968194, -1.0000244926078776, 2.4999755120012304, -1.0000244887077503, -1.0000244759228658, -1.0000244746097022, -1.000024484469248, 2.4999756053156377, 2.4999754125513474, -1.0000245962221173)
+
+colLongEntry  = color.new(color.lime, 0)
+colShortEntry = color.new(color.red, 0)
+colFocus      = color.new(color.yellow, 0)
+colM0Stop     = color.new(color.red, 30)
+colM1Stop     = color.new(color.orange, 30)
+colM0Tgt      = color.new(color.green, 50)
+colM1Tgt      = color.new(color.teal, 50)
+colEntryLine  = color.new(color.white, 40)
+colM0Out      = color.new(color.maroon, 0)
+colM1Win      = color.new(color.lime, 0)
+colM1Loss     = color.new(color.maroon, 0)
+
+f_grp_name(g) =>
+    g == "A" ? "M0 STOP -> M1 TARGET" : g == "B" ? "M1 worse than M0" : g == "C" ? "Normal M1 winner" : "M1 loser"
+
+f_out_y(i, isM1) =>
+    ep = array.get(entryPx, i)
+    out = isM1 ? array.get(m1Outcome, i) : array.get(m0Outcome, i)
+    if out == "TARGET"
+        isM1 ? array.get(m1TgtPx, i) : array.get(m0TgtPx, i)
+    else if out == "STOP"
+        isM1 ? array.get(m1StopPx, i) : array.get(m0StopPx, i)
+    else
+        ep
+
+for i = 0 to N - 1
+    ep  = array.get(entryPx, i)
+    m0s = array.get(m0StopPx, i)
+    m0t = array.get(m0TgtPx, i)
+    m1s = array.get(m1StopPx, i)
+    m1t = array.get(m1TgtPx, i)
+    isLong = array.get(direction, i) == "LONG"
+    isFocus = array.get(focusTrade, i)
+    endBar = bar_index + HOLD_MIN
+
+    if time == array.get(entryMs, i)
+        if showEntries
+            numTxt = showTradeNums ? "#" + str.tostring(array.get(tradeNum, i)) + "\n" : ""
+            grpTxt = array.get(grpLetter, i) + " " + f_grp_name(array.get(grpLetter, i)) + "\n"
+            idTxt = array.get(tradeId, i) + "\n"
+            dirTxt = (isLong ? "LONG" : "SHORT") + " ENTRY"
+            entryCol = isFocus ? colFocus : isLong ? colLongEntry : colShortEntry
+            entryStyle = isLong ? label.style_label_up : label.style_label_down
+            yEntry = isLong ? low : high
+            label.new(bar_index, yEntry, numTxt + grpTxt + idTxt + dirTxt, style=entryStyle, color=entryCol, textcolor=color.black, size=isFocus ? size.normal : size.small)
+        if showM0Stop
+            line.new(bar_index, m0s, endBar, m0s, color=colM0Stop, width=isFocus ? 2 : 1)
+        if showM1Stop
+            line.new(bar_index, m1s, endBar, m1s, color=colM1Stop, width=isFocus ? 2 : 1, style=line.style_dashed)
+        if showM0Target
+            line.new(bar_index, m0t, endBar, m0t, color=colM0Tgt, width=1)
+        if showM1Target
+            line.new(bar_index, m1t, endBar, m1t, color=colM1Tgt, width=1, style=line.style_dashed)
+        line.new(bar_index, ep, endBar, ep, color=colEntryLine, width=1, style=line.style_dotted)
+
+    if showOutcomes and time == array.get(m0ExitMs, i)
+        label.new(bar_index, f_out_y(i, false), "M0 " + array.get(m0Outcome, i) + "\n" + str.tostring(array.get(m0NetR, i), "#.##") + "R", style=label.style_label_left, color=colM0Out, textcolor=color.white, size=size.tiny)
+    if showOutcomes and time == array.get(m1ExitMs, i)
+        m1col = array.get(m1Outcome, i) == "TARGET" ? colM1Win : colM1Loss
+        label.new(bar_index, f_out_y(i, true), "M1 " + array.get(m1Outcome, i) + "\n" + str.tostring(array.get(m1NetR, i), "#.##") + "R", style=label.style_label_left, color=m1col, textcolor=color.white, size=size.tiny)
+
+var table dbg = table.new(position.bottom_right, 2, 8, bgcolor=color.new(color.black, 15), border_width=1)
+if barstate.islast and showDebug
+    table.cell(dbg, 0, 0, "Phase58J-TV11", text_color=color.gray, text_size=size.small)
+    table.cell(dbg, 1, 0, "11 frozen review trades", text_color=color.white, text_size=size.small)
+    table.cell(dbg, 0, 1, "Groups A/B/C/D", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 1, "2 / 3 / 3 / 3", text_color=color.white, text_size=size.tiny)
+    table.cell(dbg, 0, 2, "Focus next", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 2, "#10 #3 #9 #11", text_color=color.yellow, text_size=size.tiny)
+    table.cell(dbg, 0, 3, "Timestamps", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 3, "Absolute Unix ms", text_color=color.white, text_size=size.tiny)
+    table.cell(dbg, 0, 4, "Chart TZ note", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 4, "Display only; ms unchanged", text_color=color.white, text_size=size.tiny)
+    table.cell(dbg, 0, 5, "Instrument", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 5, "NQ1! 1M", text_color=color.white, text_size=size.tiny)
+    table.cell(dbg, 0, 6, "Source CSV", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 6, "last_week_tradingview_review_corrected.csv", text_color=color.white, text_size=size.tiny)
+    table.cell(dbg, 0, 7, "Visualization", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 7, "FROZEN — no recompute", text_color=color.white, text_size=size.tiny)

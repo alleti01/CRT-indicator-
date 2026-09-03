@@ -1,0 +1,26 @@
+{
+  "phase": 52,
+  "data": {
+    "timezone": "America/Chicago",
+    "session_convention": "RTH 0930-1600 CT for optional filters",
+    "m1_first": "2017-10-01 17:00:00-05:00",
+    "m1_last": "2026-06-26 15:59:00-05:00",
+    "m1_bars": 3075087,
+    "m15_first": "2017-10-01 17:00:00-05:00",
+    "m15_last": "2026-06-28 23:45:00-05:00",
+    "m15_bars": 205223,
+    "m1_sources": "phase45.execution.data_1m RAW_1M_PATHS (stitched)",
+    "m15_sources": "phase36.data load_replay_market_15m (5m aggregated)",
+    "missing_data": "dropna on OHLC; no forward fill on prices"
+  },
+  "wf_spec": {
+    "family": "G3",
+    "context": "C4",
+    "rth_only": true
+  },
+  "core_overlap_min": 30,
+  "verdict": {
+    "advance": "NO",
+    "s52_oos_AvgR": 1.2114135456096984
+  }
+}

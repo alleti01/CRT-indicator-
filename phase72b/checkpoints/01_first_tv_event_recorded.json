@@ -1,0 +1,9 @@
+{
+  "checkpoint": "01_first_tv_event_recorded",
+  "status": "COMPLETE",
+  "updated_at_utc": "2026-09-02T23:40:00+00:00",
+  "note": "OBS-AUG30-001: AUTO SIGNAL_SHORT NY 21:46 / CHI 20:46 Aug 30 2026 from user screenshot",
+  "observation_id": "OBS-AUG30-001",
+  "tv_timestamp_chicago": "2026-08-30 20:46:00",
+  "tv_timestamp_ny": "2026-08-30 21:46:00"
+}

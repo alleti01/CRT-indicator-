@@ -1,0 +1,2 @@
+name,description,stable_features,median_test_tpd
+SPARSE_LR_MISSED_REVERSAL,Walk-forward logistic regression on missed-reversal positives vs matched negatives; train-only score threshold for sparse firing,"{'Long': 'failed_new_low,micro_higher_low,lower_wick_ratio,body_atr,range_atr', 'Short': 'body_atr,upper_wick_ratio,failed_new_high,micro_lower_high,ret_6_atr'}",0.06995917586272885

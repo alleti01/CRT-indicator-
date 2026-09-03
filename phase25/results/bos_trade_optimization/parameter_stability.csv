@@ -1,0 +1,9 @@
+parameter,value,count,folds
+entry_model,RETRACE_50,3,4
+entry_model,NEXT_CLOSE,1,4
+stop_atr,1.0,3,4
+stop_atr,1.25,1,4
+target_r,3.0,4,4
+max_bars,9,4,4
+management,FIXED,4,4
+trail_atr,1.0,4,4

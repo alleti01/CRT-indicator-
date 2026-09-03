@@ -1,0 +1,1 @@
+trade_id,signal_id,timestamp,direction,phase44_class,setup_type,b1_window,b1_delay,entry_time,entry_price,stop,target,risk_points,exit_time,exit_price,exit_type,gross_r,cost_r,net_r,mae_r,mfe_r,hold_minutes,wrong_direction,model_hash,data_status,dataset_tag

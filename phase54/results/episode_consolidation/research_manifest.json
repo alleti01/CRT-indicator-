@@ -1,0 +1,27 @@
+{
+  "search": {
+    "consolidation_families": [
+      "E0",
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F"
+    ],
+    "time_windows": [
+      5,
+      10,
+      15,
+      20,
+      30
+    ],
+    "atr_separations": [
+      0.5,
+      1.0,
+      1.5
+    ]
+  },
+  "advance": true,
+  "wf_folds_used": 4
+}

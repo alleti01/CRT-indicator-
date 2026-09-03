@@ -1,0 +1,16 @@
+ARCHETYPE RULES (deterministic, causal features only):
+1. TRANSITION if 15m_context=TRANSITION OR market_state=TRANSITION
+2. CHOP if market_state=UNCERTAIN OR ambiguous_reaction
+3. LATE_CHASE if move_10_atr>=2.0 OR move_5_atr>=1.5
+4. EXTENDED_CONTINUATION if move_10_atr>=1.0
+5. PULLBACK_CONTINUATION if follows_pullback AND move_10_atr<0.5
+6. EARLY_TURN if move_10_atr<=0.25 AND bars_since_opp_start<=3
+7. EARLY_CONTINUATION if 0<=move_10_atr<=0.75
+8. OTHER otherwise
+
+LOSER CAUSE RULES (STOP trades only, entry-time):
+- LATE_EXTENSION if move_10_atr>=1.5 OR archetype in LATE_CHASE/EXTENDED_CONTINUATION
+- WRONG_DIRECTION if not aligned_with_active
+- CHOP / TRANSITION from archetype
+- EARLY_BUT_FAILED if move_10_atr<0.5
+- FAILED_CONTINUATION else

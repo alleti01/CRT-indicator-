@@ -1,0 +1,6 @@
+{
+  "primary": "America/Chicago",
+  "display": "America/New_York for session",
+  "pass": true,
+  "note": "entry_ts from parquet"
+}

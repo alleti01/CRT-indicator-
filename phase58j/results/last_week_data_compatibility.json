@@ -1,0 +1,31 @@
+{
+  "hist_last": "2026-06-26 15:59:00-05:00",
+  "ext_first": "2026-06-28 17:00:00-05:00",
+  "ext_last": "2026-08-28 15:59:00-05:00",
+  "overlap_bars": 0,
+  "columns_hist": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "contract",
+    "instrument_id",
+    "atr",
+    "rel_volume",
+    "vol_ma5"
+  ],
+  "columns_ext": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "contract",
+    "instrument_id"
+  ],
+  "timezone": "America/Chicago",
+  "duplicate_ext": 0,
+  "ohlc_bad_ext": 0,
+  "status": "PASS"
+}

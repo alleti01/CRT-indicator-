@@ -1,0 +1,200 @@
+{
+  "phase": "Strategy Research V5 \u2014 Directional Displacement / Momentum Initiation",
+  "data_range": {
+    "start": "2017-10-01 17:00:00-05:00",
+    "end": "2026-06-28 23:55:00-05:00",
+    "bars_5m": 615898
+  },
+  "events_deduplicated": 315855,
+  "events_raw": 530177,
+  "events_by_era": {
+    "era1": 47440,
+    "era2": 47186,
+    "era3": 40158
+  },
+  "baselines": {
+    "unconditional": [
+      {
+        "horizon": 1,
+        "mean_signed_atr": 0.002112740861499288,
+        "N": 591895
+      },
+      {
+        "horizon": 3,
+        "mean_signed_atr": 0.005605668811824535,
+        "N": 591893
+      },
+      {
+        "horizon": 6,
+        "mean_signed_atr": 0.012732653900617926,
+        "N": 591890
+      },
+      {
+        "horizon": 12,
+        "mean_signed_atr": 0.028455366598038614,
+        "N": 591884
+      },
+      {
+        "horizon": 24,
+        "mean_signed_atr": 0.05841510672562318,
+        "N": 591872
+      }
+    ],
+    "bullish_ordinary": [
+      {
+        "horizon": 1,
+        "directional_atr": 0.005405272757624139,
+        "N": 293486
+      },
+      {
+        "horizon": 3,
+        "directional_atr": 0.015259008242271712,
+        "N": 293484
+      },
+      {
+        "horizon": 6,
+        "directional_atr": 0.03021326725416247,
+        "N": 293481
+      },
+      {
+        "horizon": 12,
+        "directional_atr": 0.059014440838124224,
+        "N": 293475
+      },
+      {
+        "horizon": 24,
+        "directional_atr": 0.11571324072996764,
+        "N": 293463
+      }
+    ],
+    "bearish_ordinary": [
+      {
+        "horizon": 1,
+        "directional_atr": -0.005755444627417546,
+        "N": 283943
+      },
+      {
+        "horizon": 3,
+        "directional_atr": -0.017049278638143473,
+        "N": 283941
+      },
+      {
+        "horizon": 6,
+        "directional_atr": -0.03442272561254572,
+        "N": 283938
+      },
+      {
+        "horizon": 12,
+        "directional_atr": -0.0674194896454731,
+        "N": 283932
+      },
+      {
+        "horizon": 24,
+        "directional_atr": -0.132200415973737,
+        "N": 283920
+      }
+    ]
+  },
+  "alone_h12": {
+    "N": 134784,
+    "mean_directional_ATR": 0.0011999285801241027,
+    "median_directional_ATR": -0.0229375086084619,
+    "positive_rate": 0.49258072174738843,
+    "ordinary_bar_baseline_ATR": -0.0028451682085046475,
+    "incremental_edge_ATR": 0.004045096788628751,
+    "mean_MFE_ATR": 2.0565893245776063,
+    "mean_MAE_ATR": 2.036907052609507,
+    "median_MFE_ATR": 1.4700118421094173,
+    "median_MAE_ATR": 1.478278658004947,
+    "session_control_effect": -0.21059450471788538,
+    "session_robust": false,
+    "same_sign_all_eras": false,
+    "raw_p": 0.8818619923139506,
+    "replication_classification": "NO_DIRECTIONAL_INFORMATION",
+    "economic_effect_classification": "NEGLIGIBLE",
+    "era1_N": 47440,
+    "era1_effect": 0.001336179720221163,
+    "era2_N": 47186,
+    "era2_effect": 0.005330961674682824,
+    "era3_N": 40158,
+    "era3_effect": -0.003815029378092242
+  },
+  "structure_h12": {
+    "N": 28966,
+    "mean_directional_ATR": 0.007436790281324142,
+    "median_directional_ATR": -0.0698772064635887,
+    "positive_rate": 0.48301456880480564,
+    "ordinary_bar_baseline_ATR": 0.00012309960755406806,
+    "incremental_edge_ATR": 0.007313690673770074,
+    "mean_MFE_ATR": 2.09893123845216,
+    "mean_MAE_ATR": 2.0197829486399312,
+    "median_MFE_ATR": 1.4614923687497032,
+    "median_MAE_ATR": 1.4740391368836252,
+    "session_control_effect": -0.14377667414700146,
+    "session_robust": false,
+    "same_sign_all_eras": true,
+    "raw_p": 0.6719017824514102,
+    "replication_classification": "NO_DIRECTIONAL_INFORMATION",
+    "economic_effect_classification": "NEGLIGIBLE",
+    "era1_N": 9948,
+    "era1_effect": 0.010671177767718807,
+    "era2_N": 10330,
+    "era2_effect": 0.0021095473776460575,
+    "era3_N": 8688,
+    "era3_effect": 0.010067399452634065
+  },
+  "followthrough_h12": {
+    "N": 63706,
+    "mean_directional_ATR": 0.009701042073666045,
+    "median_directional_ATR": 0.0,
+    "positive_rate": 0.4960443286346655,
+    "ordinary_bar_baseline_ATR": -0.0018824719010008255,
+    "incremental_edge_ATR": 0.011583513974666872,
+    "mean_MFE_ATR": 2.0787178699864906,
+    "mean_MAE_ATR": 2.0309720471672814,
+    "median_MFE_ATR": 1.4827934067502944,
+    "median_MAE_ATR": 1.4504481625876844,
+    "session_control_effect": -0.19075508190258084,
+    "session_robust": false,
+    "same_sign_all_eras": false,
+    "raw_p": 0.41160889101541936,
+    "replication_classification": "NO_DIRECTIONAL_INFORMATION",
+    "economic_effect_classification": "NEGLIGIBLE",
+    "era1_N": 21881,
+    "era1_effect": 0.03941707228647223,
+    "era2_N": 22519,
+    "era2_effect": -0.008510192354038599,
+    "era3_N": 19306,
+    "era3_effect": -0.002736421357854253
+  },
+  "failure_h12": {
+    "N": 34495,
+    "mean_directional_ATR": -0.0013701190225461934,
+    "median_directional_ATR": 0.021476391070282472,
+    "positive_rate": 0.5018408464994927,
+    "ordinary_bar_baseline_ATR": -0.005619156209208876,
+    "incremental_edge_ATR": 0.0042490371866626825,
+    "mean_MFE_ATR": 2.073526310244238,
+    "mean_MAE_ATR": 2.0780646218569325,
+    "median_MFE_ATR": 1.4963830022918965,
+    "median_MAE_ATR": 1.519006836357547,
+    "session_control_effect": 0.15144417104331537,
+    "session_robust": false,
+    "same_sign_all_eras": false,
+    "raw_p": 1.0,
+    "replication_classification": "NO_DIRECTIONAL_INFORMATION",
+    "economic_effect_classification": "NEGLIGIBLE",
+    "era1_N": 12023,
+    "era1_effect": 0.025606765701646713,
+    "era2_N": 11964,
+    "era2_effect": -0.025998310398875426,
+    "era3_N": 10508,
+    "era3_effect": -0.0041957188905104624
+  },
+  "strength_monotonicity_label": "NON_MONOTONIC",
+  "fdr_survivors": 0,
+  "cross_era_replicated": 23,
+  "session_robust_replicated": 23,
+  "final_classification": "C",
+  "lookahead_audit": "PASS"
+}

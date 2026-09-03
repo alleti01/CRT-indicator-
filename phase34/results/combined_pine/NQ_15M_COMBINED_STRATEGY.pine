@@ -1,0 +1,274 @@
+//@version=6
+// NQ 15m Combined Strategy — Phase 31 + Phase 33 (Phase 34)
+// Same frozen state machines as NQ_15M_COMBINED_INDICATOR.pine
+
+strategy(
+     "NQ 15M Combined Continuation + Reversal",
+     shorttitle = "NQ15_COMB_ST",
+     overlay = true,
+     pyramiding = 2,
+     initial_capital = 100000,
+     default_qty_type = strategy.fixed,
+     default_qty_value = 1,
+     commission_type = strategy.commission.cash_per_order,
+     commission_value = 0,
+     process_orders_on_close = true,
+     calc_on_every_tick = false,
+     max_labels_count = 500,
+     max_lines_count = 500)
+
+bool tfOk = timeframe.period == "15"
+
+const float FZ_BODY_MULT = 1.5
+const int FZ_BODY_AVG_LEN = 20
+const float FZ_CL_LONG = 0.80
+const float FZ_CL_SHORT = 0.20
+const float FZ_BOS_RETEST_TOL = 0.10
+const int FZ_BOS_RETEST_WIN = 2
+const int FZ_ATR_LEN = 14
+const string FZ_RTH = "0930-1600"
+const int FZ_DEDUPE_ACTIVE = 6
+const int FZ_DEDUPE_SAME_DIR = 4
+const int FZ_DEDUPE_DAY_CAP = 2
+const float FZ_P31_STOP_ATR = 0.75
+const float FZ_P31_TARGET_R = 3.0
+const int FZ_P31_MAX_HOLD = 4
+const int FZ_P33_FAIL_WIN = 4
+const int FZ_P33_RETEST_WIN = 2
+const float FZ_P33_STOP_ATR = 0.75
+const float FZ_P33_TARGET_R = 2.5
+const int FZ_P33_MAX_HOLD = 3
+
+const int ST_IDLE = 0
+const int ST_WAIT = 1
+const int ST_ACTIVE = 2
+const int RV_WAIT_RECLAIM = 1
+const int RV_WAIT_RETEST = 2
+const int RV_ACTIVE = 3
+
+inRth(string sess) =>
+    int sh = int(str.tonumber(str.substring(sess, 0, 2)))
+    int sm = int(str.tonumber(str.substring(sess, 2, 4)))
+    int eh = int(str.tonumber(str.substring(sess, 5, 7)))
+    int em = int(str.tonumber(str.substring(sess, 7, 9)))
+    int startM = sh * 60 + sm
+    int endM = eh * 60 + em
+    int curM = hour * 60 + minute
+    startM <= endM ? curM >= startM and curM < endM : curM >= startM or curM < endM
+
+cmeDayKey() =>
+    str.format("{0,number,0000}-{1,number,00}-{2,number,00}", year, month, dayofmonth)
+
+dedupePass(int dir, int activeUntil, int lastLongBar, int lastShortBar, string dayKey, int dayCount) =>
+    bool sameDirOk = dir == 1 ? bar_index - lastLongBar >= FZ_DEDUPE_SAME_DIR : bar_index - lastShortBar >= FZ_DEDUPE_SAME_DIR
+    bool activeOk = bar_index > activeUntil
+    string dk = cmeDayKey()
+    bool dayOk = dk != dayKey ? true : dayCount < FZ_DEDUPE_DAY_CAP
+    activeOk and sameDirOk and dayOk
+
+tryBosRetestFill(int dir, float level, float tol) =>
+    bool filled = false
+    float px = na
+    if dir == 1 and low <= level + tol
+        px := math.min(level + tol, close)
+        filled := true
+    if dir == -1 and high >= level - tol
+        px := math.max(level - tol, close)
+        filled := true
+    [filled, px]
+
+midpointReclaimed(int dispDir, float mid) =>
+    dispDir == -1 ? close > mid : close < mid
+
+tryReclaimRetestFill(int dir, float level, float tol) =>
+    bool filled = false
+    float px = na
+    if dir == 1 and low <= level + tol
+        px := math.min(level + tol, close)
+        filled := true
+    if dir == -1 and high >= level - tol
+        px := math.max(level - tol, close)
+        filled := true
+    [filled, px]
+
+float atrVal = ta.atr(FZ_ATR_LEN)
+float barBody = math.abs(close - open)
+float avgBody = ta.sma(barBody, FZ_BODY_AVG_LEN)
+float barRange = high - low
+float closeLoc = barRange > 0 ? (close - low) / barRange : na
+bool rthOk = inRth(FZ_RTH)
+bool bodyReady = bar_index >= FZ_BODY_AVG_LEN
+bool longDisp = tfOk and rthOk and bodyReady and not na(avgBody) and barBody > FZ_BODY_MULT * avgBody and closeLoc >= FZ_CL_LONG
+bool shortDisp = tfOk and rthOk and bodyReady and not na(avgBody) and barBody > FZ_BODY_MULT * avgBody and closeLoc <= FZ_CL_SHORT
+
+var int p31State = ST_IDLE
+var int p31Dir = 0
+var float p31Bos = na
+var float p31Tol = na
+var int p31DispBar = na
+var int p31Deadline = na
+var float p31Stop = na
+var float p31Target = na
+var int p31Held = 0
+var int p31DdActive = -1
+var int p31DdLong = -999
+var int p31DdShort = -999
+var string p31DdDay = ""
+var int p31DdCount = 0
+
+var int rvState = ST_IDLE
+var int rvDir = 0
+var int rvDispDir = 0
+var float rvMid = na
+var int rvDispBar = na
+var int rvReclaimDeadline = na
+var int rvConfirmBar = -1
+var float rvReclaim = na
+var float rvTol = na
+var int rvRetestDeadline = na
+var float rvStop = na
+var float rvTarget = na
+var int rvHeld = 0
+var int rvDdActive = -1
+var int rvDdLong = -999
+var int rvDdShort = -999
+var string rvDdDay = ""
+var int rvDdCount = 0
+
+if barstate.isconfirmed and tfOk
+    if p31State == ST_ACTIVE
+        p31Held += 1
+        bool hitStop = p31Dir == 1 ? low <= p31Stop : high >= p31Stop
+        bool hitTgt = p31Dir == 1 ? high >= p31Target : low <= p31Target
+        if hitStop
+            strategy.close("P31", comment = "P31 STOP")
+            p31State := ST_IDLE
+            p31Dir := 0
+        else if hitTgt
+            strategy.close("P31", comment = "P31 TARGET")
+            p31State := ST_IDLE
+            p31Dir := 0
+        else if p31Held >= FZ_P31_MAX_HOLD
+            strategy.close("P31", comment = "P31 TIME")
+            p31State := ST_IDLE
+            p31Dir := 0
+    else if p31State == ST_WAIT
+        if bar_index > p31Deadline
+            p31State := ST_IDLE
+            p31Dir := 0
+        else if bar_index > p31DispBar
+            [filled, px] = tryBosRetestFill(p31Dir, p31Bos, p31Tol)
+            if filled
+                float risk = FZ_P31_STOP_ATR * atrVal
+                p31Stop := p31Dir == 1 ? px - risk : px + risk
+                p31Target := p31Dir == 1 ? px + FZ_P31_TARGET_R * risk : px - FZ_P31_TARGET_R * risk
+                p31Held := 0
+                p31State := ST_ACTIVE
+                if p31Dir == 1
+                    strategy.entry("P31", strategy.long, comment = "L")
+                else
+                    strategy.entry("P31", strategy.short, comment = "S")
+    else if p31State == ST_IDLE
+        string p31Dk = cmeDayKey()
+        if p31Dk != p31DdDay
+            p31DdDay := p31Dk
+            p31DdCount := 0
+        if longDisp and dedupePass(1, p31DdActive, p31DdLong, p31DdShort, p31DdDay, p31DdCount)
+            p31Dir := 1
+            p31Bos := high
+            p31Tol := FZ_BOS_RETEST_TOL * atrVal
+            p31DispBar := bar_index
+            p31Deadline := bar_index + FZ_BOS_RETEST_WIN
+            p31State := ST_WAIT
+            p31DdActive := bar_index + FZ_DEDUPE_ACTIVE
+            p31DdLong := bar_index
+            p31DdCount := cmeDayKey() != p31DdDay ? 1 : p31DdCount + 1
+            p31DdDay := cmeDayKey()
+        else if shortDisp and dedupePass(-1, p31DdActive, p31DdLong, p31DdShort, p31DdDay, p31DdCount)
+            p31Dir := -1
+            p31Bos := low
+            p31Tol := FZ_BOS_RETEST_TOL * atrVal
+            p31DispBar := bar_index
+            p31Deadline := bar_index + FZ_BOS_RETEST_WIN
+            p31State := ST_WAIT
+            p31DdActive := bar_index + FZ_DEDUPE_ACTIVE
+            p31DdShort := bar_index
+            p31DdCount := cmeDayKey() != p31DdDay ? 1 : p31DdCount + 1
+            p31DdDay := cmeDayKey()
+
+    if rvState == RV_ACTIVE
+        rvHeld += 1
+        bool rvHitStop = rvDir == 1 ? low <= rvStop : high >= rvStop
+        bool rvHitTgt = rvDir == 1 ? high >= rvTarget : low <= rvTarget
+        if rvHitStop
+            strategy.close("RV", comment = "RV STOP")
+            rvState := ST_IDLE
+            rvDir := 0
+            rvConfirmBar := -1
+        else if rvHitTgt
+            strategy.close("RV", comment = "RV TARGET")
+            rvState := ST_IDLE
+            rvDir := 0
+            rvConfirmBar := -1
+        else if rvHeld >= FZ_P33_MAX_HOLD
+            strategy.close("RV", comment = "RV TIME")
+            rvState := ST_IDLE
+            rvDir := 0
+            rvConfirmBar := -1
+    else if rvState == RV_WAIT_RETEST
+        if bar_index > rvRetestDeadline
+            rvState := ST_IDLE
+            rvDir := 0
+            rvConfirmBar := -1
+        else if bar_index > rvConfirmBar
+            [rvFill, rvPx] = tryReclaimRetestFill(rvDir, rvReclaim, rvTol)
+            if rvFill
+                float rvRisk = FZ_P33_STOP_ATR * atrVal
+                rvStop := rvDir == 1 ? rvPx - rvRisk : rvPx + rvRisk
+                rvTarget := rvDir == 1 ? rvPx + FZ_P33_TARGET_R * rvRisk : rvPx - FZ_P33_TARGET_R * rvRisk
+                rvHeld := 0
+                rvState := RV_ACTIVE
+                if rvDir == 1
+                    strategy.entry("RV", strategy.long, comment = "RL")
+                else
+                    strategy.entry("RV", strategy.short, comment = "RS")
+    else if rvState == RV_WAIT_RECLAIM
+        if bar_index > rvReclaimDeadline
+            rvState := ST_IDLE
+            rvDir := 0
+            rvConfirmBar := -1
+        else if bar_index > rvDispBar and midpointReclaimed(rvDispDir, rvMid)
+            rvConfirmBar := bar_index
+            rvReclaim := rvMid
+            rvTol := FZ_BOS_RETEST_TOL * atrVal
+            rvRetestDeadline := bar_index + FZ_P33_RETEST_WIN
+            rvState := RV_WAIT_RETEST
+    else if rvState == ST_IDLE
+        string rvDk = cmeDayKey()
+        if rvDk != rvDdDay
+            rvDdDay := rvDk
+            rvDdCount := 0
+        if shortDisp and dedupePass(1, rvDdActive, rvDdLong, rvDdShort, rvDdDay, rvDdCount)
+            rvDispDir := -1
+            rvDir := 1
+            rvMid := (high + low) / 2.0
+            rvDispBar := bar_index
+            rvReclaimDeadline := bar_index + FZ_P33_FAIL_WIN
+            rvConfirmBar := -1
+            rvState := RV_WAIT_RECLAIM
+            rvDdActive := bar_index + FZ_DEDUPE_ACTIVE
+            rvDdLong := bar_index
+            rvDdCount := cmeDayKey() != rvDdDay ? 1 : rvDdCount + 1
+            rvDdDay := cmeDayKey()
+        else if longDisp and dedupePass(-1, rvDdActive, rvDdLong, rvDdShort, rvDdDay, rvDdCount)
+            rvDispDir := 1
+            rvDir := -1
+            rvMid := (high + low) / 2.0
+            rvDispBar := bar_index
+            rvReclaimDeadline := bar_index + FZ_P33_FAIL_WIN
+            rvConfirmBar := -1
+            rvState := RV_WAIT_RECLAIM
+            rvDdActive := bar_index + FZ_DEDUPE_ACTIVE
+            rvDdShort := bar_index
+            rvDdCount := cmeDayKey() != rvDdDay ? 1 : rvDdCount + 1
+            rvDdDay := cmeDayKey()

@@ -1,0 +1,237 @@
+fold,direction,rule,tree_upper_bound
+1,Long,minutes_since_open<60 AND atr_expansion>1.165 AND rel_volume>1.44,"|--- rel_volume <= 0.73
+|   |--- rel_volume <= 0.12
+|   |   |--- ret_3 <= -0.00
+|   |   |   |--- class: 0
+|   |   |--- ret_3 >  -0.00
+|   |   |   |--- class: 0
+|   |--- rel_volume >  0.12
+|   |   |--- ret_1 <= -0.00
+|   |   |   |--- class: 1
+|   |   |--- ret_1 >  -0.00
+|   |   |   |--- class: 0
+|--- rel_volume >  0.73
+|   |--- atr_expansion <= 1.16
+|   |   |--- minutes_since_open <= 292.50
+|   |   |   |--- class: 1
+|   |   |--- minutes_since_open >  292.50
+|   |   |   |--- class: 0
+|   |--- atr_"
+1,Short,break_low_8>0 AND price_vs_ema8<-0.5833,"|--- minutes_since_open <= 307.50
+|   |--- ema8_slope <= -0.02
+|   |   |--- atr_expansion <= 1.04
+|   |   |   |--- class: 1
+|   |   |--- atr_expansion >  1.04
+|   |   |   |--- class: 1
+|   |--- ema8_slope >  -0.02
+|   |   |--- atr_expansion <= 1.22
+|   |   |   |--- class: 0
+|   |   |--- atr_expansion >  1.22
+|   |   |   |--- class: 1
+|--- minutes_since_open >  307.50
+|   |--- pullback_from_high_8 <= 3.53
+|   |   |--- ret_4 <= 0.01
+|   |   |   |--- class: 0
+|   |   |--- ret_4 >  0.01
+|   |   |   "
+2,Long,minutes_since_open<60 AND rel_volume>1.435 AND atr_expansion>1.158,"|--- rel_volume <= 0.73
+|   |--- rel_volume <= 0.13
+|   |   |--- ema8_slope <= 0.29
+|   |   |   |--- class: 0
+|   |   |--- ema8_slope >  0.29
+|   |   |   |--- class: 1
+|   |--- rel_volume >  0.13
+|   |   |--- minutes_since_open <= 157.50
+|   |   |   |--- class: 0
+|   |   |--- minutes_since_open >  157.50
+|   |   |   |--- class: 0
+|--- rel_volume >  0.73
+|   |--- minutes_since_open <= 307.50
+|   |   |--- rel_volume <= 1.69
+|   |   |   |--- class: 1
+|   |   |--- rel_volume >  1.69
+|   |   |   |---"
+2,Short,break_low_8>0 AND price_vs_ema8<-0.5864,"|--- pullback_from_high_8 <= 1.68
+|   |--- minutes_since_open <= 307.50
+|   |   |--- atr_expansion <= 1.22
+|   |   |   |--- class: 0
+|   |   |--- atr_expansion >  1.22
+|   |   |   |--- class: 1
+|   |--- minutes_since_open >  307.50
+|   |   |--- ret_4 <= 0.01
+|   |   |   |--- class: 0
+|   |   |--- ret_4 >  0.01
+|   |   |   |--- class: 1
+|--- pullback_from_high_8 >  1.68
+|   |--- minutes_since_open <= 307.50
+|   |   |--- rel_volume <= 1.06
+|   |   |   |--- class: 1
+|   |   |--- rel_volume >  1.06
+"
+3,Long,minutes_since_open<60 AND atr_expansion>1.154 AND rel_volume>1.417,"|--- rel_volume <= 0.73
+|   |--- minutes_since_open <= 315.00
+|   |   |--- minutes_since_open <= 157.50
+|   |   |   |--- class: 0
+|   |   |--- minutes_since_open >  157.50
+|   |   |   |--- class: 0
+|   |--- minutes_since_open >  315.00
+|   |   |--- ema8_slope <= 0.30
+|   |   |   |--- class: 0
+|   |   |--- ema8_slope >  0.30
+|   |   |   |--- class: 1
+|--- rel_volume >  0.73
+|   |--- minutes_since_open <= 307.50
+|   |   |--- rel_volume <= 1.54
+|   |   |   |--- class: 1
+|   |   |--- rel_volume >  1"
+3,Short,break_low_8>0 AND atr_expansion>1.154,"|--- minutes_since_open <= 307.50
+|   |--- dist_high_8_atr <= -1.67
+|   |   |--- rel_volume <= 1.06
+|   |   |   |--- class: 1
+|   |   |--- rel_volume >  1.06
+|   |   |   |--- class: 1
+|   |--- dist_high_8_atr >  -1.67
+|   |   |--- atr_expansion <= 1.06
+|   |   |   |--- class: 0
+|   |   |--- atr_expansion >  1.06
+|   |   |   |--- class: 1
+|--- minutes_since_open >  307.50
+|   |--- ret_3 <= -0.01
+|   |   |--- class: 1
+|   |--- ret_3 >  -0.01
+|   |   |--- ret_1 <= -0.00
+|   |   |   |--- class: 0
+| "
+4,Long,minutes_since_open<60 AND atr_expansion>1.149 AND rel_volume>1.407,"|--- minutes_since_open <= 307.50
+|   |--- rel_volume <= 1.42
+|   |   |--- minutes_since_open <= 202.50
+|   |   |   |--- class: 0
+|   |   |--- minutes_since_open >  202.50
+|   |   |   |--- class: 1
+|   |--- rel_volume >  1.42
+|   |   |--- rel_volume <= 1.74
+|   |   |   |--- class: 1
+|   |   |--- rel_volume >  1.74
+|   |   |   |--- class: 1
+|--- minutes_since_open >  307.50
+|   |--- ema8_slope <= 0.28
+|   |   |--- rel_volume <= 2.78
+|   |   |   |--- class: 0
+|   |   |--- rel_volume >  2.78
+|   | "
+4,Short,minutes_since_open<60 AND atr_expansion>1.149 AND break_low_8>0,"|--- minutes_since_open <= 307.50
+|   |--- dist_high_8_atr <= -1.67
+|   |   |--- rel_volume <= 1.06
+|   |   |   |--- class: 1
+|   |   |--- rel_volume >  1.06
+|   |   |   |--- class: 1
+|   |--- dist_high_8_atr >  -1.67
+|   |   |--- atr_expansion <= 0.93
+|   |   |   |--- class: 0
+|   |   |--- atr_expansion >  0.93
+|   |   |   |--- class: 1
+|--- minutes_since_open >  307.50
+|   |--- ret_4 <= -0.01
+|   |   |--- ret_1 <= -0.00
+|   |   |   |--- class: 1
+|   |   |--- ret_1 >  -0.00
+|   |   |   |--- cla"
+5,Long,minutes_since_open<60 AND atr_expansion>1.146 AND rel_volume>1.398,"|--- minutes_since_open <= 307.50
+|   |--- atr_expansion <= 1.15
+|   |   |--- minutes_since_open <= 202.50
+|   |   |   |--- class: 0
+|   |   |--- minutes_since_open >  202.50
+|   |   |   |--- class: 1
+|   |--- atr_expansion >  1.15
+|   |   |--- rel_volume <= 1.55
+|   |   |   |--- class: 1
+|   |   |--- rel_volume >  1.55
+|   |   |   |--- class: 1
+|--- minutes_since_open >  307.50
+|   |--- ema8_slope <= 0.28
+|   |   |--- rel_volume <= 2.78
+|   |   |   |--- class: 0
+|   |   |--- rel_volume >  2.78
+"
+5,Short,atr_expansion>1.146 AND minutes_since_open<60 AND break_low_8>0,"|--- minutes_since_open <= 307.50
+|   |--- pullback_from_high_8 <= 1.69
+|   |   |--- atr_expansion <= 1.22
+|   |   |   |--- class: 0
+|   |   |--- atr_expansion >  1.22
+|   |   |   |--- class: 1
+|   |--- pullback_from_high_8 >  1.69
+|   |   |--- rel_volume <= 1.06
+|   |   |   |--- class: 1
+|   |   |--- rel_volume >  1.06
+|   |   |   |--- class: 1
+|--- minutes_since_open >  307.50
+|   |--- atr_expansion <= 1.12
+|   |   |--- ema8_slope <= -0.29
+|   |   |   |--- class: 0
+|   |   |--- ema8_slope >  -"
+6,Long,minutes_since_open<60 AND atr_expansion>1.146 AND rel_volume>1.392,"|--- minutes_since_open <= 307.50
+|   |--- atr_expansion <= 1.14
+|   |   |--- minutes_since_open <= 202.50
+|   |   |   |--- class: 0
+|   |   |--- minutes_since_open >  202.50
+|   |   |   |--- class: 1
+|   |--- atr_expansion >  1.14
+|   |   |--- rel_volume <= 1.55
+|   |   |   |--- class: 1
+|   |   |--- rel_volume >  1.55
+|   |   |   |--- class: 1
+|--- minutes_since_open >  307.50
+|   |--- ema8_slope <= 0.28
+|   |   |--- rel_volume <= 2.78
+|   |   |   |--- class: 0
+|   |   |--- rel_volume >  2.78
+"
+6,Short,atr_expansion>1.146 AND minutes_since_open<60 AND break_low_8>0,"|--- minutes_since_open <= 307.50
+|   |--- pullback_from_high_8 <= 1.67
+|   |   |--- atr_expansion <= 1.22
+|   |   |   |--- class: 0
+|   |   |--- atr_expansion >  1.22
+|   |   |   |--- class: 1
+|   |--- pullback_from_high_8 >  1.67
+|   |   |--- rel_volume <= 1.06
+|   |   |   |--- class: 1
+|   |   |--- rel_volume >  1.06
+|   |   |   |--- class: 1
+|--- minutes_since_open >  307.50
+|   |--- atr_expansion <= 1.12
+|   |   |--- close_loc <= 0.64
+|   |   |   |--- class: 0
+|   |   |--- close_loc >  0.64"
+7,Long,atr_expansion>1.145 AND minutes_since_open<75 AND rel_volume>1.392,"|--- minutes_since_open <= 307.50
+|   |--- rel_volume <= 1.17
+|   |   |--- ema8_slope <= -0.10
+|   |   |   |--- class: 1
+|   |   |--- ema8_slope >  -0.10
+|   |   |   |--- class: 0
+|   |--- rel_volume >  1.17
+|   |   |--- atr_expansion <= 1.15
+|   |   |   |--- class: 1
+|   |   |--- atr_expansion >  1.15
+|   |   |   |--- class: 1
+|--- minutes_since_open >  307.50
+|   |--- ema8_slope <= 0.28
+|   |   |--- rel_volume <= 2.78
+|   |   |   |--- class: 0
+|   |   |--- rel_volume >  2.78
+|   |   |   |--- c"
+7,Short,atr_expansion>1.145 AND break_low_8>0,"|--- minutes_since_open <= 307.50
+|   |--- pullback_from_high_8 <= 1.67
+|   |   |--- atr_expansion <= 1.22
+|   |   |   |--- class: 0
+|   |   |--- atr_expansion >  1.22
+|   |   |   |--- class: 1
+|   |--- pullback_from_high_8 >  1.67
+|   |   |--- rel_volume <= 1.58
+|   |   |   |--- class: 1
+|   |   |--- rel_volume >  1.58
+|   |   |   |--- class: 1
+|--- minutes_since_open >  307.50
+|   |--- ret_3 <= -0.01
+|   |   |--- atr_expansion <= 1.19
+|   |   |   |--- class: 0
+|   |   |--- atr_expansion >  1.1"

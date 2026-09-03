@@ -1,0 +1,77 @@
+//@version=5
+indicator("Phase58E Direction Audit", overlay=true, max_labels_count=200, max_boxes_count=20)
+
+// Diagnostic overlay — does NOT replace Phase58D TAKE logic
+
+showOpportunities = input.bool(false, "Show opportunity dots")
+showDirection = input.bool(false, "Show direction triangles")
+showDisagreements = input.bool(true, "Show disagreement labels")
+showScores = input.bool(false, "Show score labels")
+showDebugTable = input.bool(true, "Show debug table")
+
+structGap = input.int(30, "Structural gap (1M bars)", minval=5)
+
+// HTF active move (causal, completed bars only)
+m15 = request.security(syminfo.tickerid, "15", close, barmerge.gaps_off, barmerge.lookahead_off)
+m5 = request.security(syminfo.tickerid, "5", close, barmerge.gaps_off, barmerge.lookahead_off)
+m5_lo = request.security(syminfo.tickerid, "5", low, barmerge.gaps_off, barmerge.lookahead_off)
+m5_hi = request.security(syminfo.tickerid, "5", high, barmerge.gaps_off, barmerge.lookahead_off)
+
+p15 = m15 - m15[4]
+p5 = m5 - m5[5]
+p1 = close - close[8]
+atr1 = ta.atr(14)
+
+active15 = p15 > atr1 ? "STRONG_UP" : p15 > atr1 * 0.3 ? "UP" : p15 < -atr1 ? "STRONG_DOWN" : p15 < -atr1 * 0.3 ? "DOWN" : "NEUTRAL"
+active5 = p5 > atr1 * 0.5 ? "UP" : p5 < -atr1 * 0.5 ? "DOWN" : "NEUTRAL"
+active1 = p1 > atr1 * 0.3 ? "UP" : p1 < -atr1 * 0.3 ? "DOWN" : "NEUTRAL"
+
+domActive = active15 != "NEUTRAL" ? active15 : active5 != "NEUTRAL" ? active5 : active1
+
+// 1M detection proxy
+body = math.abs(close - open)
+longCand = close > open and body > atr1 * 0.3 and low <= ta.lowest(low, 20) + atr1 * 0.5
+shortCand = close < open and body > atr1 * 0.3 and high >= ta.highest(high, 20) - atr1 * 0.5
+
+var string activeDir = na
+var int activeStart = na
+var string origDir = na
+
+if longCand or shortCand
+    dir = longCand ? "LONG" : "SHORT"
+    isNew = na(activeDir) or dir != activeDir or (bar_index - activeStart) > structGap
+    if isNew
+        activeDir := dir
+        activeStart := bar_index
+        origDir := dir
+
+        longScore = (domActive == "UP" or domActive == "STRONG_UP" ? 2 : 0) + (longCand ? 1 : 0)
+        shortScore = (domActive == "DOWN" or domActive == "STRONG_DOWN" ? 2 : 0) + (shortCand ? 1 : 0)
+        shadowDir = longScore > shortScore ? "LONG" : shortScore > longScore ? "SHORT" : "UNCERTAIN"
+        mktState = origDir == shadowDir ? "CONTINUATION" : (domActive == "NEUTRAL" ? "UNCERTAIN" : "PULLBACK")
+
+        if showOpportunities
+            plotshape(true, title="Opp", location=location.absolute, style=shape.circle, color=color.new(color.blue, 50), size=size.tiny)
+
+        if showDirection and shadowDir != "UNCERTAIN"
+            plotshape(shadowDir == "LONG", title="Shadow Long", location=location.belowbar, color=color.green, style=shape.triangleup, size=size.tiny)
+            plotshape(shadowDir == "SHORT", title="Shadow Short", location=location.abovebar, color=color.red, style=shape.triangledown, size=size.tiny)
+
+        if showDisagreements and shadowDir != "UNCERTAIN" and shadowDir != origDir
+            label.new(bar_index, close, "FLIP " + origDir + "->" + shadowDir, style=label.style_label_center, color=color.yellow, textcolor=color.black, size=size.small)
+
+        if showScores
+            label.new(bar_index, high, "L" + str.tostring(longScore) + " S" + str.tostring(shortScore), style=label.style_label_down, color=color.new(color.gray, 70), textcolor=color.white, size=size.tiny)
+
+var table dbg = table.new(position.bottom_right, 2, 10, bgcolor=color.new(color.black, 80))
+if barstate.islast and showDebugTable
+    table.cell(dbg, 0, 0, "15M ACTIVE", text_color=color.gray)
+    table.cell(dbg, 1, 0, active15, text_color=color.white)
+    table.cell(dbg, 0, 1, "5M ACTIVE", text_color=color.gray)
+    table.cell(dbg, 1, 1, active5, text_color=color.white)
+    table.cell(dbg, 0, 2, "1M ACTIVE", text_color=color.gray)
+    table.cell(dbg, 1, 2, active1, text_color=color.white)
+    table.cell(dbg, 0, 3, "DOMINANT", text_color=color.gray)
+    table.cell(dbg, 1, 3, domActive, text_color=color.white)
+    table.cell(dbg, 0, 4, "ORIGINAL", text_color=color.gray)
+    table.cell(dbg, 1, 4, na(origDir) ? "-" : origDir, text_color=color.white)

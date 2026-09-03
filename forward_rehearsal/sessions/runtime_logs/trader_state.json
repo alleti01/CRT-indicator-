@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "trader_state": "FLAT",
+  "last_signal_id": "",
+  "open_side": "FLAT",
+  "entry_price": null,
+  "stop_price": null,
+  "target_price": null,
+  "signal_atr": null,
+  "entry_time": "",
+  "mfe_r": 0.0,
+  "mae_r": 0.0,
+  "bars_in_trade": 0,
+  "pending_orders": [],
+  "halted": false
+}

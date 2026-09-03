@@ -1,0 +1,9 @@
+{
+  "late_defense": "NO_LATE_FILTER_EDGE",
+  "time_exit": "TIME_EXIT_EDGE",
+  "failure_exit": "NO_FAILURE_EXIT_EDGE",
+  "reversal": "NO_REVERSAL_EDGE",
+  "unified_pass": true,
+  "ready_phase71": true,
+  "elapsed_s": 273.64396691322327
+}

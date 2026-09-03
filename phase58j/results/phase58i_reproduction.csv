@@ -1,0 +1,3 @@
+model,trades,TotalR,MaxDD,expected_total_r,expected_max_dd,pass_totalr,pass_trades
+M0,60118,11581.432110031268,2866.9139051904626,11581.43,2866.91,True,True
+M1,60118,31788.946735468486,26.502162355242035,31788.95,26.5,True,True

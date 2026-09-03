@@ -1,0 +1,34 @@
+{
+  "phase": "Phase56",
+  "purpose": "S54 forward paper validation on unseen holdout data",
+  "forward_start_timestamp_ct": "2025-01-01 00:00:00",
+  "forward_start_timezone": "America/Chicago",
+  "freeze_timestamp_ct": "2026-08-28 00:00:00",
+  "model_hash": "bccf4277f3d44d13",
+  "forward_scoring_fold": 5,
+  "d10_method": "frozen_global_threshold",
+  "d10_min_score_inclusive": 0.6839845690148053,
+  "episode_family": "A",
+  "episode_window_min": 30,
+  "entry_rule": "FIRST_QUALIFYING_EVENT",
+  "execution": {
+    "stop_atr": 0.75,
+    "target_r": 2.5,
+    "max_hold_min": 60
+  },
+  "holdout_firewall": {
+    "start": "2025-01-01",
+    "end": "2026-06-26",
+    "note": "Forward sample excludes all Phase53-55 development/parity observations"
+  },
+  "historical_oos_benchmark": {
+    "N": 10587,
+    "AvgR": 0.8294948177072894,
+    "PF": 2.6499530084335507,
+    "episodes_day": 7.271291208791209
+  },
+  "signal_id_prefix": "S56",
+  "event_id_prefix": "F56",
+  "paper_only": true,
+  "no_model_changes": true
+}

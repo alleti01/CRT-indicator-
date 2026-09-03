@@ -1,0 +1,6 @@
+metric,value
+pct_hit_0.5R_finish_negative,0.12857142857142856
+pct_hit_1R_finish_negative,0.04285714285714286
+pct_hit_1.5R_finish_nonpositive,0.01904761904761905
+pct_hit_2R_fail_realize_1R,0.0
+median_giveback,0.47849333404278804

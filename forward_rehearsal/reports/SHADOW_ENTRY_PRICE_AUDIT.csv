@@ -1,0 +1,1 @@
+signal_id,pine_signal_price,market_price_at_webhook,market_price_at_decision,next_tradable_price,signal_to_decision_points,signal_to_decision_atr,estimated_slippage_points,atr,timestamp_utc

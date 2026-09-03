@@ -1,0 +1,10 @@
+{
+  "stop_atr": 0.75,
+  "target_r": 2.5,
+  "max_hold_min": 60,
+  "entry_price": "signal_bar_close",
+  "sim_start_bar": "entry_i_plus_1",
+  "intrabar_order": "stop_before_target",
+  "time_exit": "close_of_last_hold_bar",
+  "cost": "phase45_round_turn"
+}

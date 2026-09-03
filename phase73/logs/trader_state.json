@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "trader_state": "LONG_ACTIVE",
+  "last_signal_id": "",
+  "open_side": "LONG",
+  "entry_price": 20002.5,
+  "stop_price": 19992.5,
+  "target_price": 20027.5,
+  "signal_atr": 10.0,
+  "entry_time": "2026-08-30T17:00:00+00:00",
+  "mfe_r": 0.1,
+  "mae_r": 0.35,
+  "bars_in_trade": 30,
+  "pending_orders": [],
+  "halted": false
+}

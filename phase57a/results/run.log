@@ -1,0 +1,98 @@
+S54 hash OK: bccf4277f3d44d13, P57 config hash: 237ff159543b18ff
+Loading markets...
+  m1: 3075087 bars
+Reproducing Phase57 legs/pullbacks/sequences...
+  Legs=188266 Pullbacks=76625 Sequences=76625
+  Raw entries: 76622
+
+============================================================
+STAGE 2: E0 CAUSALITY AUDIT
+============================================================
+
+2a. Retrospective pullback proof...
+  Scan extends past deepest_i: 74297/76625 (97.0%)
+
+2b. Truncation invariance test (500 sample)...
+  Truncation parity: 500/500 (100.0%)
+  FAILURES: 0/500 (0.0%)
+
+2c. Causal alternative (first-qualification + next-bar entry)...
+  Causal entries: 76621
+  Causal next-bar: N=76621 AvgR=0.0989 PF=1.125
+
+2d. Swing causality: PASS (Phase52 j=i-swing confirmation lag)
+
+2e. Code leak scan...
+  Suspicious patterns: 12
+    research/analysis.py:122 — Global qcut — check if fitted on train only
+    research/outcomes.py:123 — Global max/min on full array (check scope)
+    research/outcomes.py:124 — Global max/min on full array (check scope)
+    research/outcomes.py:126 — Global max/min on full array (check scope)
+    research/outcomes.py:127 — Global max/min on full array (check scope)
+
+============================================================
+STAGE 3: EXECUTABILITY AUDIT
+============================================================
+
+Raw E0: N=76622 AvgR=1.5539 PF=7.557
+
+3a. Overlapping trade audit...
+  Overlapping trades (sampled): 28.2%
+  Max concurrent positions: 3
+
+3b. Intrabar collisions...
+  Collisions: 2427/76622 (3.2%)
+
+3c. Entry executability X0-X3...
+  X0_reported: N=76622 AvgR=1.5539 PF=7.557
+  X1_next_bar: N=76621 AvgR=1.0269 PF=3.329
+  X2_1tick: N=76621 AvgR=0.8984 PF=2.831
+  X3_2tick: N=76621 AvgR=0.7700 PF=2.415
+
+3d. Independent outcome cross-check (1000 sample)...
+  Mean abs diff: 0.00000000, Max: 0.00000000
+
+============================================================
+STAGE 4: ROBUSTNESS AUDIT
+============================================================
+
+4a. Duplicates...
+  Gap distribution: {'<=0': 11129, '<=1': 11533, '<=2': 11928, '<=3': 12274, '<=5': 12969, '<=10': 16315, '<=15': 21654, '<=30': 37381}
+
+4b. Episode consolidation views...
+  A_raw: N=76622 AvgR=1.5539 PF=7.557
+  C_5min: N=67834 AvgR=1.5370 PF=7.320
+  D_15min: N=62316 AvgR=1.5208 PF=7.088
+  E_30min: N=52417 AvgR=1.4822 PF=6.606
+  G_one_position: N=61573 AvgR=1.6148 PF=8.540
+
+4c. Year-by-year...
+ year    N     AvgR        PF       TotalR      MaxDD  WinRate  LongAvgR  ShortAvgR
+ 2017 2224 0.210162  1.286635   467.399829 271.050533 0.676709  0.167716   0.261739
+ 2018 9003 1.292671  5.526298 11637.914625  44.929702 0.829390  1.265800   1.322548
+ 2019 9053 1.255318  5.210619 11364.391168  30.369572 0.821385  1.258290   1.251855
+ 2020 8946 1.715844 10.138164 15349.940226  10.701328 0.853454  1.698650   1.736434
+ 2021 8904 1.617727  8.380723 14404.243880  10.038168 0.835018  1.597800   1.640482
+ 2022 8583 1.756635 10.278344 15077.198771   7.554944 0.842363  1.739595   1.774334
+ 2023 8616 1.619940  8.614826 13957.402598   9.515487 0.838324  1.620510   1.619296
+ 2024 8770 1.685044  9.379967 14777.838935   7.966383 0.841163  1.661232   1.711433
+ 2025 8386 1.721537  9.560343 14436.806241   6.005832 0.829597  1.717310   1.726164
+ 2026 4137 1.833930 11.567127  7586.967091   5.198147 0.845057  1.811962   1.859050
+
+4d. Cost stress...
+  1.0x: AvgR=1.5539
+  1.5x: AvgR=1.3662
+  2.0x: AvgR=1.1785
+
+4e. Placebo (direction shuffle)...
+  Placebo: AvgR=0.1250 PF=1.158
+
+4f. Causal next-bar + 30min consolidation...
+  Causal+30min: N=49322 AvgR=0.0850 PF=1.107
+
+============================================================
+STAGE 5: REPORTS
+============================================================
+
+Phase57A complete in 59.8 min
+Critical findings: 1

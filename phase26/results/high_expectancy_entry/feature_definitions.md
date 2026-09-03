@@ -1,0 +1,44 @@
+# Phase 26 causal features
+
+All features use information available at bar close only.
+
+- `body_atr`
+- `range_atr`
+- `body_range`
+- `close_location`
+- `upper_wick`
+- `lower_wick`
+- `ret_1_atr`
+- `ret_3_atr`
+- `ret_6_atr`
+- `accel_atr`
+- `overlap_ratio`
+- `consec_dir`
+- `dist_swing_high_atr`
+- `dist_swing_low_atr`
+- `range_position`
+- `range_width_atr`
+- `breakout_up_atr`
+- `breakout_down_atr`
+- `bars_since_high`
+- `bars_since_low`
+- `atr_ratio_6_72`
+- `atr_percentile`
+- `range_percentile`
+- `realized_vol`
+- `vol_percentile`
+- `compression`
+- `expansion`
+- `volume_z`
+- `volume_percentile`
+- `vol_accel`
+- `disp_per_volume`
+- `minute_of_day`
+- `minutes_from_open`
+- `day_of_week`
+- `is_rth`
+- `dist_pdh_atr`
+- `dist_pdl_atr`
+- `dist_onh_atr`
+- `dist_onl_atr`
+- `dist_session_open_atr`

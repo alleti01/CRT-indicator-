@@ -1,0 +1,10 @@
+{
+  "signal_hash": "0da41f282174679f",
+  "trader_hash": "b6adfc04e8885a3d",
+  "pine_hash": "8b74254eeee9fc20",
+  "source_file": "TV_REVIEW/phase72a_autonomous_trader.pine",
+  "atr": "SMA(14) range",
+  "htf": "developing buckets + lookahead_off completed",
+  "t5_minutes": 15,
+  "symbol_assumption": "NQ1! approximate"
+}

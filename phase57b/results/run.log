@@ -1,0 +1,121 @@
+S54 hash OK: bccf4277f3d44d13
+Loading markets...
+  m1: 3075087 bars (16.7s)
+Detecting legs...
+  Legs: 188266 (31.3s)
+Detecting causal turns...
+  Causal turns: 186843 (2.0s)
+  By type: {'T1': 109546, 'T2': 53660, 'T3': 23637}
+  Tradeable entries: 186843
+
+--- RAW CAUSAL TURN BASELINE ---
+  Raw: N=186843 AvgR=-0.3664 PF=0.626 WR=0.285 (0.6s)
+
+--- BY TURN TYPE ---
+  T1: N=109546 AvgR=-0.3676 PF=0.625
+  T2: N=53660 AvgR=-0.3878 PF=0.611
+  T3: N=23637 AvgR=-0.3117 PF=0.666
+
+--- EPISODE CONSOLIDATION ---
+  Episode consolidation (18.8s)
+  raw: N=186843 AvgR=-0.3664 PF=0.626
+  5min: N=182011 AvgR=-0.3642 PF=0.628
+  15min: N=145664 AvgR=-0.3596 PF=0.632
+  30min: N=108250 AvgR=-0.3607 PF=0.631
+  one_position: N=167225 AvgR=-0.3669 PF=0.626
+
+--- NEXT-BAR ENTRY ---
+  Next-bar: N=186843 AvgR=-0.3655 PF=0.626
+  Next-bar + 30min ep: N=108250 AvgR=-0.3632 PF=0.628
+
+--- COST STRESS ---
+  1.0x: AvgR=-0.3664
+  1.5x: AvgR=-0.5511
+  2.0x: AvgR=-0.7358
+
+--- SLIPPAGE STRESS ---
+  +1 tick: AvgR=-0.4938 PF=0.540
+  +2 tick: AvgR=-0.6212 PF=0.469
+  +4 tick: AvgR=-0.8760 PF=0.359
+
+--- YEAR TABLE ---
+ year     N      AvgR       PF  WinRate  LongAvgR  ShortAvgR
+ 2017  5388 -1.660664 0.162659 0.235152 -1.654991  -1.666875
+ 2018 21415 -0.621101 0.465821 0.284754 -0.619457  -0.622808
+ 2019 21818 -0.636874 0.454961 0.281694 -0.625348  -0.649105
+ 2020 21322 -0.243474 0.727583 0.291295 -0.235813  -0.251791
+ 2021 21440 -0.301289 0.675752 0.285728 -0.312408  -0.289578
+ 2022 21324 -0.184107 0.782284 0.286391 -0.172567  -0.195991
+ 2023 21545 -0.326464 0.651858 0.280668 -0.319002  -0.334320
+ 2024 21428 -0.229996 0.740401 0.292374 -0.237690  -0.221888
+ 2025 20996 -0.180014 0.786438 0.285959 -0.204240  -0.155317
+ 2026 10167 -0.097614 0.876753 0.292417 -0.119726  -0.074924
+
+--- DIRECTION ---
+  LONG: N=95665 AvgR=-0.3688 PF=0.625
+  SHORT: N=91178 AvgR=-0.3638 PF=0.627
+
+--- PLACEBO ---
+  Direction shuffle: AvgR=-0.3545
+
+--- WALK-FORWARD OOS ---
+  Stitched OOS: N=105977 AvgR=-0.2569 PF=0.714
+
+--- HOLDOUT ---
+  Holdout: N=31108 AvgR=-0.1537 PF=0.814
+# Phase57B — Causal Turn Discovery Report
+
+## Configuration (frozen, normalized for universality)
+- Leg: swing=5, min_distance_atr=1.0
+- Pullback: min_depth_pct=0.15
+- Turn evidence: T1 (close reversal), T2 (body reversal), T3 (wick rejection)
+- Trade: 0.75 ATR stop, 2.5R target, 60m hold
+- S54 hash: bccf4277f3d44d13 (unchanged)
+
+## Key Results
+
+| View | N | AvgR | PF | WR |
+|------|---|------|-----|-----|
+| Raw causal turn | 186843 | -0.3664 | 0.626 | 0.285 |
+| Next-bar entry | 186843 | -0.3655 | 0.626 | 0.285 |
+| 30min episodes | 108250 | -0.3607 | 0.631 | 0.287 |
+| One position | 167225 | -0.3669 | 0.626 | 0.285 |
+| WF OOS | 105977 | -0.2569 | 0.714 | 0.287 |
+| Holdout | 31108 | -0.1537 | 0.814 | 0.288 |
+| 2x costs | 186843 | -0.7358 | 0.415 | |
+| Placebo | 186843 | -0.3545 | 0.635 | |
+
+## Turn Type Breakdown
+- T1: N=109546 AvgR=-0.3676 PF=0.625
+- T2: N=53660 AvgR=-0.3878 PF=0.611
+- T3: N=23637 AvgR=-0.3117 PF=0.666
+
+## Phase57B Answers
+
+1. **Can Leg1 be identified causally?** YES
+2. **Can active pullback be identified causally?** YES
+3. **Can we recognize the turn early without future extreme?** NO (T1/T2/T3)
+4. **Earliest executable entry?** Turn bar close (0-bar) or next bar (+1)
+5. **What improves turn recognition?** See turn type breakdown
+6. **ONE structural opportunity?** One turn per leg, 30min episode window
+7. **Structural reset?** New leg via swing progression
+8. **Edge survives one-entry-per-setup?** NO
+9. **Edge survives realistic execution/costs?** NO
+10. **Normalized for universality?** YES (ATR-relative, pct-of-leg)
+
+## Verdict
+
+PHASE57B CAUSALITY: **PASS**
+PHASE57B CAUSAL TURN EDGE: **NO**
+PHASE57B EPISODE ROBUSTNESS: **FAIL**
+PHASE57B EXECUTABLE ENTRY: **FAIL**
+PHASE57B COST STRESS: **FAIL**
+PHASE57B YEAR STABILITY: **FAIL**
+PHASE57B PLACEBO: **PASS**
+PHASE57B HOLDOUT: **FAIL**
+PHASE57B ONE-POSITION PORTFOLIO: **FAIL**
+PHASE57B OVERALL: **FAIL**
+READY FOR PHASE57C CROSS-MARKET: **NO**
+
+
+Phase57B complete in 1.4 min

@@ -1,0 +1,1837 @@
+//@version=6
+indicator("Phase72A Autonomous Trader", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=100)
+
+// =============================================================================
+// PHASE72A — Frozen causal signal (Phase60 HTF) + Phase71 management
+// Signal hash: 0da41f282174679f | Trader hash: b6adfc04e8885a3d
+// NO lookahead_on | One position | T5 @15m | STOP_FIRST
+// Signal on closed bar T → canonical ENTRY at open T+1
+// Phase58 internal mgmt: 0.75 ATR (blocks new signals)
+// Canonical M1 mgmt: 1.0 ATR stop, 2.5R target, 60 bar max hold
+// =============================================================================
+
+TZ_WARN = timeframe.in_seconds() != 60
+WARMUP  = 100
+
+// ── Display ──────────────────────────────────────────────────────────────────
+grpDisp = "Display"
+showTake      = input.bool(true,  "Show TAKE", group=grpDisp)
+showEntry     = input.bool(true,  "Show ENTRY", group=grpDisp)
+showStopTgt   = input.bool(true,  "Show stop/target", group=grpDisp)
+showExits     = input.bool(true,  "Show exits", group=grpDisp)
+showWait      = input.bool(false, "Show WAIT", group=grpDisp)
+showPass      = input.bool(false, "Show PASS", group=grpDisp)
+showP4Abst    = input.bool(false, "Show P4 abstains", group=grpDisp)
+showH1Abst    = input.bool(false, "Show H1 abstains", group=grpDisp)
+showHTF       = input.bool(false, "Show HTF context table", group=grpDisp)
+showDebug     = input.bool(false, "Show diagnostic table", group=grpDisp)
+showReason    = input.bool(false, "Show reason codes", group=grpDisp)
+showExtDiag   = input.bool(false, "Show Phase58K extension diagnostic", group=grpDisp)
+
+// ── Manual review overlay (display ONLY — does not affect signals) ─────────────
+grpReview = "Manual review (Python expected — display only)"
+showPyExpected   = input.bool(true, "Show Python-expected signal/entry ghosts", group=grpReview)
+pySignalMs       = input.time(1787936160000, "Python signal bar (unix ms)", group=grpReview)
+pyEntryMs        = input.time(1787936220000, "Python entry bar (unix ms)", group=grpReview)
+pyExpectedDir    = input.string("SHORT", "Python expected direction", options=["LONG", "SHORT"], group=grpReview)
+pyExpectedId     = input.string("P60-036172", "Python trade_id (label only)", group=grpReview)
+pyExpectedEntry  = input.float(29506.25, "Python expected entry price", group=grpReview)
+// P60-036172: signal NY 12:56 Aug 28 | entry NY 12:57 Aug 28 (= Chicago 11:56/11:57)
+
+// ── Layer B: parity debug (visual only) ──────────────────────────────────────
+grpPar = "Parity debug (visual only — NOT used for signals)"
+debugParityMarkers = input.bool(false, "Debug historical parity markers", group=grpPar)
+refEntryUnixMs     = input.time(1787769660000, "Reference entry unix ms", group=grpPar)
+refDirection       = input.string("LONG", "Reference direction", options=["LONG", "SHORT"], group=grpPar)
+refEntryUnixMs2    = input.time(1787905860000, "Ref entry unix ms #2", group=grpPar)
+refDirection2      = input.string("LONG", "Ref direction #2", options=["LONG", "SHORT"], group=grpPar)
+refEntryUnixMs3    = input.time(1787911140000, "Ref entry unix ms #3", group=grpPar)
+refDirection3      = input.string("SHORT", "Ref direction #3", options=["LONG", "SHORT"], group=grpPar)
+
+// ── Phase59D trace (Layer B only) ────────────────────────────────────────────
+grpTrace = "Phase59D trace (diagnostic only)"
+debugTrace = input.bool(false, "Enable bar trace (Data Window + labels)", group=grpTrace)
+// 1787767200000 = 2026-08-26 13:00 Chicago; 1787770800000 = 14:00 Chicago (const for input.time)
+traceStartMs = input.time(1787767200000, "Trace window start (Chicago)", group=grpTrace)
+traceEndMs   = input.time(1787770800000, "Trace window end (Chicago)", group=grpTrace)
+lw063138Diag = input.bool(false, "LW-063138 labels 13:35–13:45 Chicago", group=grpTrace)
+
+// ── Phase59E forensic (Layer B only — zero effect on Layer A) ────────────────
+grp59e = "Phase59E forensic"
+phase59eForensic = input.bool(false, "Phase59E forensic", group=grp59e)
+
+// ── Phase59H forensic (Layer B only) ─────────────────────────────────────────
+grp59h = "Phase59H forensic"
+phase59hForensic = input.bool(false, "Phase59H take-timing forensic 13:35–13:45", group=grp59h)
+
+// ── Frozen parameters ────────────────────────────────────────────────────────
+grpCore = "Frozen parameters"
+structGap          = input.int(30, "Structural gap (1M bars)", minval=5, group=grpCore)
+takeThreshold      = input.int(4, "Take threshold (variant E)", minval=1, group=grpCore)
+armedMinScore      = input.int(2, "Armed min score", minval=1, group=grpCore)
+armedTimeoutBars   = input.int(15, "Armed timeout bars", minval=5, group=grpCore)
+swingPeriod        = input.int(5, "Swing period", minval=2, group=grpCore)
+m1StopAtr          = input.float(1.0, "M1 stop ATR", group=grpCore)
+p58StopAtr         = input.float(0.75, "Phase58 internal stop ATR", group=grpCore)
+targetR            = input.float(2.5, "M1 target R", group=grpCore)
+maxHoldBars        = input.int(60, "Max hold bars", minval=1, group=grpCore)
+bodyThreshATR      = input.float(0.3, "Body threshold ATR", group=grpCore)
+maxChaseATR        = input.float(1.5, "Max chase ATR", group=grpCore)
+cooldownBars       = input.int(3, "Cooldown bars", group=grpCore)
+maxWaitBars        = input.int(2, "Max wait bars (variant E)", minval=0, group=grpCore)
+decelLookback      = input.int(3, "Deceleration lookback", minval=2, group=grpCore)
+microShiftBars     = input.int(2, "Micro shift bars", minval=1, group=grpCore)
+wickRejectionPct   = input.float(0.5, "Wick rejection pct", group=grpCore)
+ctPullback         = input.float(0.5, "Countertrend pullback ratio", group=grpCore)
+ctReversal         = input.float(0.85, "Countertrend reversal ratio", group=grpCore)
+progressLb1m       = input.int(8, "Progress lookback 1M", minval=3, group=grpCore)
+progressLb5m       = input.int(5, "Progress lookback 5M", minval=2, group=grpCore)
+progressLb15m      = input.int(4, "Progress lookback 15M", minval=2, group=grpCore)
+strongProgressAtr  = input.float(1.0, "Strong progress ATR", group=grpCore)
+weakProgressAtr    = input.float(0.3, "Weak progress ATR", group=grpCore)
+
+// =============================================================================
+// ATR — Python parity: rolling mean of range (NOT ta.atr RMA)
+// =============================================================================
+atrRaw = ta.sma(high - low, 14)
+f_atrUse(float raw) =>
+    float out = raw
+    if out <= 0 or na(out)
+        out := nz(raw[1], 0)
+    if out <= 0
+        for k = 2 to 5
+            v = nz(raw[k], 0)
+            if v > 0
+                out := v
+                break
+    out <= 0 ? 1.0 : out
+atrUse = f_atrUse(atrRaw)
+
+// =============================================================================
+// PHASE72A — Causal developing HTF (NO lookahead_on)
+// Matches phase60/python/developing_htf.py semantics on 1M chart.
+// Developing OHLC: incremental bucket state. Completed HTF: lookahead_off only.
+// =============================================================================
+
+// ── Developing 5M bucket ─────────────────────────────────────────────────────
+var int   m5BucketMs = na
+var float m5Open = na
+var float m5High = na
+var float m5Low  = na
+var float m5Close = na
+var float m5PrevClose = na
+var float m5PrevHigh = na
+var float m5PrevLow = na
+
+bucket5Ms = int(time / 300000) * 300000
+newM5 = na(m5BucketMs) or bucket5Ms != m5BucketMs
+if newM5
+    m5PrevClose := m5Close
+    m5PrevHigh := m5High
+    m5PrevLow := m5Low
+    m5BucketMs := bucket5Ms
+    m5Open := open
+    m5High := high
+    m5Low := low
+    m5Close := close
+else
+    m5High := math.max(m5High, high)
+    m5Low := math.min(m5Low, low)
+    m5Close := close
+
+// ── Developing 15M bucket ────────────────────────────────────────────────────
+var int   m15BucketMs = na
+var float m15Open = na
+var float m15High = na
+var float m15Low  = na
+var float m15Close = na
+var float m15PrevClose = na
+
+bucket15Ms = int(time / 900000) * 900000
+newM15 = na(m15BucketMs) or bucket15Ms != m15BucketMs
+if newM15
+    m15PrevClose := m15Close
+    m15BucketMs := bucket15Ms
+    m15Open := open
+    m15High := high
+    m15Low := low
+    m15Close := close
+else
+    m15High := math.max(m15High, high)
+    m15Low := math.min(m15Low, low)
+    m15Close := close
+
+// Aliases — signal engine uses m5H/m5L/m15H etc. (developing current bucket)
+m5H  = m5High
+m5L  = m5Low
+m5C  = m5Close
+m5O  = m5Open
+m5C1 = m5PrevClose
+m5H1 = m5PrevHigh
+m5L1 = m5PrevLow
+m15H = m15High
+m15L = m15Low
+m15C = m15Close
+m15O = m15Open
+
+// Completed HTF (confirmed bars only — lookahead_off)
+[m5C_comp, m5O_comp, m5H_comp, m5L_comp] = request.security(
+     syminfo.tickerid, "5", [close[1], open[1], high[1], low[1]], lookahead=barmerge.lookahead_off)
+[m15C_comp, m15H_comp, m15L_comp] = request.security(
+     syminfo.tickerid, "15", [close[1], high[1], low[1]], lookahead=barmerge.lookahead_off)
+m5BarTime = request.security(syminfo.tickerid, "5", time[1], lookahead=barmerge.lookahead_off)
+m15BarTime = request.security(syminfo.tickerid, "15", time[1], lookahead=barmerge.lookahead_off)
+
+m5AtrRaw = ta.sma(m5H - m5L, 14)
+m15AtrRaw = ta.sma(m15H - m15L, 14)
+m5Atr  = f_atrUse(m5AtrRaw)
+m15Atr = f_atrUse(m15AtrRaw)
+
+// 5M swings — completed bars only
+m5PivotH = request.security(syminfo.tickerid, "5", ta.pivothigh(high, swingPeriod, swingPeriod), lookahead=barmerge.lookahead_off)
+m5PivotL = request.security(syminfo.tickerid, "5", ta.pivotlow(low, swingPeriod, swingPeriod), lookahead=barmerge.lookahead_off)
+var float m5LastSH = na
+var float m5PrevSH = na
+var float m5LastSL = na
+var float m5PrevSL = na
+if not na(m5PivotH)
+    m5PrevSH := m5LastSH
+    m5LastSH := m5PivotH
+if not na(m5PivotL)
+    m5PrevSL := m5LastSL
+    m5LastSL := m5PivotL
+
+// 15M structural refs — completed bars only
+m15H4 = request.security(syminfo.tickerid, "15", high[4], lookahead=barmerge.lookahead_off)
+m15L4 = request.security(syminfo.tickerid, "15", low[4], lookahead=barmerge.lookahead_off)
+m15C12 = request.security(syminfo.tickerid, "15", close[12], lookahead=barmerge.lookahead_off)
+
+// HTF debug (known_at = current 1M bar close)
+htfKnownAt = time
+htfCompleted = false
+htfTime5 = m5BucketMs
+htfTime15 = m15BucketMs
+
+// =============================================================================
+// 1M causal swings
+// =============================================================================
+pivotHigh = ta.pivothigh(high, swingPeriod, swingPeriod)
+pivotLow  = ta.pivotlow(low, swingPeriod, swingPeriod)
+var float lastSH = na
+var float lastSL = na
+var float prevSH = na
+var float prevSL = na
+if not na(pivotHigh)
+    prevSH := lastSH
+    lastSH := pivotHigh
+if not na(pivotLow)
+    prevSL := lastSL
+    lastSL := pivotLow
+
+// sh/sl at i vs i-10 (context.py)
+shCur  = ta.valuewhen(not na(pivotHigh), pivotHigh, 0)
+shPrev = ta.valuewhen(not na(pivotHigh), pivotHigh, 1)
+slCur  = ta.valuewhen(not na(pivotLow), pivotLow, 0)
+slPrev = ta.valuewhen(not na(pivotLow), pivotLow, 1)
+// Fallback to stored vars
+shAtI   = na(shCur) ? lastSH : shCur
+shAtI10 = na(shPrev) ? nz(lastSH[10], lastSH) : shPrev
+slAtI   = na(slCur) ? lastSL : slCur
+slAtI10 = na(slPrev) ? nz(lastSL[10], lastSL) : slPrev
+
+// =============================================================================
+// Hoisted series — unconditional every bar (Pine consistency requirement)
+// =============================================================================
+LB20   = 20
+IMP_LB = 12
+rh1m20  = ta.highest(high, LB20)
+rl1m20  = ta.lowest(low, LB20)
+rh5m20  = ta.highest(m5H, LB20)
+rl5m20  = ta.lowest(m5L, LB20)
+rh1m12  = ta.highest(high, IMP_LB)
+rl1m12  = ta.lowest(low, IMP_LB)
+rh15m8  = ta.highest(m15H, 8)
+rl15m8  = ta.lowest(m15L, 8)
+ll12_1m = ta.lowest(low, IMP_LB)
+hh12_1m = ta.highest(high, IMP_LB)
+llPb1m  = ta.lowest(low, progressLb1m)
+hhPb1m  = ta.highest(high, progressLb1m)
+m5RangeSma4 = ta.sma(m5H - m5L, 4)
+imp1m20 = rh1m20 - rl1m20
+imp5m20 = rh5m20 - rl5m20
+imp15m8 = rh15m8 - rl15m8
+
+// =============================================================================
+// Helper: classify progress state (active_move.py)
+// =============================================================================
+f_classifyProgress(float prog) =>
+    string s = "NEUTRAL"
+    if prog >= strongProgressAtr
+        s := "STRONG_UP"
+    else if prog >= weakProgressAtr
+        s := "UP"
+    else if prog <= -strongProgressAtr
+        s := "STRONG_DOWN"
+    else if prog <= -weakProgressAtr
+        s := "DOWN"
+    else if math.abs(prog) < weakProgressAtr * 0.5
+        s := "NEUTRAL"
+    else
+        s := "TRANSITION"
+    s
+
+f_scoreState(string st) =>
+    st == "STRONG_UP" ? 2 : st == "UP" ? 1 : st == "STRONG_DOWN" ? -2 : st == "DOWN" ? -1 : 0
+
+f_dominant(string s15, string s5, string s1) =>
+    string dom = "NEUTRAL"
+    if s15 == "STRONG_UP" or s15 == "STRONG_DOWN"
+        dom := s15
+    else if s5 == "STRONG_UP" or s5 == "STRONG_DOWN"
+        dom := s5
+    else if s1 == "STRONG_UP" or s1 == "STRONG_DOWN"
+        dom := s1
+    else if s15 == "UP" or s15 == "DOWN"
+        dom := s15
+    else if s5 == "UP" or s5 == "DOWN"
+        dom := s5
+    else if s1 == "UP" or s1 == "DOWN"
+        dom := s1
+    else
+        dom := s5 != "NEUTRAL" ? s5 : s1
+    dom
+
+f_sideAligned(string dir, string dom) =>
+    dir == "LONG" ? dom == "STRONG_UP" or dom == "UP" : dir == "SHORT" ? dom == "STRONG_DOWN" or dom == "DOWN" : false
+
+// =============================================================================
+// 15M context (context_15m.py — causal port)
+// =============================================================================
+f_ctx15() =>
+    float bull = 0.0
+    float bear = 0.0
+    array<string> rs = array.new_string(0)
+    if bar_index >= 20
+        if not na(m15H) and not na(m15H4)
+            if m15H > m15H4
+                bull += 0.5
+                array.push(rs, "15M_HH")
+            else if m15H < m15H4
+                bear += 0.5
+                array.push(rs, "15M_LH")
+        if not na(m15L) and not na(m15L4)
+            if m15L > m15L4
+                bull += 0.5
+                array.push(rs, "15M_HL")
+            else if m15L < m15L4
+                bear += 0.5
+                array.push(rs, "15M_LL")
+        if not na(m15C12)
+            prog = (m15C - m15C12) / m15Atr
+            if prog > 0.5
+                bull += 1.0
+                array.push(rs, "15M_PROG_UP")
+            else if prog < -0.5
+                bear += 1.0
+                array.push(rs, "15M_PROG_DN")
+        impulse = imp15m8
+        if m15Atr > 0 and impulse / m15Atr > 2.0
+            if m15C > m15C[8]
+                bull += 0.5
+                array.push(rs, "15M_IMP_BULL")
+            else
+                bear += 0.5
+                array.push(rs, "15M_IMP_BEAR")
+        rng = impulse
+        pos = rng > 0 ? (m15C - rl15m8) / rng : 0.5
+        if pos > 0.7
+            bull += 0.5
+            array.push(rs, "15M_RANGE_HIGH")
+        else if pos < 0.3
+            bear += 0.5
+            array.push(rs, "15M_RANGE_LOW")
+        m5Rng = m5H - m5L
+        m5Prior = m5RangeSma4
+        if m5Prior > 0 and m5Rng / m5Prior > 1.3
+            if m5C > m5O
+                bull += 0.5
+                array.push(rs, "15M_EXP_BULL")
+            else
+                bear += 0.5
+                array.push(rs, "15M_EXP_BEAR")
+    net = bull - bear
+    strength = math.max(-2.0, math.min(2.0, net))
+    state = strength >= 1.0 ? "BULLISH" : strength <= -1.0 ? "BEARISH" : math.abs(strength) < 0.5 and (bull + bear) > 0 ? "TRANSITION" : "NEUTRAL"
+    score = int(math.round(math.max(-2.0, math.min(2.0, strength))))
+    [state, strength, score, bull, bear, rs]
+
+[ctx15State, ctx15Strength, ctx15Score, ctx15Bull, ctx15Bear, ctx15Reasons] = f_ctx15()
+
+// =============================================================================
+// 5M structure (context_5m.py)
+// =============================================================================
+f_ctx5() =>
+    int bull = 0
+    int bear = 0
+    array<string> rs = array.new_string(0)
+    if bar_index >= 20
+        if not na(m5LastSH) and not na(m5PrevSH)
+            if m5LastSH > m5PrevSH
+                bull += 1
+                array.push(rs, "5M_HH")
+            else if m5LastSH < m5PrevSH
+                bear += 1
+                array.push(rs, "5M_LH")
+        if not na(m5LastSL) and not na(m5PrevSL)
+            if m5LastSL > m5PrevSL
+                bull += 1
+                array.push(rs, "5M_HL")
+            else if m5LastSL < m5PrevSL
+                bear += 1
+                array.push(rs, "5M_LL")
+        mom5 = (m5C - m5C[5]) / m5Atr
+        if mom5 > 0.3
+            bull += 1
+            array.push(rs, "5M_MOM_UP")
+        else if mom5 < -0.3
+            bear += 1
+            array.push(rs, "5M_MOM_DN")
+    net = bull - bear
+    dir = net >= 2 ? "BULLISH" : net <= -2 ? "BEARISH" : "NEUTRAL"
+    [dir, bull, bear, rs]
+
+[ctx5Dir, ctx5Bull, ctx5Bear, ctx5Reasons] = f_ctx5()
+
+// =============================================================================
+// Phase58 context (context.py — swing i vs i-10, 5m body, 15m mom)
+// =============================================================================
+f_computeContext() =>
+    int bullScore = 0
+    int bearScore = 0
+    array<string> reasons = array.new_string(0)
+    if bar_index >= 20
+        if not na(shAtI) and not na(shAtI10)
+            if shAtI > shAtI10
+                bullScore += 1
+                array.push(reasons, "SWING_HH")
+            else if shAtI < shAtI10
+                bearScore += 1
+                array.push(reasons, "SWING_LH")
+        if not na(slAtI) and not na(slAtI10)
+            if slAtI > slAtI10
+                bullScore += 1
+                array.push(reasons, "SWING_HL")
+            else if slAtI < slAtI10
+                bearScore += 1
+                array.push(reasons, "SWING_LL")
+        mom = (close - close[5]) / atrUse
+        if mom > 0.3
+            bullScore += 1
+            array.push(reasons, "MOM_BULL")
+        else if mom < -0.3
+            bearScore += 1
+            array.push(reasons, "MOM_BEAR")
+        m5Body = (m5C - m5O) / m5Atr
+        if m5Body > 0.2
+            bullScore += 1
+            array.push(reasons, "M5_BULL")
+        else if m5Body < -0.2
+            bearScore += 1
+            array.push(reasons, "M5_BEAR")
+        if bar_index > 15
+            m15Mom = (m15C - m15C[15]) / m15Atr
+            if m15Mom > 0.3
+                bullScore += 1
+                array.push(reasons, "M15_BULL")
+            else if m15Mom < -0.3
+                bearScore += 1
+                array.push(reasons, "M15_BEAR")
+    net = bullScore - bearScore
+    dir = net >= 2 ? "BULLISH" : net <= -2 ? "BEARISH" : "NEUTRAL"
+    conf = math.min(100, math.abs(net) * 25)
+    [dir, conf, bullScore, bearScore, reasons]
+
+// =============================================================================
+// Location — 1M (location.py) + 5M (location_5m.py)
+// =============================================================================
+f_loc1m(string dir) =>
+    int sc = 0
+    array<string> rs = array.new_string(0)
+    if bar_index >= 30
+        if dir == "LONG" and not na(lastSL)
+            if math.abs(close - lastSL) / atrUse < 0.5
+                sc += 1
+                array.push(rs, "NEAR_SWING_LOW")
+        if dir == "SHORT" and not na(lastSH)
+            if math.abs(close - lastSH) / atrUse < 0.5
+                sc += 1
+                array.push(rs, "NEAR_SWING_HIGH")
+        imp = imp1m20
+        pb = imp > 0 ? (dir == "LONG" ? (rh1m20 - close) / imp : (close - rl1m20) / imp) : 0.0
+        if pb >= 0.15 and pb <= 0.6
+            sc += 1
+            array.push(rs, "PB_HEALTHY_DEPTH")
+        rngPos = imp > 0 ? (close - rl1m20) / imp : 0.5
+        if dir == "LONG" and rngPos < 0.35
+            sc += 1
+            array.push(rs, "LOW_IN_RANGE")
+        if dir == "SHORT" and rngPos > 0.65
+            sc += 1
+            array.push(rs, "HIGH_IN_RANGE")
+    [sc, rs]
+
+f_loc5m(string dir) =>
+    int sc = 0
+    array<string> rs = array.new_string(0)
+    prox = 0.5
+    if bar_index >= 30
+        if dir == "LONG" and not na(m5LastSL)
+            if math.abs(m5C - m5LastSL) / m5Atr < prox
+                sc += 1
+                array.push(rs, "5M_NEAR_SWING_LOW")
+        if dir == "SHORT" and not na(m5LastSH)
+            if math.abs(m5C - m5LastSH) / m5Atr < prox
+                sc += 1
+                array.push(rs, "5M_NEAR_SWING_HIGH")
+        imp = imp5m20
+        pb = imp > 0 ? (dir == "LONG" ? (rh5m20 - m5C) / imp : (m5C - rl5m20) / imp) : 0.0
+        if pb >= 0.15 and pb <= 0.6
+            sc += 1
+            array.push(rs, "5M_PB_DEPTH_OK")
+        if dir == "LONG" and not na(m15L) and math.abs(m5C - m15L) / m5Atr < prox * 1.5
+            sc += 1
+            array.push(rs, "5M_NEAR_15M_LOW")
+        if dir == "SHORT" and not na(m15H) and math.abs(m5C - m15H) / m5Atr < prox * 1.5
+            sc += 1
+            array.push(rs, "5M_NEAR_15M_HIGH")
+    [math.min(sc, 2), rs]
+
+f_locationScore(string dir) =>
+    [l1, r1] = f_loc1m(dir)
+    [l5, r5] = f_loc5m(dir)
+    sc = math.min(3, l1 + l5)
+    [sc, r1, r5]
+
+// =============================================================================
+// Reaction — 6 components (reaction.py)
+// =============================================================================
+f_failedExtension(string dir) =>
+    bool active = false
+    if bar_index >= 2
+        if dir == "LONG"
+            newExt = low < low[1]
+            prog = newExt ? (low[1] - low) / atrUse : 0.0
+            active := newExt and prog < 0.15 and close > close[1]
+        else
+            newExt = high > high[1]
+            prog = newExt ? (high - high[1]) / atrUse : 0.0
+            active := newExt and prog < 0.15 and close < close[1]
+    active
+
+f_momentumLoss(string dir) =>
+    bool active = false
+    if bar_index >= decelLookback + 1
+        if dir == "LONG"
+            m0 = math.abs(close[1] - close[2])
+            m1 = math.abs(close[2] - close[3])
+            m2 = math.abs(close[3] - close[4])
+            sell0 = close[1] < close[2] ? m0 : 0.0
+            sell1 = close[2] < close[3] ? m1 : 0.0
+            active := sell0 > 0 and sell1 > 0 and sell0 < sell1 * 0.7
+        else
+            m0 = math.abs(close[1] - close[2])
+            m1 = math.abs(close[2] - close[3])
+            buy0 = close[1] > close[2] ? m0 : 0.0
+            buy1 = close[2] > close[3] ? m1 : 0.0
+            active := buy0 > 0 and buy1 > 0 and buy0 < buy1 * 0.7
+    active
+
+f_reclaim(string dir) =>
+    bool active = false
+    if bar_index >= 3
+        prior = close[2]
+        if dir == "LONG"
+            active := close > prior and close[1] < prior
+        else
+            active := close < prior and close[1] > prior
+    active
+
+f_dirResponse(string dir) =>
+    body = close - open
+    absBody = math.abs(body) / atrUse
+    dir == "LONG" ? body > 0 and absBody >= bodyThreshATR : body < 0 and absBody >= bodyThreshATR
+
+f_microShift(string dir) =>
+    bool shifted = false
+    if bar_index >= microShiftBars
+        if dir == "LONG"
+            shifted := close > close[1] and close[1] > close[2]
+        else
+            shifted := close < close[1] and close[1] < close[2]
+    shifted
+
+f_rejection(string dir) =>
+    br = high - low
+    bool active = false
+    if br > 0
+        if dir == "LONG"
+            lw = math.min(close, open) - low
+            active := lw / br >= wickRejectionPct and close > open
+        else
+            uw = high - math.max(close, open)
+            active := uw / br >= wickRejectionPct and close < open
+    active
+
+f_allReactions(string dir) =>
+    int sc = 0
+    array<string> rs = array.new_string(0)
+    if f_failedExtension(dir)
+        sc += 1
+        array.push(rs, "FAILED_EXT")
+    if f_momentumLoss(dir)
+        sc += 1
+        array.push(rs, "MOM_LOSS")
+    if f_reclaim(dir)
+        sc += 1
+        array.push(rs, "RECLAIM")
+    if f_dirResponse(dir)
+        sc += 1
+        array.push(rs, "DIR_RESPONSE")
+    if f_microShift(dir)
+        sc += 1
+        array.push(rs, "MICRO_SHIFT")
+    if f_rejection(dir)
+        sc += 1
+        array.push(rs, "REJECTION")
+    [math.min(sc, 3), rs]
+
+// =============================================================================
+// 15M direction score (score_15m_for_direction)
+// =============================================================================
+f_score15m(string dir) =>
+    int sc = 0
+    array<string> rs = array.new_string(0)
+    s = ctx15Score
+    if dir == "LONG"
+        if s > 0
+            sc := math.min(2, s)
+            array.push(rs, "15M_SUPPORT_" + str.tostring(sc))
+        else if s < -1
+            sc := math.max(-2, s)
+            array.push(rs, "15M_CONTRA_" + str.tostring(s))
+        else
+            array.push(rs, "15M_NEUTRAL")
+    else
+        if s < 0
+            sc := math.min(2, math.abs(s))
+            array.push(rs, "15M_SUPPORT_" + str.tostring(sc))
+        else if s > 1
+            sc := math.max(-2, -s)
+            array.push(rs, "15M_CONTRA_" + str.tostring(s))
+        else
+            array.push(rs, "15M_NEUTRAL")
+    [sc, rs]
+
+// =============================================================================
+// Evidence (evidence.py) + decide variant E
+// =============================================================================
+f_computeEvidence(string dir) =>
+    [locSc, lr1, lr5] = f_locationScore(dir)
+    [c15, r15] = f_score15m(dir)
+    dir5 = dir == "LONG" ? math.min(2, ctx5Bull) : math.min(2, ctx5Bear)
+    dirSc = c15 + dir5
+    [reactSc, reactRs] = f_allReactions(dir)
+    contra = 0
+    array<string> contraRs = array.new_string(0)
+    if dir == "LONG" and ctx15State == "BEARISH" and ctx15Strength <= -1.0
+        contra -= 1
+        array.push(contraRs, "HTF_CONTRADICTION")
+    if dir == "SHORT" and ctx15State == "BULLISH" and ctx15Strength >= 1.0
+        contra -= 1
+        array.push(contraRs, "HTF_CONTRADICTION")
+    if dir == "LONG" and ctx5Dir == "BEARISH" and ctx5Bear >= 2
+        contra -= 1
+        array.push(contraRs, "5M_EXPANSION_AGAINST")
+    if dir == "SHORT" and ctx5Dir == "BULLISH" and ctx5Bull >= 2
+        contra -= 1
+        array.push(contraRs, "5M_EXPANSION_AGAINST")
+    total = locSc + dirSc + reactSc + contra
+    [total, locSc, dirSc, reactSc, contra, r15, reactRs, contraRs]
+
+f_decideE(int total, int reactSc, int contra, int waitUsed) =>
+    string dec = "PASS"
+    if total >= takeThreshold
+        dec := "TAKE"
+    else if reactSc >= 1 and total >= takeThreshold - 1
+        dec := waitUsed < maxWaitBars ? "WAIT" : "TAKE"
+    else if total <= 1 or contra <= -2
+        dec := "PASS"
+    else if waitUsed < maxWaitBars
+        dec := "WAIT"
+    else
+        dec := "PASS"
+    dec
+
+// =============================================================================
+// Active move + confidence (confidence.py + forensics enrich)
+// =============================================================================
+f_activeMove() =>
+    p1 = bar_index >= progressLb1m ? (close - close[progressLb1m]) / atrUse : 0.0
+    p5 = (m5C - m5C[progressLb5m]) / m5Atr
+    p15 = (m15C - m15C[progressLb15m]) / m15Atr
+    s1 = f_classifyProgress(p1)
+    s5 = f_classifyProgress(p5)
+    s15 = f_classifyProgress(p15)
+    dom = f_dominant(s15, s5, s1)
+    bullImp = (rh1m12 - rl1m12) / atrUse
+    [dom, s1, s5, s15, p1, bullImp]
+
+f_structFeatures() =>
+    hh = not na(shAtI) and not na(shAtI10) and shAtI > shAtI10
+    hl = not na(slAtI) and not na(slAtI10) and slAtI > slAtI10
+    lh = not na(shAtI) and not na(shAtI10) and shAtI < shAtI10
+    ll = not na(slAtI) and not na(slAtI10) and slAtI < slAtI10
+    failUp = bar_index >= 2 and high > high[1] and (high - high[1]) / atrUse < 0.15 and close < close[1]
+    failDn = bar_index >= 2 and low < low[1] and (low[1] - low) / atrUse < 0.15 and close > close[1]
+    [hh or hl, lh or ll, failUp, failDn]
+
+f_countertrend(string dom, float imp1m) =>
+    lb = progressLb1m
+    float ratio = 0.0
+    if dom == "STRONG_UP" or dom == "UP"
+        actImp = (high - ll12_1m) / atrUse
+        counterImp = math.max(0.0, (high - llPb1m) / atrUse)
+        ratio := actImp > 0.05 ? counterImp / actImp : 0.0
+    else if dom == "STRONG_DOWN" or dom == "DOWN"
+        actImp = (hh12_1m - low) / atrUse
+        counterImp = math.max(0.0, (hhPb1m - low) / atrUse)
+        ratio := actImp > 0.05 ? counterImp / actImp : 0.0
+    else
+        ratio := math.abs((close - close[lb]) / atrUse) / math.max(imp1m, 0.5)
+    ratio
+
+f_structureContext(string dir, string dom, bool bullStruct, bool bearStruct, bool failUp, bool failDn) =>
+    intact = dir == "LONG" ? bullStruct or dom == "STRONG_UP" or dom == "UP" or dom == "NEUTRAL" : bearStruct or dom == "STRONG_DOWN" or dom == "DOWN" or dom == "NEUTRAL"
+    weakening = dir == "LONG" ? failUp or dom == "STRONG_DOWN" or dom == "DOWN" : failDn or dom == "STRONG_UP" or dom == "UP"
+    oppStr = dir == "LONG" ? bearStruct or failUp : bullStruct or failDn
+    [intact, weakening, oppStr]
+
+f_reversalSupport(bool priorWeak, bool oppStr, float ctRatio, bool failUp, bool failDn, string dir) =>
+    int sc = 0
+    if priorWeak
+        sc += 1
+    if oppStr
+        sc += 1
+    if ctRatio >= ctReversal
+        sc += 2
+    else if ctRatio >= ctPullback
+        sc += 1
+    if dir == "LONG" and failUp
+        sc += 1
+    if dir == "SHORT" and failDn
+        sc += 1
+    sc >= 3 ? "STRONG" : sc >= 2 ? "MODERATE" : sc >= 1 ? "WEAK" : "NONE"
+
+f_confidenceBand(int score) =>
+    score >= 4 ? "VERY_HIGH" : score >= 2 ? "HIGH" : score >= 0 ? "MEDIUM" : score >= -2 ? "LOW" : "VERY_LOW"
+
+f_computeConfidence(string dir) =>
+    [dom, s1, s5, s15, p1, imp1m] = f_activeMove()
+    [bullStruct, bearStruct, failUp, failDn] = f_structFeatures()
+    ctRatio = f_countertrend(dom, imp1m)
+    [structIntact, priorWeak, oppStr] = f_structureContext(dir, dom, bullStruct, bearStruct, failUp, failDn)
+    aligned = f_sideAligned(dir, dom)
+    domSc = f_scoreState(dom)
+    int score = 0
+    bool actAln = false
+    bool actOpp = false
+    bool structAln = false
+    bool structOpp = false
+    bool htfSup = false
+    bool htfContra = false
+    bool ctWeak = false
+    bool ctStrong = false
+    if dir == "LONG"
+        if domSc >= 1
+            score += 2
+            actAln := true
+        else if domSc <= -1
+            score -= 2
+            actOpp := true
+    else
+        if domSc <= -1
+            score += 2
+            actAln := true
+        else if domSc >= 1
+            score -= 2
+            actOpp := true
+    if structIntact
+        score += 1
+        structAln := true
+    else
+        score -= 1
+        structOpp := true
+    if dir == "LONG"
+        if ctx15State == "BULLISH"
+            score += 1
+            htfSup := true
+        else if ctx15State == "BEARISH" and ctx15Strength <= -1.0
+            score -= 1
+            htfContra := true
+    else
+        if ctx15State == "BEARISH"
+            score += 1
+            htfSup := true
+        else if ctx15State == "BULLISH" and ctx15Strength >= 1.0
+            score -= 1
+            htfContra := true
+    if ctRatio < ctPullback and aligned
+        score += 1
+        ctWeak := true
+    else if ctRatio >= ctReversal and not aligned
+        score += 1
+        ctStrong := true
+    revSup = f_reversalSupport(priorWeak, oppStr, ctRatio, failUp, failDn, dir)
+    frRisk = "LOW"
+    if not aligned and ctRatio < ctPullback
+        frRisk := "MEDIUM"
+    domBull = dom == "STRONG_UP" or dom == "UP"
+    domBear = dom == "STRONG_DOWN" or dom == "DOWN"
+    opposed = (dir == "SHORT" and domBull) or (dir == "LONG" and domBear)
+    weakRev = not priorWeak and not oppStr
+    if opposed and ctRatio < ctPullback and weakRev
+        frRisk := "HIGH"
+        score -= 2
+    else if frRisk == "MEDIUM"
+        score -= 1
+    if revSup == "STRONG" or revSup == "MODERATE"
+        if not aligned
+            score += revSup == "STRONG" ? 2 : 1
+    band = f_confidenceBand(score)
+    missingVh = actAln and structAln and not htfSup and not ctWeak
+    highSubtype = ""
+    if band == "HIGH"
+        revOk = revSup == "MODERATE" or revSup == "STRONG"
+        highSubtype := actOpp and revOk ? "HIGH_REVERSAL" : missingVh ? "HIGH_CONFLICTED" : "HIGH_CLEAN"
+    mktState = aligned and structIntact and ctRatio < ctPullback ? "CONTINUATION" : opposed and ctRatio < ctPullback ? "PULLBACK" : "UNCERTAIN"
+    [band, score, revSup, dom, htfContra, missingVh, highSubtype, actAln, structAln, htfSup, ctWeak, frRisk, mktState]
+
+// P4 (policies.py)
+f_p4Abstain(string dir, string revSup, string dom) =>
+    strongContra = (dir == "LONG" and ctx15State == "BEARISH" and (dom == "DOWN" or dom == "STRONG_DOWN")) or (dir == "SHORT" and ctx15State == "BULLISH" and (dom == "UP" or dom == "STRONG_UP"))
+    weakRev = revSup == "NONE" or revSup == "WEAK"
+    strongContra and weakRev
+
+// H1 (filters.py) — abstain if HIGH_CONFLICTED and htf_contra_code
+f_h1Abstain(string highSubtype, bool htfContraCode) =>
+    highSubtype == "HIGH_CONFLICTED" and htfContraCode
+
+// =============================================================================
+// Unconditional feature cache — every bar (Pine consistency; Layer A reads these)
+// =============================================================================
+[ctxDir, ctxConf, bullSc, bearSc, ctxRs] = f_computeContext()
+
+[locScLong, locRs1Long, locRs5Long] = f_locationScore("LONG")
+[locScShort, locRs1Short, locRs5Short] = f_locationScore("SHORT")
+
+[reactScLong, reactRsLong] = f_allReactions("LONG")
+[reactScShort, reactRsShort] = f_allReactions("SHORT")
+
+[evTotalLong, evLocLong, evDirLong, evReactLong, evContraLong, evR15Long, evReactRsLong, evContraRsLong] = f_computeEvidence("LONG")
+[evTotalShort, evLocShort, evDirShort, evReactShort, evContraShort, evR15Short, evReactRsShort, evContraRsShort] = f_computeEvidence("SHORT")
+
+[bandLong, cScoreLong, revSupLong, domLong, htfContraLong, missingVhLong, highSubLong, actAlnLong, structAlnLong, htfSupLong, ctWeakLong, frRiskLong, mktLong] = f_computeConfidence("LONG")
+[bandShort, cScoreShort, revSupShort, domShort, htfContraShort, missingVhShort, highSubShort, actAlnShort, structAlnShort, htfSupShort, ctWeakShort, frRiskShort, mktShort] = f_computeConfidence("SHORT")
+
+// =============================================================================
+// State variables — Layer A
+// =============================================================================
+// Phase58 trader: WATCH=0 ARMED_L=1 ARMED_S=-1 IN_L=2 IN_S=-2 COOLDOWN=3
+var int   p58State = 0
+var string p58Dir = ""
+var int   armedBar = 0
+var int   armedBars = 0
+var float armedPrice = na
+var float pbExtreme = na
+var int   cooldownRem = 0
+
+// Phase58 internal trade (0.75 ATR — blocks new signals)
+var bool  p58InTrade = false
+var string p58TradeDir = na
+var int   p58EntryBar = na
+var float p58Entry = na
+var float p58Stop = na
+var float p58Target = na
+var int   p58Deadline = na
+var float p58SignalAtr = na
+var bool  p58SkipCooldownDec = false
+var bool  p58BlockSignals = false
+
+// Opportunity memory (Phase58D)
+var string curOppId = na
+var string curOppDir = na
+var int   curOppLastSi = na
+var int   curOppStartSi = na
+var int   oppCounter = 0
+
+// Pending canonical entry (T+1)
+var bool   pendingTake = false
+var string pendingDir = na
+var int    pendingSignalBar = na
+var string pendingOppId = na
+var string pendingReason = na
+
+// M1 canonical trades (up to 8 concurrent)
+MAX_TRADES = 8
+
+// =============================================================================
+// PHASE71 — Frozen one-position management (T5 + M0)
+// Replaces overlapping M1 array trades. STOP_FIRST. T5 @ ei+15 once.
+// =============================================================================
+grpP71 = "Phase71 Management"
+t5Bars      = input.int(15, "T5 checkpoint bars", group=grpP71)
+t5MfeR      = input.float(1.0, "T5 MFE threshold R", group=grpP71)
+enableT5    = input.bool(true, "Enable T5", group=grpP71)
+DEBUG_MANUAL_SIGNAL = input.bool(false, "DEBUG manual signal override", group=grpP71)
+debugManualLong  = input.bool(false, "Manual LONG signal", group=grpP71)
+debugManualShort = input.bool(false, "Manual SHORT signal", group=grpP71)
+
+var string posState = "FLAT"
+var float  entryPx = na
+var float  initAtr = na
+var float  stopPx = na
+var float  tgtPx = na
+var int    entryBar = na
+var int    signalBar = na
+var int    posDir = 0
+var float  runMfeR = 0.0
+var bool   t5Checked = false
+var string lastAction = ""
+var string lastReason = ""
+var int    skippedSignals = 0
+
+f_posActive() =>
+    posState == "LONG_ACTIVE" or posState == "SHORT_ACTIVE" or posState == "PENDING_LONG" or posState == "PENDING_SHORT"
+
+var array<int>    tEntryBar = array.new_int(0)
+var array<string> tDir = array.new_string(0)
+var array<float>  tEntry = array.new_float(0)
+var array<float>  tStop = array.new_float(0)
+var array<float>  tTarget = array.new_float(0)
+var array<int>    tDeadline = array.new_int(0)
+var array<bool>   tActive = array.new_bool(0)
+
+// Display state (updated each confirmed bar)
+var string decisionLabel = "WATCH"
+var string p58dDecision = ""
+var string p4Status = "KEEP"
+var string h1Status = "KEEP"
+var string confBand = ""
+var string domActive = "NEUTRAL"
+var int    lastEvidence = 0
+
+f_addM1Trade(string dir, float ep, int eBar) =>
+    risk = m1StopAtr * atrUse
+    st = dir == "LONG" ? ep - risk : ep + risk
+    tg = dir == "LONG" ? ep + targetR * risk : ep - targetR * risk
+    dl = eBar + maxHoldBars
+    if array.size(tActive) >= MAX_TRADES
+        array.shift(tEntryBar)
+        array.shift(tDir)
+        array.shift(tEntry)
+        array.shift(tStop)
+        array.shift(tTarget)
+        array.shift(tDeadline)
+        array.shift(tActive)
+    array.push(tEntryBar, eBar)
+    array.push(tDir, dir)
+    array.push(tEntry, ep)
+    array.push(tStop, st)
+    array.push(tTarget, tg)
+    array.push(tDeadline, dl)
+    array.push(tActive, true)
+
+// Layer B debug-only auto entry log (does NOT affect signals)
+var array<int>    dbgAutoEntryMs = array.new_int(0)
+var array<string> dbgAutoEntryDir = array.new_string(0)
+
+f_dbgLogAutoEntry(string dir) =>
+    if debugParityMarkers
+        array.push(dbgAutoEntryMs, time)
+        array.push(dbgAutoEntryDir, dir)
+
+f_refMatch(int refMs, string refDir) =>
+    bool refHit = debugParityMarkers and time == refMs
+    bool autoHit = false
+    string autoDir = ""
+    if debugParityMarkers and array.size(dbgAutoEntryMs) > 0
+        for i = 0 to array.size(dbgAutoEntryMs) - 1
+            if array.get(dbgAutoEntryMs, i) == time
+                autoHit := true
+                autoDir := array.get(dbgAutoEntryDir, i)
+                break
+    string tag = ""
+    if refHit or autoHit
+        if refHit and autoHit
+            tag := refDir == autoDir ? "PARITY ✓" : "DIR MISMATCH ✗"
+        else if refHit
+            tag := "REF ONLY ✗"
+        else
+            tag := "AUTO ONLY ✗"
+    [refHit, autoHit, tag]
+
+// =============================================================================
+// Main bar logic — Layer A (closed bar only)
+// =============================================================================
+if barstate.isconfirmed and not TZ_WARN and bar_index >= WARMUP
+    decisionLabel := "WATCH"
+    p58dDecision := ""
+    p4Status := "KEEP"
+    h1Status := "KEEP"
+
+    // Coerce IN_* when internal trade active (Python: manage-trade short-circuit)
+    if p58InTrade and (p58State == 1 or p58State == -1)
+        p58State := p58TradeDir == "LONG" ? 2 : -2
+
+    // Finalize Phase58 internal entry/stop on entry bar BEFORE manage (Python cl[i+1] + signal ATR)
+    if p58InTrade and bar_index == p58EntryBar
+        p58Entry := close
+        risk58 = p58StopAtr * p58SignalAtr
+        p58Stop := p58TradeDir == "LONG" ? p58Entry - risk58 : p58Entry + risk58
+        p58Target := p58TradeDir == "LONG" ? p58Entry + targetR * risk58 : p58Entry - targetR * risk58
+
+    // ── Phase71 one-position entry at T+1 open ─────────────────────────────
+    if pendingTake and bar_index == pendingSignalBar + 1 and posState == "FLAT"
+        entryPx := open
+        initAtr := atrUse
+        entryBar := bar_index
+        signalBar := pendingSignalBar
+        posDir := pendingDir == "LONG" ? 1 : -1
+        riskP71 = m1StopAtr * initAtr
+        stopPx := posDir == 1 ? entryPx - riskP71 : entryPx + riskP71
+        tgtPx := posDir == 1 ? entryPx + targetR * riskP71 : entryPx - targetR * riskP71
+        runMfeR := 0.0
+        t5Checked := false
+        posState := posDir == 1 ? "LONG_ACTIVE" : "SHORT_ACTIVE"
+        lastAction := posDir == 1 ? "ENTER_LONG" : "ENTER_SHORT"
+        lastReason := "ENTRY"
+        if showEntry
+            entLbl = posDir == 1 ? "ENTER_LONG" : "ENTER_SHORT"
+            label.new(bar_index, entryPx, entLbl + "\n" + str.tostring(entryPx, format.mintick), style=posDir == 1 ? label.style_label_up : label.style_label_down, color=color.new(color.green, 0), textcolor=color.white, size=size.small)
+        pendingTake := false
+        pendingDir := na
+        pendingSignalBar := na
+        pendingOppId := na
+
+    // ── Phase71 one-position management (STOP_FIRST, T5, 60m) ───────────
+    if posState == "LONG_ACTIVE" or posState == "SHORT_ACTIVE"
+        mins = bar_index - entryBar
+        riskP71 = m1StopAtr * initAtr
+        hitStop = posDir == 1 ? low <= stopPx : high >= stopPx
+        hitTgt  = posDir == 1 ? high >= tgtPx : low <= tgtPx
+        exited = false
+        if hitStop and hitTgt
+            exited := true
+            lastAction := "EXIT_STOP"
+            lastReason := "M0_STOP"
+            if showExits
+                label.new(bar_index, stopPx, "EXIT_STOP", color=color.red, textcolor=color.white, size=size.small)
+        else if hitStop
+            exited := true
+            lastAction := "EXIT_STOP"
+            lastReason := "M0_STOP"
+            if showExits
+                label.new(bar_index, stopPx, "EXIT_STOP", color=color.red, textcolor=color.white, size=size.small)
+        else if hitTgt
+            exited := true
+            lastAction := "EXIT_TARGET"
+            lastReason := "M0_TARGET"
+            if showExits
+                label.new(bar_index, tgtPx, "EXIT_TARGET", color=color.lime, textcolor=color.black, size=size.small)
+        if not exited
+            fav = posDir == 1 ? (high - entryPx) / riskP71 : (entryPx - low) / riskP71
+            runMfeR := math.max(runMfeR, fav)
+            if enableT5 and not t5Checked and mins >= t5Bars
+                t5Checked := true
+                if runMfeR < t5MfeR
+                    exited := true
+                    lastAction := "EXIT_TIME_PROGRESS"
+                    lastReason := "T5_NO_PROGRESS"
+                    if showExits
+                        label.new(bar_index, close, "EXIT_TIME_PROGRESS", color=color.orange, textcolor=color.white, size=size.small)
+            if not exited and mins >= maxHoldBars
+                exited := true
+                lastAction := "EXIT_MAX_HOLD"
+                lastReason := "MAX_HOLD_60M"
+                if showExits
+                    label.new(bar_index, close, "EXIT_MAX_HOLD", color=color.gray, textcolor=color.white, size=size.small)
+        if exited
+            posState := "FLAT"
+            entryPx := na
+            runMfeR := 0.0
+            t5Checked := false
+            posDir := 0
+
+    // ── Legacy M1 array trades DISABLED (Phase71 one-position only) ───────
+    // f_addM1Trade no longer called — see Phase71 block above
+
+    // ── Manage Phase58 internal trade (0.75 ATR) ────────────────────────
+    if p58InTrade and bar_index > p58EntryBar
+        dir = p58TradeDir
+        hitStop = dir == "LONG" ? low <= p58Stop : high >= p58Stop
+        hitTgt = dir == "LONG" ? high >= p58Target : low <= p58Target
+        if hitStop or hitTgt or bar_index >= p58Deadline
+            p58InTrade := false
+            p58State := 3
+            cooldownRem := cooldownBars
+            p58TradeDir := na
+            p58Dir := ""
+            p58SkipCooldownDec := true
+
+    // ── Cooldown (Python: no decrement on exit bar) ───────────────────────
+    if p58State == 3 and not p58InTrade
+        if not p58SkipCooldownDec
+            cooldownRem -= 1
+        p58SkipCooldownDec := false
+        if cooldownRem <= 0
+            p58State := 0
+            p58Dir := ""
+            armedBar := 0
+            armedBars := 0
+            armedPrice := na
+            pbExtreme := na
+            p58BlockSignals := true
+        decisionLabel := "COOLDOWN"
+
+    // ── Signal generation (blocked while in Phase58 internal trade) ───────
+    // Python: cooldown bar returns before ARMED/WATCH transitions same bar
+    if not f_posActive() and not p58InTrade and p58State != 3 and not p58BlockSignals
+        // WATCH → ARMED
+        if p58State == 0
+            string tradeDir = ctxDir == "BULLISH" ? "LONG" : ctxDir == "BEARISH" ? "SHORT" : ""
+            if tradeDir != ""
+                locSc = tradeDir == "LONG" ? locScLong : locScShort
+                ctxSc = math.min(2, tradeDir == "LONG" ? bullSc : bearSc)
+                totalArm = ctxSc + locSc
+                if totalArm >= armedMinScore
+                    p58State := tradeDir == "LONG" ? 1 : -1
+                    p58Dir := tradeDir
+                    armedBar := bar_index
+                    armedBars := 0
+                    armedPrice := close
+                    pbExtreme := close
+                    decisionLabel := "ARMED " + tradeDir
+
+        // ARMED → raw TAKE / WAIT / PASS / INVALIDATED
+        if p58State == 1 or p58State == -1
+            armedBars += 1
+            dirStr = p58Dir
+            tradeDirInt = dirStr == "LONG" ? 1 : -1
+            if dirStr == "LONG"
+                pbExtreme := math.min(pbExtreme, low)
+            else
+                pbExtreme := math.max(pbExtreme, high)
+
+            // Armed timeout
+            if armedBars > armedTimeoutBars
+                p58State := 0
+                p58Dir := ""
+                armedBar := 0
+                armedBars := 0
+                armedPrice := na
+                pbExtreme := na
+                decisionLabel := "INVALIDATED"
+                if showPass
+                    label.new(bar_index, close, "TIMEOUT", style=label.style_label_center, color=color.gray, size=size.tiny)
+
+            // Context contradiction
+            else if (dirStr == "LONG" and ctxDir == "BEARISH") or (dirStr == "SHORT" and ctxDir == "BULLISH")
+                p58State := 0
+                p58Dir := ""
+                armedBar := 0
+                armedBars := 0
+                armedPrice := na
+                pbExtreme := na
+                decisionLabel := "INVALIDATED"
+                if showPass
+                    label.new(bar_index, close, "CTX_CONTRA", style=label.style_label_center, color=color.gray, size=size.tiny)
+
+            else
+                reactSc = dirStr == "LONG" ? reactScLong : reactScShort
+                locSc = dirStr == "LONG" ? locScLong : locScShort
+                ctxSc = math.min(2, dirStr == "LONG" ? bullSc : bearSc)
+                contra = 0
+                if dirStr == "LONG" and ctxDir == "NEUTRAL" and bearSc >= 2
+                    contra -= 1
+                if dirStr == "SHORT" and ctxDir == "NEUTRAL" and bullSc >= 2
+                    contra -= 1
+                total = ctxSc + locSc + reactSc + contra
+                deterioration = dirStr == "LONG" ? (close - armedPrice) / atrUse : (armedPrice - close) / atrUse
+
+                // Anti-chase
+                if deterioration > maxChaseATR and reactSc >= 1
+                    p58State := 0
+                    p58Dir := ""
+                    armedBar := 0
+                    armedBars := 0
+                    armedPrice := na
+                    pbExtreme := na
+                    decisionLabel := "MISSED"
+                    if showPass
+                        label.new(bar_index, close, "NO_CHASE", style=label.style_label_center, color=color.gray, size=size.tiny)
+
+                else if total >= takeThreshold
+                    // ── Raw Phase58 TAKE → Phase58D pipeline ──────────────
+                    rawTake = true
+                    isNew = na(curOppId) or dirStr != curOppDir or (bar_index - curOppLastSi) > structGap
+                    if isNew
+                        oppCounter += 1
+                        curOppId := "OPP_" + str.tostring(bar_index) + "_" + dirStr
+                        curOppDir := dirStr
+                        curOppStartSi := bar_index
+                        curOppLastSi := bar_index
+
+                        evTotal = dirStr == "LONG" ? evTotalLong : evTotalShort
+                        evReact = dirStr == "LONG" ? evReactLong : evReactShort
+                        evContra = dirStr == "LONG" ? evContraLong : evContraShort
+                        lastEvidence := evTotal
+                        decE = f_decideE(evTotal, evReact, evContra, 0)
+                        p58dDecision := decE
+
+                        if decE == "WAIT"
+                            decisionLabel := "WAIT"
+                            if showWait
+                                label.new(bar_index, close, "WAIT " + dirStr, style=label.style_label_center, color=color.blue, size=size.tiny)
+                        else if decE == "PASS"
+                            decisionLabel := "PASS"
+                            if showPass
+                                label.new(bar_index, close, "PASS", style=label.style_label_center, color=color.gray, size=size.tiny)
+                        else if decE == "TAKE"
+                            band = dirStr == "LONG" ? bandLong : bandShort
+                            revSup = dirStr == "LONG" ? revSupLong : revSupShort
+                            dom = dirStr == "LONG" ? domLong : domShort
+                            htfContraCode = dirStr == "LONG" ? htfContraLong : htfContraShort
+                            highSub = dirStr == "LONG" ? highSubLong : highSubShort
+                            confBand := band
+                            domActive := dom
+                            p4Abst = f_p4Abstain(dirStr, revSup, dom)
+                            h1Abst = f_h1Abstain(highSub, htfContraCode)
+                            p4Status := p4Abst ? "ABSTAIN" : "KEEP"
+                            h1Status := h1Abst ? "ABSTAIN" : "KEEP"
+
+                            if p4Abst
+                                decisionLabel := "P4 ABSTAIN"
+                                if showP4Abst
+                                    label.new(bar_index, close, "P4 ABSTAIN", style=label.style_label_center, color=color.orange, size=size.tiny)
+                            else if h1Abst
+                                decisionLabel := "H1 ABSTAIN"
+                                if showH1Abst
+                                    label.new(bar_index, close, "H1 ABSTAIN", style=label.style_label_center, color=color.fuchsia, size=size.tiny)
+                            else if f_posActive()
+                                skippedSignals += 1
+                                decisionLabel := "SIGNAL_IGNORED"
+                            else
+                                // Canonical TAKE = Phase58D TAKE AND P4 KEEP AND H1 KEEP
+                                decisionLabel := "TAKE " + dirStr
+                                pendingTake := true
+                                pendingDir := dirStr
+                                pendingSignalBar := bar_index
+                                pendingOppId := curOppId
+                                pendingReason := "TAKE_" + dirStr + " | E=" + str.tostring(evTotal) + " | 15m=" + ctx15State + " | P4=" + p4Status + " | H1=" + h1Status + " | band=" + band
+                                lastAction := dirStr == "LONG" ? "SIGNAL_LONG" : "SIGNAL_SHORT"
+                                lastReason := "SIGNAL"
+                                if showTake
+                                    sigLbl = dirStr == "LONG" ? "SIGNAL_LONG" : "SIGNAL_SHORT"
+                                    label.new(bar_index, close, sigLbl, style=label.style_label_center, color=dirStr == "LONG" ? color.green : color.red, textcolor=color.white, size=size.small)
+
+                                // Phase58 internal trade (0.75 ATR — blocks further signals)
+                                // Python: ep=cl[entry_i], risk=stop_atr*atr[signal_i] — finalized on entry bar close
+                                p58InTrade := true
+                                p58TradeDir := dirStr
+                                p58EntryBar := bar_index + 1
+                                p58SignalAtr := atrUse
+                                p58Entry := na
+                                p58Stop := na
+                                p58Target := na
+                                p58Deadline := bar_index + 1 + maxHoldBars
+                                p58State := dirStr == "LONG" ? 2 : -2
+                                armedBar := 0
+                                armedBars := 0
+                                armedPrice := na
+                                pbExtreme := na
+                    else
+                        curOppLastSi := bar_index
+                        decisionLabel := "UPDATE"
+                else
+                    decisionLabel := reactSc >= 1 ? "WAIT" : "ARMED"
+                    if reactSc >= 1 and showWait
+                        label.new(bar_index, close, "ARMED/WAIT", style=label.style_label_center, color=color.blue, size=size.tiny)
+
+    if p58BlockSignals
+        p58BlockSignals := false
+
+// =============================================================================
+// Layer B — parity debug markers (fully isolated from Layer A)
+// =============================================================================
+if debugParityMarkers and barstate.isconfirmed
+    [r1, a1, t1] = f_refMatch(refEntryUnixMs, refDirection)
+    if r1
+        label.new(bar_index, open, "REFERENCE\n" + refDirection + "\n" + t1, style=label.style_label_up, color=color.yellow, textcolor=color.black, size=size.small)
+    [r2, a2, t2] = f_refMatch(refEntryUnixMs2, refDirection2)
+    if r2
+        label.new(bar_index, open, "REFERENCE #2\n" + refDirection2 + "\n" + t2, style=label.style_label_up, color=color.yellow, textcolor=color.black, size=size.tiny)
+    [r3, a3, t3] = f_refMatch(refEntryUnixMs3, refDirection3)
+    if r3
+        label.new(bar_index, open, "REFERENCE #3\n" + refDirection3 + "\n" + t3, style=label.style_label_up, color=color.yellow, textcolor=color.black, size=size.tiny)
+
+// Plot stop/target for active Phase71 position
+float plotStop = na
+float plotTgt = na
+if (posState == "LONG_ACTIVE" or posState == "SHORT_ACTIVE") and showStopTgt
+    plotStop := stopPx
+    plotTgt := tgtPx
+plot(plotStop, "M1 Stop", color.red, 2, plot.style_linebr)
+plot(plotTgt, "M1 Target", color.teal, 2, plot.style_linebr)
+
+// Phase58K extension diagnostic (display only)
+m5MoveAtr = math.abs(m5C - m5C[10]) / atrUse
+move20Atr = math.abs(close - close[20]) / atrUse
+
+var table dbg = table.new(position.top_right, 2, 18, bgcolor=color.new(color.black, 85))
+if barstate.islast and showDebug
+    table.cell(dbg, 0, 0, "PHASE59C CANONICAL", text_color=color.yellow, text_size=size.small)
+    table.cell(dbg, 1, 0, "D(E)→P4→H1→M1", text_color=color.yellow, text_size=size.small)
+    table.cell(dbg, 0, 1, "1M TF", text_color=color.gray)
+    table.cell(dbg, 1, 1, TZ_WARN ? "WARN: not 1M" : "OK", text_color=TZ_WARN ? color.red : color.lime)
+    table.cell(dbg, 0, 2, "decision", text_color=color.gray)
+    table.cell(dbg, 1, 2, decisionLabel, text_color=color.white)
+    table.cell(dbg, 0, 3, "phase58d", text_color=color.gray)
+    table.cell(dbg, 1, 3, p58dDecision == "" ? "-" : p58dDecision, text_color=color.white)
+    table.cell(dbg, 0, 4, "opportunity", text_color=color.gray)
+    table.cell(dbg, 1, 4, na(curOppId) ? "-" : curOppId, text_color=color.white)
+    table.cell(dbg, 0, 5, "P4", text_color=color.gray)
+    table.cell(dbg, 1, 5, p4Status, text_color=color.white)
+    table.cell(dbg, 0, 6, "H1", text_color=color.gray)
+    table.cell(dbg, 1, 6, h1Status, text_color=color.white)
+    table.cell(dbg, 0, 7, "confidence", text_color=color.gray)
+    table.cell(dbg, 1, 7, confBand == "" ? "-" : confBand, text_color=color.white)
+    table.cell(dbg, 0, 8, "dominant", text_color=color.gray)
+    table.cell(dbg, 1, 8, domActive, text_color=color.white)
+    table.cell(dbg, 0, 9, "evidence", text_color=color.gray)
+    table.cell(dbg, 1, 9, str.tostring(lastEvidence), text_color=color.white)
+    if showHTF
+        table.cell(dbg, 0, 10, "15M", text_color=color.gray)
+        table.cell(dbg, 1, 10, ctx15State + " (" + str.tostring(ctx15Strength, "#.##") + ")", text_color=color.white)
+        table.cell(dbg, 0, 11, "5M", text_color=color.gray)
+        table.cell(dbg, 1, 11, ctx5Dir, text_color=color.white)
+    table.cell(dbg, 0, 12, "ATR", text_color=color.gray)
+    table.cell(dbg, 1, 12, str.tostring(atrUse, "#.####"), text_color=color.white)
+    table.cell(dbg, 0, 13, "pending", text_color=color.gray)
+    table.cell(dbg, 1, 13, pendingTake ? pendingDir : "-", text_color=color.white)
+    actCnt = 0
+    dbgTN = array.size(tActive)
+    if dbgTN > 0
+        for i = 0 to dbgTN - 1
+            if array.get(tActive, i)
+                actCnt += 1
+    table.cell(dbg, 0, 14, "M1 active", text_color=color.gray)
+    table.cell(dbg, 1, 14, str.tostring(actCnt), text_color=color.white)
+    table.cell(dbg, 0, 15, "p58 internal", text_color=color.gray)
+    table.cell(dbg, 1, 15, p58InTrade ? p58TradeDir : "-", text_color=color.white)
+    if showReason and not na(pendingReason) and pendingReason != ""
+        table.cell(dbg, 0, 16, "reason", text_color=color.gray)
+        table.cell(dbg, 1, 16, pendingReason, text_color=color.silver, text_size=size.tiny)
+    else if showExtDiag
+        table.cell(dbg, 0, 16, "m5_move_atr", text_color=color.gray)
+        table.cell(dbg, 1, 16, str.tostring(m5MoveAtr, "#.##"), text_color=color.white)
+        table.cell(dbg, 0, 17, "move_20_atr", text_color=color.gray)
+        table.cell(dbg, 1, 17, str.tostring(move20Atr, "#.##"), text_color=color.white)
+
+if barstate.islast and TZ_WARN
+    label.new(bar_index, high, "Phase59C: use 1-minute chart", style=label.style_label_down, color=color.red, textcolor=color.white, size=size.normal)
+
+// =============================================================================
+// Phase59D — Layer B trace (reads Layer A state; never writes it)
+// =============================================================================
+inTraceWin = debugTrace and time >= traceStartMs and time < traceEndMs
+totalArmLong = math.min(2, bullSc) + locScLong
+totalArmShort = math.min(2, bearSc) + locScShort
+traceRawTake = (p58State == 1 or p58State == -1) and (p58State == 1 ? (math.min(2, bullSc) + locScLong + reactScLong) : (math.min(2, bearSc) + locScShort + reactScShort)) >= takeThreshold
+
+plot(debugTrace and inTraceWin ? atrUse : na, "TRC_ATR", display=display.data_window)
+plot(debugTrace and inTraceWin ? locScLong : na, "TRC_locL", display=display.data_window)
+plot(debugTrace and inTraceWin ? locScShort : na, "TRC_locS", display=display.data_window)
+plot(debugTrace and inTraceWin ? reactScLong : na, "TRC_reactL", display=display.data_window)
+plot(debugTrace and inTraceWin ? reactScShort : na, "TRC_reactS", display=display.data_window)
+plot(debugTrace and inTraceWin ? totalArmLong : na, "TRC_armL", display=display.data_window)
+plot(debugTrace and inTraceWin ? totalArmShort : na, "TRC_armS", display=display.data_window)
+plot(debugTrace and inTraceWin ? p58State : na, "TRC_p58State", display=display.data_window)
+plot(debugTrace and inTraceWin ? armedBars : na, "TRC_armedBars", display=display.data_window)
+plot(debugTrace and inTraceWin ? evTotalLong : na, "TRC_evL", display=display.data_window)
+plot(debugTrace and inTraceWin ? evTotalShort : na, "TRC_evS", display=display.data_window)
+plot(debugTrace and inTraceWin ? (pendingTake ? 1 : 0) : na, "TRC_pending", display=display.data_window)
+plot(debugTrace and inTraceWin ? (p58InTrade ? 1 : 0) : na, "TRC_p58InTrade", display=display.data_window)
+plot(debugTrace and inTraceWin ? m5C : na, "TRC_m5C", display=display.data_window)
+plot(debugTrace and inTraceWin ? m15C : na, "TRC_m15C", display=display.data_window)
+plotchar(debugTrace and inTraceWin and barstate.isconfirmed, "TRC", "•", location=location.bottom, color=color.new(color.blue, 70), size=size.tiny)
+
+var table traceTbl = table.new(position.bottom_right, 2, 14, bgcolor=color.new(color.black, 80))
+if debugTrace and barstate.islast and inTraceWin
+    table.cell(traceTbl, 0, 0, "PHASE59D TRACE", text_color=color.aqua, text_size=size.small)
+    table.cell(traceTbl, 1, 0, str.format_time(time, "HH:mm", "America/Chicago"), text_color=color.white, text_size=size.small)
+    table.cell(traceTbl, 0, 1, "ctxDir", text_color=color.gray)
+    table.cell(traceTbl, 1, 1, ctxDir, text_color=color.white)
+    table.cell(traceTbl, 0, 2, "locL/reactL", text_color=color.gray)
+    table.cell(traceTbl, 1, 2, str.tostring(locScLong) + "/" + str.tostring(reactScLong), text_color=color.white)
+    table.cell(traceTbl, 0, 3, "armL", text_color=color.gray)
+    table.cell(traceTbl, 1, 3, str.tostring(totalArmLong), text_color=color.white)
+    table.cell(traceTbl, 0, 4, "p58State", text_color=color.gray)
+    table.cell(traceTbl, 1, 4, str.tostring(p58State) + " " + p58Dir, text_color=color.white)
+    table.cell(traceTbl, 0, 5, "armed", text_color=color.gray)
+    table.cell(traceTbl, 1, 5, str.tostring(armedBars) + " @ " + str.tostring(armedPrice, "#.##"), text_color=color.white)
+    table.cell(traceTbl, 0, 6, "decision", text_color=color.gray)
+    table.cell(traceTbl, 1, 6, decisionLabel, text_color=color.white)
+    table.cell(traceTbl, 0, 7, "D/P4/H1", text_color=color.gray)
+    table.cell(traceTbl, 1, 7, p58dDecision + " / " + p4Status + " / " + h1Status, text_color=color.white)
+    table.cell(traceTbl, 0, 8, "pending", text_color=color.gray)
+    table.cell(traceTbl, 1, 8, pendingTake ? pendingDir : "-", text_color=color.white)
+    table.cell(traceTbl, 0, 9, "p58InTrade", text_color=color.gray)
+    table.cell(traceTbl, 1, 9, p58InTrade ? p58TradeDir : "-", text_color=color.white)
+    table.cell(traceTbl, 0, 10, "opp", text_color=color.gray)
+    table.cell(traceTbl, 1, 10, na(curOppId) ? "-" : curOppId, text_color=color.white)
+    table.cell(traceTbl, 0, 11, "evL", text_color=color.gray)
+    table.cell(traceTbl, 1, 11, str.tostring(evTotalLong), text_color=color.white)
+    table.cell(traceTbl, 0, 12, "ATR", text_color=color.gray)
+    table.cell(traceTbl, 1, 12, str.tostring(atrUse, "#.####"), text_color=color.white)
+    table.cell(traceTbl, 0, 13, "m5/m15 C", text_color=color.gray)
+    table.cell(traceTbl, 1, 13, str.tostring(m5C, "#.##") + " / " + str.tostring(m15C, "#.##"), text_color=color.white)
+
+// LW-063138 window: 13:35–13:45 Chicago = unix 1787769300000 .. 1787769900000
+lwDiagWin = lw063138Diag and time >= 1787769300000 and time <= 1787769900000
+if lwDiagWin and barstate.isconfirmed
+    evShow = p58Dir == "LONG" ? evTotalLong : p58Dir == "SHORT" ? evTotalShort : evTotalLong
+    lbl = str.format_time(time, "HH:mm", "America/Chicago") + "\n" +
+         ctxDir + " L" + str.tostring(locScLong) + " R" + str.tostring(reactScLong) + "\n" +
+         "armL=" + str.tostring(totalArmLong) + " st=" + str.tostring(p58State) + " " + p58Dir + "\n" +
+         "rt=" + (traceRawTake ? "Y" : "N") + " D=" + p58dDecision + "\n" +
+         "P4=" + p4Status + " H1=" + h1Status + "\n" +
+         "pend=" + (pendingTake ? pendingDir : "-") + " in=" + (p58InTrade ? p58TradeDir : "-") + "\n" +
+         "E=" + str.tostring(evShow) + " ATR=" + str.tostring(atrUse, "#.##")
+    label.new(bar_index, high, lbl, style=label.style_label_down, color=color.new(color.teal, 20), textcolor=color.white, size=size.tiny)
+
+// =============================================================================
+// Phase59E — forensic table + fixed markers (Layer B only)
+// =============================================================================
+E59_WIN_START = 1787768640000  // 2026-08-26 13:24 Chicago
+E59_WIN_END   = 1787769900000  // 2026-08-26 13:45 Chicago
+inE59Win = phase59eForensic and time >= E59_WIN_START and time <= E59_WIN_END
+e59RawTake = (p58State == 1 or p58State == -1) and (p58State == 1 ? (math.min(2, bullSc) + locScLong + reactScLong) : (math.min(2, bearSc) + locScShort + reactScShort)) >= takeThreshold
+
+var table e59Tbl = table.new(position.middle_right, 2, 16, bgcolor=color.new(color.black, 75), border_width=1)
+if phase59eForensic and barstate.islast
+    table.cell(e59Tbl, 0, 0, "PHASE59E", text_color=color.yellow, text_size=size.small)
+    table.cell(e59Tbl, 1, 0, "FORENSIC", text_color=color.yellow, text_size=size.small)
+    table.cell(e59Tbl, 0, 1, "TIME NY", text_color=color.gray)
+    table.cell(e59Tbl, 1, 1, str.format_time(time, "yyyy-MM-dd HH:mm", "America/New_York"), text_color=color.white, text_size=size.tiny)
+    table.cell(e59Tbl, 0, 2, "TIME CHI", text_color=color.gray)
+    table.cell(e59Tbl, 1, 2, str.format_time(time, "yyyy-MM-dd HH:mm", "America/Chicago"), text_color=color.white, text_size=size.tiny)
+    table.cell(e59Tbl, 0, 3, "OPEN", text_color=color.gray)
+    table.cell(e59Tbl, 1, 3, str.tostring(open, "#.##"), text_color=color.white)
+    table.cell(e59Tbl, 0, 4, "HIGH", text_color=color.gray)
+    table.cell(e59Tbl, 1, 4, str.tostring(high, "#.##"), text_color=color.white)
+    table.cell(e59Tbl, 0, 5, "LOW", text_color=color.gray)
+    table.cell(e59Tbl, 1, 5, str.tostring(low, "#.##"), text_color=color.white)
+    table.cell(e59Tbl, 0, 6, "CLOSE", text_color=color.gray)
+    table.cell(e59Tbl, 1, 6, str.tostring(close, "#.##"), text_color=color.white)
+    table.cell(e59Tbl, 0, 7, "ATR", text_color=color.gray)
+    table.cell(e59Tbl, 1, 7, str.tostring(atrUse, "#.######"), text_color=color.white)
+    table.cell(e59Tbl, 0, 8, "p58InTrade", text_color=color.gray)
+    table.cell(e59Tbl, 1, 8, p58InTrade ? "1 " + p58TradeDir : "0", text_color=color.white)
+    table.cell(e59Tbl, 0, 9, "p58State", text_color=color.gray)
+    table.cell(e59Tbl, 1, 9, str.tostring(p58State) + " " + p58Dir, text_color=color.white)
+    table.cell(e59Tbl, 0, 10, "reactL/S", text_color=color.gray)
+    table.cell(e59Tbl, 1, 10, str.tostring(reactScLong) + "/" + str.tostring(reactScShort), text_color=color.white)
+    table.cell(e59Tbl, 0, 11, "ctxDir", text_color=color.gray)
+    table.cell(e59Tbl, 1, 11, ctxDir, text_color=color.white)
+    table.cell(e59Tbl, 0, 12, "rawTake", text_color=color.gray)
+    table.cell(e59Tbl, 1, 12, e59RawTake ? "1" : "0", text_color=color.white)
+    table.cell(e59Tbl, 0, 13, "decision", text_color=color.gray)
+    table.cell(e59Tbl, 1, 13, decisionLabel, text_color=color.white)
+    table.cell(e59Tbl, 0, 14, "D/P4/H1", text_color=color.gray)
+    table.cell(e59Tbl, 1, 14, p58dDecision + "/" + p4Status + "/" + h1Status, text_color=color.white, text_size=size.tiny)
+    table.cell(e59Tbl, 0, 15, "unix_ms", text_color=color.gray)
+    table.cell(e59Tbl, 1, 15, str.tostring(time), text_color=color.silver, text_size=size.tiny)
+
+if inE59Win and barstate.isconfirmed
+    mk = str.format_time(time, "HH:mm", "America/Chicago") + "\n" +
+         "O" + str.tostring(open, "#.##") + " H" + str.tostring(high, "#.##") + "\n" +
+         "L" + str.tostring(low, "#.##") + " C" + str.tostring(close, "#.##") + "\n" +
+         "A" + str.tostring(atrUse, "#.##") + " in=" + (p58InTrade ? "1" : "0") + "\n" +
+         "st=" + str.tostring(p58State) + " " + p58Dir + "\n" +
+         "rL/rS=" + str.tostring(reactScLong) + "/" + str.tostring(reactScShort)
+    label.new(bar_index, low, mk, style=label.style_label_up, color=color.new(color.orange, 30), textcolor=color.white, size=size.tiny)
+
+// =============================================================================
+// Phase59H — take-timing forensic (Layer B only)
+// =============================================================================
+H59_WIN_START = 1787769300000  // 2026-08-26 13:35 Chicago
+H59_WIN_END   = 1787769900000  // 2026-08-26 13:45 Chicago
+inH59Win = phase59hForensic and time >= H59_WIN_START and time <= H59_WIN_END
+h59CtxSc = p58Dir == "LONG" ? math.min(2, bullSc) : p58Dir == "SHORT" ? math.min(2, bearSc) : math.min(2, bullSc)
+h59LocSc = p58Dir == "LONG" ? locScLong : p58Dir == "SHORT" ? locScShort : locScLong
+h59ReactSc = p58Dir == "LONG" ? reactScLong : p58Dir == "SHORT" ? reactScShort : reactScLong
+h59Total = h59CtxSc + h59LocSc + h59ReactSc
+h59RawTake = (p58State == 1 or p58State == -1) and h59Total >= takeThreshold
+h59Ev = p58Dir == "LONG" ? evTotalLong : p58Dir == "SHORT" ? evTotalShort : evTotalLong
+
+var table h59Tbl = table.new(position.top_right, 2, 18, bgcolor=color.new(color.black, 78), border_width=1)
+if phase59hForensic and barstate.islast
+    table.cell(h59Tbl, 0, 0, "PHASE59H", text_color=color.aqua, text_size=size.small)
+    table.cell(h59Tbl, 1, 0, "TAKE TIMING", text_color=color.aqua, text_size=size.small)
+    table.cell(h59Tbl, 0, 1, "TIME CHI", text_color=color.gray)
+    table.cell(h59Tbl, 1, 1, str.format_time(time, "HH:mm", "America/Chicago"), text_color=color.white)
+    table.cell(h59Tbl, 0, 2, "TIME NY", text_color=color.gray)
+    table.cell(h59Tbl, 1, 2, str.format_time(time, "HH:mm", "America/New_York"), text_color=color.white)
+    table.cell(h59Tbl, 0, 3, "p58State", text_color=color.gray)
+    table.cell(h59Tbl, 1, 3, str.tostring(p58State) + " " + p58Dir, text_color=color.white)
+    table.cell(h59Tbl, 0, 4, "p58InTrade", text_color=color.gray)
+    table.cell(h59Tbl, 1, 4, p58InTrade ? p58TradeDir : "0", text_color=color.white)
+    table.cell(h59Tbl, 0, 5, "ctx/loc/react", text_color=color.gray)
+    table.cell(h59Tbl, 1, 5, str.tostring(h59CtxSc) + "/" + str.tostring(h59LocSc) + "/" + str.tostring(h59ReactSc), text_color=color.white)
+    table.cell(h59Tbl, 0, 6, "total/thr", text_color=color.gray)
+    table.cell(h59Tbl, 1, 6, str.tostring(h59Total) + "/" + str.tostring(takeThreshold), text_color=color.white)
+    table.cell(h59Tbl, 0, 7, "rawTake", text_color=color.gray)
+    table.cell(h59Tbl, 1, 7, h59RawTake ? "1" : "0", text_color=color.white)
+    table.cell(h59Tbl, 0, 8, "evTotal", text_color=color.gray)
+    table.cell(h59Tbl, 1, 8, str.tostring(h59Ev), text_color=color.white)
+    table.cell(h59Tbl, 0, 9, "decision", text_color=color.gray)
+    table.cell(h59Tbl, 1, 9, decisionLabel, text_color=color.white)
+    table.cell(h59Tbl, 0, 10, "D/P4/H1", text_color=color.gray)
+    table.cell(h59Tbl, 1, 10, p58dDecision + "/" + p4Status + "/" + h1Status, text_color=color.white, text_size=size.tiny)
+    table.cell(h59Tbl, 0, 11, "m5 O/H/L/C", text_color=color.gray)
+    table.cell(h59Tbl, 1, 11, str.tostring(m5O, "#.##") + " " + str.tostring(m5H, "#.##") + " " + str.tostring(m5L, "#.##") + " " + str.tostring(m5C, "#.##"), text_color=color.white, text_size=size.tiny)
+    table.cell(h59Tbl, 0, 12, "m5 src CHI", text_color=color.gray)
+    table.cell(h59Tbl, 1, 12, str.format_time(m5BarTime, "HH:mm", "America/Chicago"), text_color=color.white, text_size=size.tiny)
+    table.cell(h59Tbl, 0, 13, "m15 O/H/L/C", text_color=color.gray)
+    table.cell(h59Tbl, 1, 13, str.tostring(m15O, "#.##") + " " + str.tostring(m15H, "#.##") + " " + str.tostring(m15L, "#.##") + " " + str.tostring(m15C, "#.##"), text_color=color.white, text_size=size.tiny)
+    table.cell(h59Tbl, 0, 14, "m15 src CHI", text_color=color.gray)
+    table.cell(h59Tbl, 1, 14, str.format_time(m15BarTime, "HH:mm", "America/Chicago"), text_color=color.white, text_size=size.tiny)
+    table.cell(h59Tbl, 0, 15, "m5ATR", text_color=color.gray)
+    table.cell(h59Tbl, 1, 15, str.tostring(m5Atr, "#.####"), text_color=color.white)
+    table.cell(h59Tbl, 0, 16, "ctxDir", text_color=color.gray)
+    table.cell(h59Tbl, 1, 16, ctxDir, text_color=color.white)
+    table.cell(h59Tbl, 0, 17, "HTF mode", text_color=color.gray)
+    table.cell(h59Tbl, 1, 17, "causal_dev", text_color=color.lime, text_size=size.tiny)
+
+if inH59Win and barstate.isconfirmed
+    h59Lbl = str.format_time(time, "HH:mm", "America/Chicago") + " NY " + str.format_time(time, "HH:mm", "America/New_York") + "\n" +
+         "st=" + str.tostring(p58State) + " " + p58Dir + " in=" + (p58InTrade ? "1" : "0") + "\n" +
+         "ctx=" + str.tostring(h59CtxSc) + " loc=" + str.tostring(h59LocSc) + " react=" + str.tostring(h59ReactSc) + " tot=" + str.tostring(h59Total) + "\n" +
+         "raw=" + (h59RawTake ? "Y" : "N") + " ev=" + str.tostring(h59Ev) + " D=" + p58dDecision + "\n" +
+         "m5@" + str.format_time(m5BarTime, "HH:mm", "America/Chicago") + " C=" + str.tostring(m5C, "#.##") + "\n" +
+         "dec=" + decisionLabel + " P4=" + p4Status + " H1=" + h1Status
+    label.new(bar_index, high, h59Lbl, style=label.style_label_down, color=color.new(color.blue, 25), textcolor=color.white, size=size.tiny)
+
+// DEBUG manual signal (disabled by default)
+if barstate.isconfirmed and DEBUG_MANUAL_SIGNAL
+    if debugManualLong[1] and posState == "FLAT"
+        posState := "PENDING_LONG"
+        signalBar := bar_index - 1
+    if debugManualShort[1] and posState == "FLAT"
+        posState := "PENDING_SHORT"
+        signalBar := bar_index - 1
+
+// Python-expected review ghosts (display only — compare autonomous Pine vs frozen Python)
+if showPyExpected and barstate.isconfirmed
+    if time == pySignalMs
+        label.new(bar_index, high, "PY SIG " + pyExpectedDir + "\n" + pyExpectedId, style=label.style_label_down, color=color.new(color.fuchsia, 20), textcolor=color.white, size=size.small)
+    if time == pyEntryMs
+        y = pyExpectedDir == "LONG" ? low : high
+        label.new(bar_index, y, "PY ENTRY " + pyExpectedDir + "\n" + str.tostring(pyExpectedEntry, format.mintick) + "\n" + pyExpectedId, style=pyExpectedDir == "LONG" ? label.style_label_up : label.style_label_down, color=color.new(color.yellow, 10), textcolor=color.black, size=size.normal)
+
+// =============================================================================
+// Phase72B — machine-readable export (Layer B only — zero effect on Layer A)
+// Enable exportParity → Data Window CSV export for Python parity comparison
+// =============================================================================
+grpP72B = "Phase72B export (diagnostic only)"
+exportParity = input.bool(false, "Export parity events to Data Window", group=grpP72B)
+
+// ── Phase72B Manual Parity (Layer B only — observational) ────────────────────
+grpP72BM = "Phase72B Manual Parity"
+manualParityMode   = input.bool(false, "Manual parity mode (master switch)", group=grpP72BM)
+showParityTable    = input.bool(true,  "Show on-chart parity table", group=grpP72BM)
+showEventLabels    = input.bool(true,  "Show detailed AUTO event labels", group=grpP72BM)
+showStateLabels    = input.bool(false, "Show state transition labels", group=grpP72BM)
+showForensicLabels = input.bool(false, "Forensic labels in window", group=grpP72BM)
+forensicStartMs    = input.time(1787767200000, "Forensic window start (Chicago)", group=grpP72BM)
+forensicEndMs      = input.time(1787770800000, "Forensic window end (Chicago)", group=grpP72BM)
+// 1788143340000 = 2026-08-30 22:29 America/New_York (= 21:29 Chicago); input.time requires const int
+inspectTimestamp   = input.time(1788143340000, "Single-bar inspect timestamp (22:29 NY / 21:29 CHI)", group=grpP72BM)
+enableInspectBar   = input.bool(false, "Enable single-bar inspect label (custom timestamp)", group=grpP72BM)
+
+// ── Phase72B Historical Forensic Inspect (hardcoded bars — Layer B only) ─────
+grpP72BH = "Phase72B Historical Forensic Inspect"
+enableHistoricalForensicInspect = input.bool(true, "Enable hardcoded 21:29 + 21:13 CHI inspect", group=grpP72BH)
+_p72bInspectBarMs = 60000
+// Chart displays New York (UTC-4); 21:29 CHI = 22:29 NY, 21:13 CHI = 22:13 NY
+_p72bInspectTs2129 = timestamp("America/New_York", 2026, 8, 30, 22, 29)
+_p72bInspectTs2113 = timestamp("America/New_York", 2026, 8, 30, 22, 13)
+
+signalLongFlag = lastAction == "SIGNAL_LONG" ? 1.0 : 0.0
+signalShortFlag = lastAction == "SIGNAL_SHORT" ? 1.0 : 0.0
+enterLongFlag = lastAction == "ENTER_LONG" ? 1.0 : 0.0
+enterShortFlag = lastAction == "ENTER_SHORT" ? 1.0 : 0.0
+exitStopFlag = lastAction == "EXIT_STOP" ? 1.0 : 0.0
+exitTargetFlag = lastAction == "EXIT_TARGET" ? 1.0 : 0.0
+exitTimeFlag = (lastAction == "EXIT_TIME_PROGRESS" or lastAction == "EXIT_MAX_HOLD") ? 1.0 : 0.0
+posStateCode = posState == "LONG_ACTIVE" ? 1.0 : posState == "SHORT_ACTIVE" ? -1.0 : 0.0
+
+plot(exportParity and barstate.isconfirmed ? signalLongFlag : na, "P72B_signalLong", display=display.data_window)
+plot(exportParity and barstate.isconfirmed ? signalShortFlag : na, "P72B_signalShort", display=display.data_window)
+plot(exportParity and barstate.isconfirmed ? enterLongFlag : na, "P72B_enterLong", display=display.data_window)
+plot(exportParity and barstate.isconfirmed ? enterShortFlag : na, "P72B_enterShort", display=display.data_window)
+plot(exportParity and barstate.isconfirmed ? exitStopFlag : na, "P72B_exitStop", display=display.data_window)
+plot(exportParity and barstate.isconfirmed ? exitTargetFlag : na, "P72B_exitTarget", display=display.data_window)
+plot(exportParity and barstate.isconfirmed ? exitTimeFlag : na, "P72B_exitTime", display=display.data_window)
+plot(exportParity and barstate.isconfirmed ? float(p58State) : na, "P72B_state", display=display.data_window)
+plot(exportParity and barstate.isconfirmed ? posStateCode : na, "P72B_direction", display=display.data_window)
+plot(exportParity and barstate.isconfirmed ? atrUse : na, "P72B_ATR", display=display.data_window)
+plot(exportParity and barstate.isconfirmed ? entryPx : na, "P72B_entryPrice", display=display.data_window)
+plot(exportParity and barstate.isconfirmed ? stopPx : na, "P72B_stopPrice", display=display.data_window)
+plot(exportParity and barstate.isconfirmed ? tgtPx : na, "P72B_targetPrice", display=display.data_window)
+plot(exportParity and barstate.isconfirmed ? time : na, "P72B_unixMs", display=display.data_window)
+
+alertcondition(exportParity and barstate.isconfirmed and signalLongFlag == 1.0, "P72B SIGNAL_LONG", "P72B SIGNAL_LONG")
+alertcondition(exportParity and barstate.isconfirmed and signalShortFlag == 1.0, "P72B SIGNAL_SHORT", "P72B SIGNAL_SHORT")
+alertcondition(exportParity and barstate.isconfirmed and enterLongFlag == 1.0, "P72B ENTER_LONG", "P72B ENTER_LONG")
+alertcondition(exportParity and barstate.isconfirmed and enterShortFlag == 1.0, "P72B ENTER_SHORT", "P72B ENTER_SHORT")
+
+// =============================================================================
+// Phase72B-M — Manual on-chart parity (Layer B ONLY — reads Layer A state)
+// No writes to trading variables. manualParityMode=false → no visual impact.
+// =============================================================================
+
+f_p72bStateLbl() =>
+    string lbl = "WATCH"
+    if posState == "LONG_ACTIVE" or posState == "SHORT_ACTIVE"
+        lbl := posState
+    else if p58State == 3
+        lbl := "COOLDOWN"
+    else if p58State == 0
+        lbl := "WATCH"
+    else if p58State == 1 or p58State == -1
+        lbl := "ARMED_" + p58Dir
+    else if p58State == 2 or p58State == -2
+        lbl := "IN_" + (p58InTrade ? p58TradeDir : p58Dir)
+    else
+        lbl := str.tostring(p58State)
+    lbl
+
+f_p72bArmTotal(string dir) =>
+    int reactSc = dir == "LONG" ? reactScLong : reactScShort
+    int locSc = dir == "LONG" ? locScLong : locScShort
+    int ctxSc = math.min(2, dir == "LONG" ? bullSc : bearSc)
+    int contra = 0
+    if dir == "LONG" and ctxDir == "NEUTRAL" and bearSc >= 2
+        contra -= 1
+    if dir == "SHORT" and ctxDir == "NEUTRAL" and bullSc >= 2
+        contra -= 1
+    ctxSc + locSc + reactSc + contra
+
+p72bRawLong  = p58State == 1 and f_p72bArmTotal("LONG") >= takeThreshold
+p72bRawShort = p58State == -1 and f_p72bArmTotal("SHORT") >= takeThreshold
+p72bIsNewOpp = na(curOppId) or p58Dir != curOppDir or (bar_index - curOppLastSi) > structGap
+p72bDecE_L   = f_decideE(evTotalLong, evReactLong, evContraLong, 0)
+p72bDecE_S   = f_decideE(evTotalShort, evReactShort, evContraShort, 0)
+p72bTakeLong  = lastAction == "SIGNAL_LONG"
+p72bTakeShort = lastAction == "SIGNAL_SHORT"
+p72bSigLong   = lastAction == "SIGNAL_LONG"
+p72bSigShort  = lastAction == "SIGNAL_SHORT"
+p72bEntLong   = lastAction == "ENTER_LONG"
+p72bEntShort  = lastAction == "ENTER_SHORT"
+p72bExStop    = lastAction == "EXIT_STOP"
+p72bExTgt     = lastAction == "EXIT_TARGET"
+p72bExTime    = lastAction == "EXIT_TIME_PROGRESS" or lastAction == "EXIT_MAX_HOLD"
+p72bInTrade   = f_posActive() or p58InTrade
+p72bDir       = posState == "LONG_ACTIVE" ? "LONG" : posState == "SHORT_ACTIVE" ? "SHORT" : p58InTrade ? p58TradeDir : p58Dir
+p72bCooldown  = p58State == 3
+p72bGateOpen  = not f_posActive() and not p58InTrade and p58State != 3 and not p58BlockSignals
+p72bMinsInTr  = (posState == "LONG_ACTIVE" or posState == "SHORT_ACTIVE") and not na(entryBar) ? bar_index - entryBar : 0
+
+var string p72bPrevSt = "WATCH"
+var string p72bPrevLastAction = ""
+
+string p72bStAfter = f_p72bStateLbl()
+string p72bStBefore = p72bPrevSt
+
+f_p72bOnInspectBar(int inspectTs) =>
+    time >= inspectTs and time < inspectTs + _p72bInspectBarMs
+
+f_p72bRenderHistoricalInspect(string inspectTag) =>
+    string iTxt = inspectTag
+    iTxt += "\ncurOppDir " + (na(curOppDir) ? "-" : curOppDir)
+    iTxt += "\noppLastSi " + (na(curOppLastSi) ? "-" : str.tostring(curOppLastSi))
+    iTxt += "\nisNewOpp " + (p72bIsNewOpp ? "true" : "false")
+    iTxt += "\np58State " + str.tostring(p58State)
+    iTxt += "\nevS " + str.tostring(evTotalShort)
+    iTxt += "\ndecE_S " + p72bDecE_S
+    iTxt += "\nP4 " + p4Status
+    iTxt += "\nH1 " + h1Status
+    label.new(bar_index, high, iTxt, style=label.style_label_down, color=color.new(color.orange, 0), textcolor=color.black, size=size.large, textalign=text.align_left)
+
+// ── Historical forensic inspect (independent of manualParityMode) ─────────────
+bool p72bHitInspect2129 = enableHistoricalForensicInspect and barstate.isconfirmed and f_p72bOnInspectBar(_p72bInspectTs2129)
+bool p72bHitInspect2113 = enableHistoricalForensicInspect and barstate.isconfirmed and f_p72bOnInspectBar(_p72bInspectTs2113)
+
+if p72bHitInspect2129
+    f_p72bRenderHistoricalInspect("INSPECT 21:29")
+if p72bHitInspect2113
+    f_p72bRenderHistoricalInspect("INSPECT 21:13")
+
+plotshape(p72bHitInspect2129, "P72B_INSPECT_2129", shape.labelup, location.abovebar, color.new(color.orange, 0), text="INSPECT 21:29", textcolor=color.black, size=size.large)
+plotshape(p72bHitInspect2113, "P72B_INSPECT_2113", shape.labelup, location.abovebar, color.new(color.orange, 0), text="INSPECT 21:13", textcolor=color.black, size=size.large)
+
+if manualParityMode and barstate.isconfirmed
+    string stBefore = p72bStBefore
+    string stAfter = p72bStAfter
+    var table p72bTbl = table.new(position.top_left, 2, 42, bgcolor=color.new(color.black, 82), border_width=1)
+    if showParityTable and barstate.islast
+        table.cell(p72bTbl, 0, 0, "P72B MANUAL PARITY", text_color=color.aqua, text_size=size.small)
+        table.cell(p72bTbl, 1, 0, "AUTO PINE (read-only)", text_color=color.aqua, text_size=size.small)
+        r = 1
+        table.cell(p72bTbl, 0, r, "sym/tf", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, syminfo.ticker + " 1M", text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "bar_index", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, str.tostring(bar_index), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "unix_ms", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, str.tostring(time), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "UTC", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, str.format_time(time, "yyyy-MM-dd HH:mm", "UTC"), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "Chicago", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, str.format_time(time, "yyyy-MM-dd HH:mm", "America/Chicago"), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "New York", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, str.format_time(time, "yyyy-MM-dd HH:mm", "America/New_York"), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "O/H/L/C", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, str.tostring(open, "#.##") + " " + str.tostring(high, "#.##") + " " + str.tostring(low, "#.##") + " " + str.tostring(close, "#.##"), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "ATR", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, str.tostring(atrUse, "#.####"), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "STATE", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, stAfter, text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "ST before/after", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, stBefore + " → " + stAfter, text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "inTrade/dir", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, (p72bInTrade ? "1" : "0") + " " + p72bDir, text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "cooldown", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, p72bCooldown ? str.tostring(cooldownRem) : "0", text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "SIG L/S", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, (p72bSigLong ? "1" : "0") + "/" + (p72bSigShort ? "1" : "0"), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "RAW L/S", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, (p72bRawLong ? "1" : "0") + "/" + (p72bRawShort ? "1" : "0"), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "TAKE L/S", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, (p72bTakeLong ? "1" : "0") + "/" + (p72bTakeShort ? "1" : "0"), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "ENT L/S", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, (p72bEntLong ? "1" : "0") + "/" + (p72bEntShort ? "1" : "0"), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "entry/ATR", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, str.tostring(entryPx, "#.##") + " / " + str.tostring(initAtr, "#.####"), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "stop/target", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, str.tostring(stopPx, "#.##") + " / " + str.tostring(tgtPx, "#.##"), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "mins in tr", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, str.tostring(p72bMinsInTr), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "EXIT s/t/time", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, (p72bExStop ? "S" : "-") + "/" + (p72bExTgt ? "T" : "-") + "/" + (p72bExTime ? "X" : "-"), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "ctx", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, ctxDir + " b" + str.tostring(bullSc) + "/r" + str.tostring(bearSc), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "loc L/S", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, str.tostring(locScLong) + "/" + str.tostring(locScShort), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "react L/S", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, str.tostring(reactScLong) + "/" + str.tostring(reactScShort), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "ev L/S", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, str.tostring(evTotalLong) + "/" + str.tostring(evTotalShort), text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "decision", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, decisionLabel, text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "D/P4/H1", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, p58dDecision + " / " + p4Status + " / " + h1Status, text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "band/dom", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, confBand + " / " + domActive, text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "GATES", text_color=color.gray, text_size=size.tiny)
+        gateTxt = (p72bGateOpen ? "OPEN" : "BLOCK") + " p58=" + str.tostring(p58State)
+        gateTxt += p58BlockSignals ? " BLK" : ""
+        gateTxt += f_posActive() ? " POS" : ""
+        gateTxt += p58InTrade ? " P58T" : ""
+        table.cell(p72bTbl, 1, r, gateTxt, text_color=color.white, text_size=size.tiny)
+        r += 1
+        table.cell(p72bTbl, 0, r, "lastAction", text_color=color.gray, text_size=size.tiny)
+        table.cell(p72bTbl, 1, r, lastAction == "" ? "-" : lastAction, text_color=color.lime, text_size=size.tiny)
+
+    if showEventLabels and lastAction != "" and lastAction != p72bPrevLastAction
+        color lblCol = color.new(color.teal, 0)
+        float yPos = high
+        string evTxt = "AUTO " + lastAction
+        evTxt += "\nCHI " + str.format_time(time, "HH:mm", "America/Chicago")
+        evTxt += "\nNY " + str.format_time(time, "HH:mm", "America/New_York")
+        evTxt += "\npx " + str.tostring(close, format.mintick)
+        evTxt += "\nATR " + str.tostring(atrUse, "#.####")
+        evTxt += "\nst " + stAfter
+        if lastAction == "SIGNAL_LONG" or lastAction == "SIGNAL_SHORT"
+            evTxt += "\nev " + str.tostring(lastAction == "SIGNAL_LONG" ? evTotalLong : evTotalShort)
+        if lastAction == "ENTER_LONG" or lastAction == "ENTER_SHORT"
+            evTxt += "\nentry " + str.tostring(entryPx, format.mintick)
+            evTxt += "\nstop " + str.tostring(stopPx, format.mintick)
+            evTxt += "\ntgt " + str.tostring(tgtPx, format.mintick)
+        label.new(bar_index, yPos, evTxt, style=label.style_label_down, color=lblCol, textcolor=color.white, size=size.small)
+
+    if showStateLabels and stBefore != stAfter
+        label.new(bar_index, low, "AUTO ST\n" + stBefore + "→" + stAfter, style=label.style_label_up, color=color.new(color.gray, 40), textcolor=color.white, size=size.tiny)
+
+    // ── Forensic window labels ───────────────────────────────────────────────
+    inP72bForensic = showForensicLabels and time >= forensicStartMs and time <= forensicEndMs
+    if inP72bForensic
+        fTxt = str.format_time(time, "HH:mm", "America/Chicago") + " NY " + str.format_time(time, "HH:mm", "America/New_York")
+        fTxt += "\nst " + stAfter + " tr=" + (p72bInTrade ? "1" : "0") + " d=" + p72bDir
+        fTxt += "\nraw " + (p72bRawLong ? "1" : "0") + "/" + (p72bRawShort ? "1" : "0")
+        fTxt += " sig " + (p72bSigLong ? "1" : "0") + "/" + (p72bSigShort ? "1" : "0")
+        fTxt += "\ntake " + (p72bTakeLong ? "1" : "0") + "/" + (p72bTakeShort ? "1" : "0")
+        fTxt += "\nctx " + ctxDir + " loc " + str.tostring(locScLong) + "/" + str.tostring(locScShort)
+        fTxt += " react " + str.tostring(reactScLong) + "/" + str.tostring(reactScShort)
+        fTxt += "\nev " + str.tostring(evTotalLong) + "/" + str.tostring(evTotalShort)
+        fTxt += " D " + p58dDecision + " P4 " + p4Status + " H1 " + h1Status
+        fTxt += "\ncd " + (p72bCooldown ? str.tostring(cooldownRem) : "0") + " gate " + (p72bGateOpen ? "Y" : "N")
+        fTxt += " act " + lastAction
+        label.new(bar_index, high, fTxt, style=label.style_label_down, color=color.new(color.navy, 30), textcolor=color.white, size=size.tiny)
+
+    // ── Single-bar inspect (custom timestamp input) ─────────────────────────
+    if enableInspectBar and f_p72bOnInspectBar(inspectTimestamp)
+        f_p72bRenderHistoricalInspect("INSPECT CUSTOM")
+
+    p72bPrevLastAction := lastAction
+
+if barstate.isconfirmed
+    p72bPrevSt := p72bStAfter
+

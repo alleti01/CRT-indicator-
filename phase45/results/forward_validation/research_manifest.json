@@ -1,0 +1,80 @@
+{
+  "phase": "Phase 45 \u2014 NQ 15M Forward Paper Validation Framework",
+  "dataset_tag": "FORWARD_VALIDATION_ONLY",
+  "frozen_parameters_unchanged": true,
+  "parity_pass": "True",
+  "development_data_end": "2026-06-28 23:45:00-05:00",
+  "forward_validation_start": "2026-06-29 00:00:00-05:00",
+  "forward_bars_available": 0,
+  "forward_candidates": 0,
+  "accepted_signals": {
+    "N": 0
+  },
+  "rejected_signals": {
+    "N": 0
+  },
+  "benchmarks": {
+    "baseline": {
+      "N": 2788,
+      "AvgR": 0.35,
+      "PF": 1.79
+    },
+    "filtered": {
+      "N": 1750,
+      "AvgR": 0.566,
+      "PF": 2.44
+    },
+    "rejected": {
+      "N": 1038,
+      "AvgR": -0.015,
+      "PF": 0.97
+    }
+  },
+  "quality_ordering": "INSUFFICIENT DATA",
+  "current_checkpoint": 0,
+  "checkpoints": [
+    {
+      "checkpoint": 25,
+      "reached": false,
+      "N": 0
+    },
+    {
+      "checkpoint": 50,
+      "reached": false,
+      "N": 0
+    },
+    {
+      "checkpoint": 100,
+      "reached": false,
+      "N": 0
+    },
+    {
+      "checkpoint": 200,
+      "reached": false,
+      "N": 0
+    },
+    {
+      "checkpoint": 300,
+      "reached": false,
+      "N": 0
+    },
+    {
+      "checkpoint": 500,
+      "reached": false,
+      "N": 0
+    }
+  ],
+  "drift_warnings": "NONE",
+  "lookahead_audit": "PASS",
+  "ready_for_paper_validation": true,
+  "ready_for_live": false,
+  "references": {
+    "phase44": "/Users/anishalleti/CRT indicator/phase44/results/quality_filtered_pine",
+    "phase44b": "/Users/anishalleti/CRT indicator/phase44b/results/final_quality_validation"
+  },
+  "protections": [
+    "forward data never used for threshold recalibration",
+    "no parameter changes permitted during forward validation",
+    "rejected signals logged observation-only"
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "phase": "Strategy Research V2 \u2014 Session Liquidity Edge Discovery",
+  "classification": "B",
+  "data_range": {
+    "start": "2017-10-01 17:00:00-05:00",
+    "end": "2026-06-28 23:55:00-05:00",
+    "bars_5m": 615898
+  },
+  "eras": {
+    "era1": [
+      "2018-01-01",
+      "2020-11-30"
+    ],
+    "era2": [
+      "2021-01-01",
+      "2023-12-29"
+    ],
+    "era3": [
+      "2024-01-01",
+      "2026-06-26"
+    ]
+  },
+  "contaminated_windows": [
+    "2018-01-01 \u2192 2020-11-30 (CRT failed-OOS observed)",
+    "2021-01-01 \u2192 2023-12-29 (Phase 18 OOS observed)",
+    "2024-01-01 \u2192 2026-06-26 (CRT development observed)",
+    "2026-06-29 \u2192 2026-08-18 (parity observed)"
+  ],
+  "discovery_label": "DEVELOPMENT / DISCOVERY \u2014 no period treated as OOS",
+  "total_events": 149459,
+  "events_by_era": {
+    "era1": 49239,
+    "era2": 56424,
+    "era3": 43796
+  },
+  "levels_tested": [
+    "PDH",
+    "PDL",
+    "ONH",
+    "ONL",
+    "ORH",
+    "ORL",
+    "PRIOR_RTH_CLOSE",
+    "SESSION_OPEN"
+  ],
+  "event_types_tested": [
+    "APPROACH",
+    "TOUCH",
+    "SWEEP",
+    "BREAK",
+    "BREAK_HOLD",
+    "BREAK_FAILURE"
+  ],
+  "fdr_survivors_5pct": 138,
+  "replicated_edge_rows": 163,
+  "lookahead_audit": true
+}

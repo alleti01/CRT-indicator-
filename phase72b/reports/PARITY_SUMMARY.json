@@ -1,0 +1,45 @@
+{
+  "verdict": "MANUAL_PARITY_IN_PROGRESS",
+  "parity_mode": "MANUAL_CHART_PARITY",
+  "generated_at_utc": "2026-09-02T23:36:22.734775+00:00",
+  "window": "aug28_session",
+  "bar_range": [
+    3136391,
+    3136946
+  ],
+  "bars_processed": 555,
+  "runtime_sec": 21.33,
+  "pine_hash": "7c38c6dbcc811683",
+  "python_mirror_hash": "13c6f0ebf55e8936",
+  "event_counts": {
+    "signals_long": 5,
+    "signals_short": 8,
+    "entries_long": 5,
+    "entries_short": 8,
+    "exits_stop": 11,
+    "exits_target": 1,
+    "exits_time": 0
+  },
+  "parity": {
+    "signal_timestamp": null,
+    "entry_timestamp": null,
+    "entry_direction": null,
+    "entry_price": null,
+    "exit_reason": null,
+    "state_transition": null,
+    "note": "CSV export optional. Manual mode: use Pine Manual Parity table + trace_timestamp.py"
+  },
+  "prefix_invariance": {
+    "pass": true,
+    "skipped": true
+  },
+  "restart_test": {
+    "pass": null,
+    "skipped": true
+  },
+  "tv_reference": {
+    "status": "NO_TV_REFERENCE"
+  },
+  "ohlc_source": "phase58j LW NQ continuous 1M",
+  "ground_truth": "TradingView phase72a_autonomous_trader.pine (NOT python ghosts)"
+}

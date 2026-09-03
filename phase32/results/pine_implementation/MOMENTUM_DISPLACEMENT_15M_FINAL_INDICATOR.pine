@@ -1,0 +1,398 @@
+//@version=6
+// Momentum Displacement @ 15m — Phase 32 Indicator (Phase 32B visualization)
+// TRADING LOGIC UNCHANGED — visualization layer only below marked section.
+// Actionable LONG/SHORT markers ONLY on BOS_RETEST entry fills.
+
+indicator(
+     "Momentum Displacement 15M FINAL",
+     shorttitle = "MD_15M_IND",
+     overlay = true,
+     max_labels_count = 500,
+     max_lines_count = 500)
+
+bool is15m = timeframe.period == "15"
+bool tfOk = is15m
+
+const float FROZEN_BODY_MULT       = 1.5
+const int   FROZEN_BODY_AVG_LEN    = 20
+const float FROZEN_CL_LONG         = 0.80
+const float FROZEN_CL_SHORT        = 0.20
+const float FROZEN_BOS_RETEST_TOL  = 0.10
+const int   FROZEN_BOS_RETEST_WIN  = 2
+const float FROZEN_STOP_ATR        = 0.75
+const float FROZEN_TARGET_R        = 3.0
+const int   FROZEN_MAX_HOLD_BARS   = 4
+const int   FROZEN_ATR_LEN         = 14
+const string FROZEN_RTH            = "0930-1600"
+const int   FROZEN_DEDUPE_ACTIVE   = 6
+const int   FROZEN_DEDUPE_SAME_DIR = 4
+const int   FROZEN_DEDUPE_DAY_CAP  = 2
+
+const int ST_IDLE         = 0
+const int ST_WAIT_RETEST  = 1
+const int ST_TRADE_ACTIVE = 2
+
+string GRP_VIS = "Visualization"
+bool showTfWarn = input.bool(true, "Show 15m timeframe warning", group = GRP_VIS)
+bool showDebug = input.bool(false, "Show Debug Markers", group = GRP_VIS)
+bool showBosLevel = input.bool(false, "Show BOS Level", group = GRP_VIS)
+bool showStateBg = input.bool(false, "Show State Background", group = GRP_VIS)
+bool showHistoricalTradeLines = input.bool(true, "Show Historical Trade Lines", group = GRP_VIS)
+int histLineLimit = input.int(5, "Historical Trade Lines", minval = 0, maxval = 20, group = GRP_VIS)
+bool showLevels = input.bool(true, "Show Active Entry/Stop/Target Lines", group = GRP_VIS)
+bool showLevelLabels = input.bool(true, "Show Active Level Labels", group = GRP_VIS)
+bool showExitMarkers = input.bool(true, "Show Exit Markers", group = GRP_VIS)
+bool showDash = input.bool(true, "Show Debug Table", group = GRP_VIS)
+
+inRth(string sess) =>
+    int sh = int(str.tonumber(str.substring(sess, 0, 2)))
+    int sm = int(str.tonumber(str.substring(sess, 2, 4)))
+    int eh = int(str.tonumber(str.substring(sess, 5, 7)))
+    int em = int(str.tonumber(str.substring(sess, 7, 9)))
+    int startM = sh * 60 + sm
+    int endM = eh * 60 + em
+    int curM = hour * 60 + minute
+    startM <= endM ? curM >= startM and curM < endM : curM >= startM or curM < endM
+
+cmeDayKey() =>
+    str.format("{0,number,0000}-{1,number,00}-{2,number,00}", year, month, dayofmonth)
+
+stateName(int s) =>
+    s == ST_IDLE ? "IDLE" :
+     s == ST_WAIT_RETEST ? "WAIT_RETEST" :
+     s == ST_TRADE_ACTIVE ? "ACTIVE" : "?"
+
+dedupePass(int dir, int activeUntil, int lastLongBar, int lastShortBar, string dayKey, int dayCount) =>
+    bool sameDirOk = dir == 1 ? bar_index - lastLongBar >= FROZEN_DEDUPE_SAME_DIR : bar_index - lastShortBar >= FROZEN_DEDUPE_SAME_DIR
+    bool activeOk = bar_index > activeUntil
+    string dk = cmeDayKey()
+    bool dayOk = dk != dayKey ? true : dayCount < FROZEN_DEDUPE_DAY_CAP
+    activeOk and sameDirOk and dayOk
+
+tryRetestFill(int dir, float bosLevel, float dispTol) =>
+    bool filled = false
+    float fillPx = na
+    if dir == 1 and low <= bosLevel + dispTol
+        fillPx := math.min(bosLevel + dispTol, close)
+        filled := true
+    if dir == -1 and high >= bosLevel - dispTol
+        fillPx := math.max(bosLevel - dispTol, close)
+        filled := true
+    [filled, fillPx]
+
+float atrVal = ta.atr(FROZEN_ATR_LEN)
+float barBody = math.abs(close - open)
+float avgBody = ta.sma(barBody, FROZEN_BODY_AVG_LEN)
+float barRange = high - low
+float closeLoc = barRange > 0 ? (close - low) / barRange : na
+
+bool rthOk = inRth(FROZEN_RTH)
+bool bodyReady = bar_index >= FROZEN_BODY_AVG_LEN
+bool longDisp = tfOk and rthOk and bodyReady and not na(avgBody) and barBody > FROZEN_BODY_MULT * avgBody and closeLoc >= FROZEN_CL_LONG
+bool shortDisp = tfOk and rthOk and bodyReady and not na(avgBody) and barBody > FROZEN_BODY_MULT * avgBody and closeLoc <= FROZEN_CL_SHORT
+
+// ═══ TRADING STATE (frozen — do not alter) ═══
+var int   smState = ST_IDLE
+var int   smDir = 0
+var float smBosLevel = na
+var float smDispTol = na
+var int   smDispBar = na
+var int   smRetestDeadline = na
+var float smEntry = na
+var float smStop = na
+var float smTarget = na
+var int   smBarsHeld = 0
+var string smExitReason = ""
+
+var int ddActiveUntil = -1
+var int ddLastLongBar = -999
+var int ddLastShortBar = -999
+var string ddDayKey = ""
+var int ddDayCount = 0
+
+var bool entryFillEvt = false
+var bool stopHitEvt = false
+var bool targetHitEvt = false
+var bool timeExitEvt = false
+var int visExitDir = 0
+
+// ═══ VISUALIZATION STATE ONLY ═══
+var int smEntryBar = na
+var line lnEntry = na
+var line lnStop = na
+var line lnTarget = na
+var label lbEntry = na
+var label lbStop = na
+var label lbTarget = na
+var line lnBos = na
+var array<line> histEntryLines = array.new_line()
+var array<line> histStopLines = array.new_line()
+var array<line> histTargetLines = array.new_line()
+
+if barstate.isconfirmed and tfOk
+    entryFillEvt := false
+    stopHitEvt := false
+    targetHitEvt := false
+    timeExitEvt := false
+
+    string dk = cmeDayKey()
+    if dk != ddDayKey
+        ddDayKey := dk
+        ddDayCount := 0
+
+    if smState == ST_TRADE_ACTIVE
+        smBarsHeld += 1
+        bool hitStop = smDir == 1 ? low <= smStop : high >= smStop
+        bool hitTarget = smDir == 1 ? high >= smTarget : low <= smTarget
+        if hitStop
+            smExitReason := "STOP"
+            stopHitEvt := true
+            visExitDir := smDir
+            if showLevels and not na(lnEntry)
+                line.set_x2(lnEntry, bar_index)
+                line.set_x2(lnStop, bar_index)
+                line.set_x2(lnTarget, bar_index)
+                if showHistoricalTradeLines and histLineLimit > 0
+                    array.push(histEntryLines, lnEntry)
+                    array.push(histStopLines, lnStop)
+                    array.push(histTargetLines, lnTarget)
+                    while array.size(histEntryLines) > histLineLimit
+                        line.delete(array.shift(histEntryLines))
+                        line.delete(array.shift(histStopLines))
+                        line.delete(array.shift(histTargetLines))
+                else
+                    line.delete(lnEntry)
+                    line.delete(lnStop)
+                    line.delete(lnTarget)
+                if not na(lbEntry)
+                    label.delete(lbEntry)
+                if not na(lbStop)
+                    label.delete(lbStop)
+                if not na(lbTarget)
+                    label.delete(lbTarget)
+            lnEntry := na
+            lnStop := na
+            lnTarget := na
+            lbEntry := na
+            lbStop := na
+            lbTarget := na
+            smEntryBar := na
+            smState := ST_IDLE
+            smDir := 0
+        else if hitTarget
+            smExitReason := "TARGET"
+            targetHitEvt := true
+            visExitDir := smDir
+            if showLevels and not na(lnEntry)
+                line.set_x2(lnEntry, bar_index)
+                line.set_x2(lnStop, bar_index)
+                line.set_x2(lnTarget, bar_index)
+                if showHistoricalTradeLines and histLineLimit > 0
+                    array.push(histEntryLines, lnEntry)
+                    array.push(histStopLines, lnStop)
+                    array.push(histTargetLines, lnTarget)
+                    while array.size(histEntryLines) > histLineLimit
+                        line.delete(array.shift(histEntryLines))
+                        line.delete(array.shift(histStopLines))
+                        line.delete(array.shift(histTargetLines))
+                else
+                    line.delete(lnEntry)
+                    line.delete(lnStop)
+                    line.delete(lnTarget)
+                if not na(lbEntry)
+                    label.delete(lbEntry)
+                if not na(lbStop)
+                    label.delete(lbStop)
+                if not na(lbTarget)
+                    label.delete(lbTarget)
+            lnEntry := na
+            lnStop := na
+            lnTarget := na
+            lbEntry := na
+            lbStop := na
+            lbTarget := na
+            smEntryBar := na
+            smState := ST_IDLE
+            smDir := 0
+        else if smBarsHeld >= FROZEN_MAX_HOLD_BARS
+            smExitReason := "TIME"
+            timeExitEvt := true
+            visExitDir := smDir
+            if showLevels and not na(lnEntry)
+                line.set_x2(lnEntry, bar_index)
+                line.set_x2(lnStop, bar_index)
+                line.set_x2(lnTarget, bar_index)
+                if showHistoricalTradeLines and histLineLimit > 0
+                    array.push(histEntryLines, lnEntry)
+                    array.push(histStopLines, lnStop)
+                    array.push(histTargetLines, lnTarget)
+                    while array.size(histEntryLines) > histLineLimit
+                        line.delete(array.shift(histEntryLines))
+                        line.delete(array.shift(histStopLines))
+                        line.delete(array.shift(histTargetLines))
+                else
+                    line.delete(lnEntry)
+                    line.delete(lnStop)
+                    line.delete(lnTarget)
+                if not na(lbEntry)
+                    label.delete(lbEntry)
+                if not na(lbStop)
+                    label.delete(lbStop)
+                if not na(lbTarget)
+                    label.delete(lbTarget)
+            lnEntry := na
+            lnStop := na
+            lnTarget := na
+            lbEntry := na
+            lbStop := na
+            lbTarget := na
+            smEntryBar := na
+            smState := ST_IDLE
+            smDir := 0
+        else if showLevels and not na(lnEntry)
+            line.set_x2(lnEntry, bar_index)
+            line.set_x2(lnStop, bar_index)
+            line.set_x2(lnTarget, bar_index)
+            if showLevelLabels
+                if not na(lbEntry)
+                    label.set_x(lbEntry, bar_index)
+                    label.set_y(lbEntry, smEntry)
+                    label.set_text(lbEntry, "ENTRY " + str.tostring(smEntry, "#.##"))
+                if not na(lbStop)
+                    label.set_x(lbStop, bar_index)
+                    label.set_y(lbStop, smStop)
+                    label.set_text(lbStop, "STOP " + str.tostring(smStop, "#.##"))
+                if not na(lbTarget)
+                    label.set_x(lbTarget, bar_index)
+                    label.set_y(lbTarget, smTarget)
+                    label.set_text(lbTarget, "TARGET " + str.tostring(smTarget, "#.##"))
+
+    else if smState == ST_WAIT_RETEST
+        if bar_index > smRetestDeadline
+            smState := ST_IDLE
+            smDir := 0
+            if not na(lnBos)
+                line.delete(lnBos)
+                lnBos := na
+        else if bar_index > smDispBar
+            [filled, fillPx] = tryRetestFill(smDir, smBosLevel, smDispTol)
+            if filled
+                smEntry := fillPx
+                smBarsHeld := 0
+                smExitReason := ""
+                float risk = FROZEN_STOP_ATR * atrVal
+                smStop := smDir == 1 ? smEntry - risk : smEntry + risk
+                smTarget := smDir == 1 ? smEntry + FROZEN_TARGET_R * risk : smEntry - FROZEN_TARGET_R * risk
+                smState := ST_TRADE_ACTIVE
+                entryFillEvt := true
+                smEntryBar := bar_index
+                if not na(lnBos)
+                    line.delete(lnBos)
+                    lnBos := na
+                if showLevels
+                    lnEntry := line.new(smEntryBar, smEntry, bar_index, smEntry, color = color.new(color.blue, 0), width = 2)
+                    lnStop := line.new(smEntryBar, smStop, bar_index, smStop, color = color.new(color.red, 0), width = 2)
+                    lnTarget := line.new(smEntryBar, smTarget, bar_index, smTarget, color = color.new(color.lime, 0), width = 2)
+                    if showLevelLabels
+                        lbEntry := label.new(bar_index, smEntry, "ENTRY " + str.tostring(smEntry, "#.##"), style = label.style_label_left, color = color.new(color.blue, 70), textcolor = color.white, size = size.small)
+                        lbStop := label.new(bar_index, smStop, "STOP " + str.tostring(smStop, "#.##"), style = label.style_label_left, color = color.new(color.red, 70), textcolor = color.white, size = size.small)
+                        lbTarget := label.new(bar_index, smTarget, "TARGET " + str.tostring(smTarget, "#.##"), style = label.style_label_left, color = color.new(color.lime, 70), textcolor = color.white, size = size.small)
+
+    else if smState == ST_IDLE
+        if longDisp and dedupePass(1, ddActiveUntil, ddLastLongBar, ddLastShortBar, ddDayKey, ddDayCount)
+            smDir := 1
+            smBosLevel := high
+            smDispTol := FROZEN_BOS_RETEST_TOL * atrVal
+            smDispBar := bar_index
+            smRetestDeadline := bar_index + FROZEN_BOS_RETEST_WIN
+            smState := ST_WAIT_RETEST
+            ddActiveUntil := bar_index + FROZEN_DEDUPE_ACTIVE
+            ddLastLongBar := bar_index
+            string dkLong = cmeDayKey()
+            if dkLong != ddDayKey
+                ddDayKey := dkLong
+                ddDayCount := 1
+            else
+                ddDayCount += 1
+            if showBosLevel
+                if not na(lnBos)
+                    line.delete(lnBos)
+                lnBos := line.new(bar_index, smBosLevel, bar_index + FROZEN_BOS_RETEST_WIN, smBosLevel, color = color.new(color.orange, 50), style = line.style_dashed, width = 1)
+        else if shortDisp and dedupePass(-1, ddActiveUntil, ddLastLongBar, ddLastShortBar, ddDayKey, ddDayCount)
+            smDir := -1
+            smBosLevel := low
+            smDispTol := FROZEN_BOS_RETEST_TOL * atrVal
+            smDispBar := bar_index
+            smRetestDeadline := bar_index + FROZEN_BOS_RETEST_WIN
+            smState := ST_WAIT_RETEST
+            ddActiveUntil := bar_index + FROZEN_DEDUPE_ACTIVE
+            ddLastShortBar := bar_index
+            string dkShort = cmeDayKey()
+            if dkShort != ddDayKey
+                ddDayKey := dkShort
+                ddDayCount := 1
+            else
+                ddDayCount += 1
+            if showBosLevel
+                if not na(lnBos)
+                    line.delete(lnBos)
+                lnBos := line.new(bar_index, smBosLevel, bar_index + FROZEN_BOS_RETEST_WIN, smBosLevel, color = color.new(color.orange, 50), style = line.style_dashed, width = 1)
+
+// ═══ VISUALIZATION OUTPUTS (no plot() of non-price series) ═══
+bool dbgDispLong = showDebug and barstate.isconfirmed and tfOk and smState == ST_WAIT_RETEST and bar_index == smDispBar and smDir == 1
+bool dbgDispShort = showDebug and barstate.isconfirmed and tfOk and smState == ST_WAIT_RETEST and bar_index == smDispBar and smDir == -1
+plotshape(dbgDispLong, title = "DISPLACEMENT LONG", style = shape.circle, location = location.belowbar, color = color.new(color.teal, 40), size = size.tiny, text = "DISP")
+plotshape(dbgDispShort, title = "DISPLACEMENT SHORT", style = shape.circle, location = location.abovebar, color = color.new(color.orange, 40), size = size.tiny, text = "DISP")
+
+plotshape(entryFillEvt and smDir == 1, title = "LONG ENTRY", style = shape.triangleup, location = location.belowbar, color = color.lime, size = size.normal, text = "LONG")
+plotshape(entryFillEvt and smDir == -1, title = "SHORT ENTRY", style = shape.triangledown, location = location.abovebar, color = color.red, size = size.normal, text = "SHORT")
+
+if showExitMarkers and barstate.isconfirmed
+    if stopHitEvt
+        label.new(bar_index, visExitDir == 1 ? low : high, "SL", style = visExitDir == 1 ? label.style_label_up : label.style_label_down, color = color.new(color.red, 0), textcolor = color.white, size = size.tiny)
+    if targetHitEvt
+        label.new(bar_index, visExitDir == 1 ? high : low, "TP", style = visExitDir == 1 ? label.style_label_down : label.style_label_up, color = color.new(color.lime, 0), textcolor = color.white, size = size.tiny)
+    if timeExitEvt
+        label.new(bar_index, close, "TIME", style = label.style_label_left, color = color.new(color.gray, 30), textcolor = color.white, size = size.tiny)
+
+bgcolor(showStateBg and smState == ST_WAIT_RETEST ? color.new(color.blue, 92) : showStateBg and smState == ST_TRADE_ACTIVE ? color.new(color.purple, 94) : na, title = "State Background")
+
+alertcondition(entryFillEvt and smDir == 1, title = "LONG ENTRY", message = "MD15 LONG entry fill")
+alertcondition(entryFillEvt and smDir == -1, title = "SHORT ENTRY", message = "MD15 SHORT entry fill")
+alertcondition(stopHitEvt, title = "STOP HIT", message = "MD15 STOP hit")
+alertcondition(targetHitEvt, title = "TARGET HIT", message = "MD15 TARGET hit")
+alertcondition(timeExitEvt, title = "TIME EXIT", message = "MD15 TIME exit")
+
+if showTfWarn and not tfOk and barstate.islast
+    label.new(bar_index, high, "Use 15m chart", style = label.style_label_down, color = color.red, textcolor = color.white)
+
+var table dash = table.new(position.top_right, 2, 14, border_width = 1)
+if showDash and barstate.islast
+    table.cell(dash, 0, 0, "Architecture", text_color = color.silver)
+    table.cell(dash, 1, 0, "MOMENTUM_DISPLACEMENT", text_color = color.white)
+    table.cell(dash, 0, 1, "Timeframe", text_color = color.silver)
+    table.cell(dash, 1, 1, "15m", text_color = color.white)
+    table.cell(dash, 0, 2, "State", text_color = color.silver)
+    table.cell(dash, 1, 2, stateName(smState), text_color = color.white)
+    table.cell(dash, 0, 3, "Direction", text_color = color.silver)
+    table.cell(dash, 1, 3, smDir == 1 ? "LONG" : smDir == -1 ? "SHORT" : "—", text_color = color.white)
+    table.cell(dash, 0, 4, "Body", text_color = color.silver)
+    table.cell(dash, 1, 4, str.tostring(barBody, "#.##"), text_color = color.white)
+    table.cell(dash, 0, 5, "20-bar Avg Body", text_color = color.silver)
+    table.cell(dash, 1, 5, str.tostring(avgBody, "#.##"), text_color = color.white)
+    table.cell(dash, 0, 6, "Body Ratio", text_color = color.silver)
+    table.cell(dash, 1, 6, not na(avgBody) and avgBody > 0 ? str.tostring(barBody / avgBody, "#.##") : "—", text_color = color.white)
+    table.cell(dash, 0, 7, "Close Location", text_color = color.silver)
+    table.cell(dash, 1, 7, str.tostring(closeLoc, "#.##"), text_color = color.white)
+    table.cell(dash, 0, 8, "BOS Level", text_color = color.silver)
+    table.cell(dash, 1, 8, str.tostring(smBosLevel, "#.##"), text_color = color.white)
+    table.cell(dash, 0, 9, "Retest Tol", text_color = color.silver)
+    table.cell(dash, 1, 9, str.tostring(smDispTol, "#.##"), text_color = color.white)
+    table.cell(dash, 0, 10, "Entry", text_color = color.silver)
+    table.cell(dash, 1, 10, str.tostring(smEntry, "#.##"), text_color = color.white)
+    table.cell(dash, 0, 11, "Stop", text_color = color.silver)
+    table.cell(dash, 1, 11, str.tostring(smStop, "#.##"), text_color = color.white)
+    table.cell(dash, 0, 12, "Target", text_color = color.silver)
+    table.cell(dash, 1, 12, str.tostring(smTarget, "#.##"), text_color = color.white)
+    table.cell(dash, 0, 13, "Bars Held / Exit", text_color = color.silver)
+    table.cell(dash, 1, 13, str.format("{0} / {1}", smBarsHeld, smExitReason == "" ? "—" : smExitReason), text_color = color.white)

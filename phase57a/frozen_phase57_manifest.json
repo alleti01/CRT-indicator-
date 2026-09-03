@@ -1,0 +1,31 @@
+{
+  "phase": "Phase57A",
+  "purpose": "Adversarial audit of Phase57 Leg+Pullback/E0 edge",
+  "s54_model_hash": "bccf4277f3d44d13",
+  "phase57_config": {
+    "leg_min_distance_atr": 1.0,
+    "leg_swing": 5,
+    "leg_start_i": 100,
+    "pullback_min_depth_pct": 0.15,
+    "pullback_max_depth_pct": 1.0,
+    "pullback_max_bars": 60,
+    "sequence_max_reaction_bars": 5,
+    "stop_atr": 0.75,
+    "target_r": 2.5,
+    "max_hold_min": 60,
+    "cost_mult": 1.0
+  },
+  "entry_convention": "E0 = pullback deepest_i bar close",
+  "direction_rule": "same as Leg1 direction",
+  "htf_alignment": "Phase55 align_htf_to_1m convention",
+  "swing_method": "Phase52 precompute_swing_highs/lows with 5-bar confirmation lag",
+  "phase57_reported": {
+    "B3_LEG_PB_N": 76625,
+    "B3_LEG_PB_AvgR": 1.55,
+    "B3_LEG_PB_PF": 7.56,
+    "E0_AvgR": 1.55,
+    "E0_WinRate": 0.832,
+    "WF_OOS_AvgR": 1.66,
+    "WF_OOS_PF": 9.01
+  }
+}

@@ -1,0 +1,2 @@
+trade_id,entry_time,direction,entry_price,ATR,t_2p5_bar,partial_realized_R,runner_stop,runner_target,runner_exit,runner_exit_reason,weighted_final_R,M0_R,incremental_R
+P60-000094,2017-10-09 13:27:00-05:00,SHORT,6070.25,1.4107142857142858,7862,2.0,1.5,4.0,4.0,RUNNER_TARGET,2.8,2.5,0.2999999999999998

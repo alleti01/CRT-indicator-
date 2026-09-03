@@ -1,0 +1,9 @@
+{
+  "phase": "58B",
+  "version": "b1",
+  "frozen_before_evaluation": true,
+  "phase58b_config_hash": "321a158a0ce9a58e",
+  "phase58_v1_hash": "facad8ebfae648be",
+  "s54_model_hash": "bccf4277f3d44d13",
+  "architecture": "15M_context_5M_decision_1M_execution"
+}

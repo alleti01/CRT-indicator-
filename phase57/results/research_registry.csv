@@ -1,0 +1,2 @@
+config_id,timestamp,family,hypothesis,parameters,train_N,train_AvgR,train_PF,oos_N,oos_AvgR,oos_PF,oos_TotalR,oos_MaxDD,year_stability,frequency_per_day,entry_latency_bars,retention_pct,status,reason
+P57-21579a7d,2026-08-29T00:07:20.635057,LEG_PB,Leg1+pullback raw,"min_dist_atr=1.0,min_depth=0.15",48131,1.525828326182768,7.407577482878656,39632,1.6636234006276758,9.01314420387232,65932.72261367604,10.038167958166014,,,,,TESTED,

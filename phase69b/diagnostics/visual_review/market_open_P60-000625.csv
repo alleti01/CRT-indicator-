@@ -1,0 +1,2 @@
+trade_id,entry_time,direction,entry_price,ATR,t_2p5_bar,partial_realized_R,runner_stop,runner_target,runner_exit,runner_exit_reason,weighted_final_R,M0_R,incremental_R
+P60-000625,2017-11-27 08:41:00-06:00,LONG,6412.0,3.2142857142857144,54308,2.0,1.5,4.0,2.2555555555555555,RUNNER_TIMEOUT,2.451111111111111,2.5,-0.04888888888888898

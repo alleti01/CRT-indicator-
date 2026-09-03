@@ -1,0 +1,6 @@
+raw,utc,chicago,new_york,unix_ms,stage,bar_index,open,close
+2026-08-26 13:40:00-05:00,2026-08-26T18:40:00+00:00,2026-08-26 13:40:00-05:00,2026-08-26 14:40:00-04:00,1787769600000,signal_bar_T (Phase58/H1 decision bar),3134046,29292.0,29293.5
+2026-08-26 13:41:00-05:00,2026-08-26T18:41:00+00:00,2026-08-26 13:41:00-05:00,2026-08-26 14:41:00-04:00,1787769660000,entry_execution_bar_T+1,3134047,29293.25,29293.75
+OPP_03134046_LONG,,,,,opportunity_id,3134046,29293.25,
+signal on closed bar T (signal_i); entry next bar open T+1 (entry_i=signal_i+1); mgmt from entry_i+1; same-bar collision STOP FIRST,,,,,frozen_execution_convention,,,
+29293.25,,m1_op[3134047]=29293.25,,,entry_execution_price,3134047,29293.25,

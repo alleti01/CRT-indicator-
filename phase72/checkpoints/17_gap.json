@@ -1,0 +1,4 @@
+{
+  "policy": "STOP_FIRST at stop price; gap-through documented as backtest convention",
+  "pass": true
+}

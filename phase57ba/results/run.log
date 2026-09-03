@@ -1,0 +1,56 @@
+S54 hash OK: bccf4277f3d44d13
+Loading markets...
+  m1: 3075087 bars
+
+=== REPRODUCING POPULATIONS ===
+  Legs: 188266, Pullbacks: 76625
+  Phase57A causal: N=76621 AvgR=0.0989 PF=1.125
+  Phase57B causal: N=186843 AvgR=-0.3664 PF=0.626
+
+=== POPULATION ACCOUNTING ===
+  Phase57A starts from PULLBACKS (pbs): 76625 → ~76621 entries
+  Phase57B starts from LEGS (legs): 188266 → ~186843 entries
+  Legs with qualifying pullback: 76625
+  Legs without qualifying pullback: 111641
+  Phase57A unique legs: 76621
+  Phase57B unique legs: 186843
+  Shared legs: 76598
+  57A-only legs: 23
+  57B-only legs: 110245
+  Phase57B events/leg: mean=1.00 median=1 max=1
+  Phase57A events/leg: mean=1.00 median=1 max=1
+
+=== CRITICAL: PHASE57A POPULATION CAUSALITY ===
+  Pullbacks where first bar qualifies: 70060/76625 (91.4%)
+  Pullbacks requiring FUTURE bars to qualify: 6565/76625 (8.6%)
+
+  Phase57A entries from causally-qualified pullbacks: 70057/76621 (91.4%)
+  Phase57A entries from FUTURE-DEPENDENT pullbacks: 6564/76621 (8.6%)
+  Causally-qualified subset: N=70057 AvgR=0.1245 PF=1.160
+  Future-dependent subset: N=6564 AvgR=-0.1741 PF=0.810
+
+=== POPULATION MATCHING ===
+  Matched legs: 76598
+  Matched 57A execution: N=76598 AvgR=0.0992 PF=1.125
+  Matched 57B first-turn: N=76598 AvgR=0.0596 PF=1.074
+  Entry timing delta (B-A): mean=0.1 median=0
+  57A-only: N=23 AvgR=-0.8532 PF=0.300
+  57B-only: N=110245 AvgR=-0.6624 PF=0.396
+
+=== DUPLICATION AUDIT ===
+events_per_leg  leg_count
+             1     186843
+             2          0
+             3          0
+            4+          0
+
+=== EXPECTANCY WATERFALL ===
+  Phase57A causal next-bar (reported): N=76621 AvgR=1.0300
+  Phase57A reproduced: N=76621 AvgR=0.0989
+  57A causally-qualified only: N=70057 AvgR=0.1245
+  57A future-dependent only: N=6564 AvgR=-0.1741
+  Matched legs (57A exec): N=76598 AvgR=0.0992
+  Matched legs (57B first-turn exec): N=76598 AvgR=0.0596
+  Phase57B raw: N=186843 AvgR=-0.3664
+
+Phase57B-A complete in 1.1 min

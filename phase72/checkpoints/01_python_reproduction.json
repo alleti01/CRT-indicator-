@@ -1,0 +1,12 @@
+{
+  "m0_AvgR": 0.01599203459208266,
+  "m0_TotalR": 578.4958593339982,
+  "t5_inc_AvgR": 0.0010690893935474434,
+  "t5_exits": 775,
+  "one_position_N": 35902,
+  "skipped": 272,
+  "one_position_AvgR": 0.01687465228217089,
+  "one_position_TotalR": 605.8337662344993,
+  "pass_m0": true,
+  "pass_1p": true
+}

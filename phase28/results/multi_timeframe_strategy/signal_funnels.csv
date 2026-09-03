@@ -1,0 +1,21 @@
+strategy,timeframe_minutes,setup_signals,confirm_attempts,confirm_accepted,completed_trades,qualified_setups,reached_later_bos,reached_retest,reached_confirmation,reached_entry,same_bar_setup_bos,same_bar_bos_retest,same_bar_retest_confirm,median_bars_setup_to_bos,median_bars_bos_to_retest,median_bars_retest_to_confirm,invalidations
+CONTROL,5,16348.0,2375.0,2347.0,9020,,,,,,,,,,,,
+RETEST_GATED,5,16348.0,2375.0,2347.0,2347,,,,,,,,,,,,
+BOS_ONLY,5,16348.0,2375.0,2347.0,6238,,,,,,,,,,,,
+SEQUENTIAL_BOS,5,,,,113,9923.0,347.0,178.0,113.0,113.0,6468.0,0.0,0.0,3.0,1.0,1.0,"{'same_bar_setup_bos': 6468, 'opposite_bos_before_retest': 1768, 'setup_bos_expiry': 1340, 'confirm_failed_or_expiry': 65, 'bos_retest_expiry': 52, 'retest_structure_failed': 117}"
+CRT_V2_B_LEGACY_EXP6,5,,,,614,0.0,1650.0,930.0,619.0,619.0,332.0,0.0,0.0,3.0,1.0,1.0,"{'same_bar_setup_bos': 332, 'opposite_bos_before_retest': 727, 'retest_structure_failed': 492, 'setup_bos_expiry': 1949, 'confirm_failed_or_expiry': 311, 'bos_retest_expiry': 228}"
+CONTROL,15,5445.0,759.0,757.0,3271,,,,,,,,,,,,
+RETEST_GATED,15,5445.0,759.0,757.0,757,,,,,,,,,,,,
+BOS_ONLY,15,5445.0,759.0,757.0,2070,,,,,,,,,,,,
+SEQUENTIAL_BOS,15,,,,47,3297.0,154.0,77.0,47.0,47.0,2035.0,0.0,0.0,2.0,1.0,1.0,"{'same_bar_setup_bos': 2035, 'setup_bos_expiry': 480, 'opposite_bos_before_retest': 628, 'bos_retest_expiry': 27, 'confirm_failed_or_expiry': 30, 'retest_structure_failed': 50}"
+CRT_V2_B_LEGACY_EXP6,15,,,,210,0.0,521.0,298.0,210.0,210.0,117.0,0.0,0.0,3.0,1.0,1.0,"{'setup_bos_expiry': 652, 'retest_structure_failed': 152, 'bos_retest_expiry': 71, 'same_bar_setup_bos': 117, 'confirm_failed_or_expiry': 88, 'opposite_bos_before_retest': 239}"
+CONTROL,30,2945.0,372.0,372.0,1752,,,,,,,,,,,,
+RETEST_GATED,30,2945.0,372.0,372.0,372,,,,,,,,,,,,
+BOS_ONLY,30,2945.0,372.0,372.0,1058,,,,,,,,,,,,
+SEQUENTIAL_BOS,30,,,,33,1736.0,100.0,50.0,33.0,33.0,1015.0,0.0,0.0,2.0,1.0,1.0,"{'same_bar_setup_bos': 1015, 'setup_bos_expiry': 267, 'bos_retest_expiry': 15, 'opposite_bos_before_retest': 354, 'retest_structure_failed': 35, 'confirm_failed_or_expiry': 17}"
+CRT_V2_B_LEGACY_EXP6,30,,,,99,0.0,251.0,138.0,99.0,99.0,63.0,0.0,0.0,3.0,1.0,1.0,"{'setup_bos_expiry': 355, 'opposite_bos_before_retest': 118, 'same_bar_setup_bos': 63, 'confirm_failed_or_expiry': 39, 'retest_structure_failed': 73, 'bos_retest_expiry': 40}"
+CONTROL,60,1430.0,176.0,176.0,761,,,,,,,,,,,,
+RETEST_GATED,60,1430.0,176.0,176.0,176,,,,,,,,,,,,
+BOS_ONLY,60,1430.0,176.0,176.0,504,,,,,,,,,,,,
+SEQUENTIAL_BOS,60,,,,10,737.0,29.0,17.0,10.0,10.0,490.0,0.0,0.0,2.0,1.0,1.5,"{'setup_bos_expiry': 93, 'same_bar_setup_bos': 490, 'opposite_bos_before_retest': 125, 'bos_retest_expiry': 5, 'retest_structure_failed': 7, 'confirm_failed_or_expiry': 7}"
+CRT_V2_B_LEGACY_EXP6,60,,,,52,0.0,141.0,79.0,52.0,52.0,40.0,0.0,0.0,3.0,1.0,1.0,"{'setup_bos_expiry': 156, 'retest_structure_failed': 34, 'opposite_bos_before_retest': 57, 'bos_retest_expiry': 28, 'same_bar_setup_bos': 40, 'confirm_failed_or_expiry': 27}"

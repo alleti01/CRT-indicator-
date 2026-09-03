@@ -1,0 +1,2 @@
+finding_id,severity,category,description,affected_trades,performance_impact,causality_impact,executability_impact,requires_fix,status
+F57A-0001,CRITICAL,CAUSALITY,E0 at pullback deepest_i is retrospective. 97.0% of pullbacks have scan window extending past deepest_i. The deepest point is only knowable after future bars confirm price didn't go deeper.,76625,Inflates AvgR by entering at pullback extreme,E0 uses future price,,False,CONFIRMED

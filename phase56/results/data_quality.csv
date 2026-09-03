@@ -1,0 +1,2 @@
+forward_bars,duplicate_bars,gaps_over_1m,first_bar,last_bar,timezone,m5_aligned_null_pct,m15_aligned_null_pct,status
+523942,0,519,2025-01-01 17:00:00-06:00,2026-06-26 00:00:00-05:00,America/Chicago,0.0,0.0,PASS

@@ -1,0 +1,64 @@
+//@version=5
+indicator("Phase58F Confidence Audit", overlay=true, max_labels_count=150)
+
+// Diagnostic overlay — KEEP / ABSTAIN on frozen Phase58D direction (no flip)
+
+showKeep = input.bool(false, "Show KEEP markers")
+showAbstain = input.bool(true, "Show ABSTAIN markers")
+showLowConf = input.bool(true, "Show LOW/VERY_LOW labels")
+showDebugTable = input.bool(true, "Show debug table")
+
+structGap = input.int(30, "Structural gap")
+
+// HTF active move
+m15 = request.security(syminfo.tickerid, "15", close, barmerge.gaps_off, barmerge.lookahead_off)
+m5 = request.security(syminfo.tickerid, "5", close, barmerge.gaps_off, barmerge.lookahead_off)
+p15 = m15 - m15[4]
+p5 = m5 - m5[5]
+p1 = close - close[8]
+atr1 = ta.atr(14)
+
+active15 = p15 > atr1 ? "BULLISH" : p15 < -atr1 ? "BEARISH" : "NEUTRAL"
+active5 = p5 > atr1 * 0.5 ? "UP" : p5 < -atr1 * 0.5 ? "DOWN" : "NEUTRAL"
+domActive = active15 != "NEUTRAL" ? active15 : active5
+
+// 1M proxy detection
+body = math.abs(close - open)
+longCand = close > open and body > atr1 * 0.3 and low <= ta.lowest(low, 20) + atr1 * 0.5
+shortCand = close < open and body > atr1 * 0.3 and high >= ta.highest(high, 20) - atr1 * 0.5
+
+var string origDir = na
+var int activeStart = na
+
+if longCand or shortCand
+    dir = longCand ? "LONG" : "SHORT"
+    isNew = na(origDir) or dir != origDir or (bar_index - activeStart) > structGap
+    if isNew
+        origDir := dir
+        activeStart := bar_index
+
+        conf = 0
+        if dir == "LONG"
+            conf += domActive == "BULLISH" ? 2 : domActive == "BEARISH" ? -2 : 0
+        else
+            conf += domActive == "BEARISH" ? 2 : domActive == "BULLISH" ? -2 : 0
+
+        band = conf >= 4 ? "VERY_HIGH" : conf >= 2 ? "HIGH" : conf >= 0 ? "MEDIUM" : conf >= -2 ? "LOW" : "VERY_LOW"
+        falseRev = (dir == "SHORT" and domActive == "BULLISH") or (dir == "LONG" and domActive == "BEARISH")
+        abstain = band == "VERY_LOW" or (band == "LOW" and falseRev)
+
+        if showKeep and not abstain
+            plotshape(true, title="Keep", location=dir == "LONG" ? location.belowbar : location.abovebar, style=shape.triangleup, color=color.green, size=size.tiny)
+        if showAbstain and abstain
+            label.new(bar_index, close, "X", style=label.style_label_center, color=color.red, textcolor=color.white, size=size.small)
+        if showLowConf and (band == "LOW" or band == "VERY_LOW")
+            label.new(bar_index, high, band, style=label.style_label_down, color=color.orange, textcolor=color.black, size=size.tiny)
+
+var table dbg = table.new(position.bottom_right, 2, 8, bgcolor=color.new(color.black, 80))
+if barstate.islast and showDebugTable
+    table.cell(dbg, 0, 0, "15M", text_color=color.gray)
+    table.cell(dbg, 1, 0, active15, text_color=color.white)
+    table.cell(dbg, 0, 1, "DOM", text_color=color.gray)
+    table.cell(dbg, 1, 1, domActive, text_color=color.white)
+    table.cell(dbg, 0, 2, "ORIG DIR", text_color=color.gray)
+    table.cell(dbg, 1, 2, na(origDir) ? "-" : origDir, text_color=color.white)

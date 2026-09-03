@@ -16,3 +16,12 @@ __pycache__/
 node_modules/
 .DS_Store
 
+# Generated datasets exceeding GitHub 100MB file limit (keep locally)
+phase20/results/session_liquidity_edge/session_liquidity_events.csv
+phase21/results/volatility_state_edge/volatility_state_events.csv
+phase23/results/directional_displacement_edge/displacement_events.csv
+phase26/results/high_expectancy_entry/entry_path_dataset.csv
+phase27/data/raw/nq_trades_pilot_202401.csv
+phase27/data/raw/nq_trades_pilot_202401.csv.parts/
+phase53/results/opportunity_discovery/event_dataset.parquet
+

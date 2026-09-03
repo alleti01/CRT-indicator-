@@ -1,0 +1,42 @@
+{
+  "freeze_id": "PHASE72A_PINE_SIGNAL_AUTHORITY",
+  "filename": "TV_REVIEW/phase72a_autonomous_trader.pine",
+  "sha256": "d75ff747a491c176eda588efc945822b8bd4a6aeaaeaf1d2bdea2b7a8e32cc1f",
+  "line_count": 1837,
+  "pine_version": 6,
+  "indicator_name": "Phase72A Autonomous Trader",
+  "freeze_timestamp_utc": "2026-09-03T03:00:00Z",
+  "phase72b_verdict": "PHASE72B_MANUAL_PARITY_LIMIT_REACHED",
+  "production_rule": "Pine = SIGNAL AUTHORITY; Python = EXECUTION/MANAGEMENT AUTHORITY",
+  "layer_a_frozen": true,
+  "symbol_assumptions": {
+    "primary": "NQ",
+    "continuous": "NQ continuous 1m",
+    "notes": "Webhook symbol must match configured production symbol"
+  },
+  "timeframe_assumptions": {
+    "signal_timeframe": "1m",
+    "bar_confirmation": "barstate.isconfirmed on 1-minute bars"
+  },
+  "signal_events": [
+    "SIGNAL_LONG",
+    "SIGNAL_SHORT"
+  ],
+  "informational_events_optional": [
+    "EXIT_STOP",
+    "EXIT_TARGET",
+    "ENTER_LONG",
+    "ENTER_SHORT"
+  ],
+  "entry_timing_semantics": {
+    "signal_bar": "Confirmed 1m bar close when Pine fires SIGNAL_*",
+    "entry_bar": "Next bar open (pendingTake finalized on entry bar close in Pine)",
+    "python_role": "Python does NOT regenerate signals; receives webhook and decides executable entry on live/replay data"
+  },
+  "management_benchmark_m0": {
+    "stop_atr": 1.0,
+    "target_r": 2.5,
+    "max_hold_minutes": 60,
+    "same_bar_collision": "STOP_FIRST"
+  }
+}

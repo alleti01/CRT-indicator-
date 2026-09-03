@@ -1,0 +1,2 @@
+trade_id,entry_time,direction,entry_price,ATR,t_2p5_bar,partial_realized_R,runner_stop,runner_target,runner_exit,runner_exit_reason,weighted_final_R,M0_R,incremental_R
+P60-000302,2017-10-30 08:33:00-05:00,LONG,6215.0,2.232142857142857,27651,2.0,1.5,4.0,1.5,RUNNER_PROTECTION,2.3,2.5,-0.20000000000000018

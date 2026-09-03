@@ -1,0 +1,21 @@
+{
+  "version": "h1",
+  "frozen_before_evaluation": true,
+  "phase58_v1_hash": "facad8ebfae648be",
+  "phase58d_config_hash": "3c25fbacad3fff92",
+  "phase58e_config_hash": "c261cd7db3f6dd53",
+  "phase58f_config_hash": "956f66036a568820",
+  "phase58g_config_hash": "b72a62c47f58d9e5",
+  "s54_model_hash": "bccf4277f3d44d13",
+  "location_good_threshold": 2,
+  "train_end_frac": 0.6,
+  "valid_end_frac": 0.8,
+  "meaningful_move_col": "meaningful_1.0atr_60m",
+  "p4_expected": {
+    "trades": 61874,
+    "abstained": 79,
+    "total_r": 10998.92,
+    "winners_retained_pct": 99.93,
+    "selectivity_ratio": 2.09
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "phase": "Phase 25 \u2014 BOS Trade Architecture Optimization",
+  "baseline_gross": {
+    "N": 4150,
+    "win_rate": 0.4166265060240964,
+    "AvgR": 0.011623717491827768,
+    "TotalR": 48.23842759108524,
+    "PF": 1.022485780745393,
+    "MaxDD": 57.86573603464265
+  },
+  "baseline_net_1x_costs": {
+    "N": 4150,
+    "AvgR": -0.028555226956691448,
+    "TotalR": -118.50419187026951,
+    "PF": 0.9471863091283165
+  },
+  "walk_forward_gross": {
+    "N": 1987,
+    "win_rate": 0.3804730749874182,
+    "AvgR": 0.032857420273651995,
+    "TotalR": 65.28769408374652,
+    "PF": 1.0579586670620897,
+    "MaxDD": 52.13029015511266
+  },
+  "walk_forward_net_1x_costs": {
+    "N": 1987,
+    "AvgR": -0.0187837577429852,
+    "TotalR": -37.32332663531159,
+    "PF": 0.9686479525508672
+  },
+  "monte_carlo_gross_wf": {
+    "P_terminal_R_gt_0": 0.8529,
+    "median_terminal_R": 65.21,
+    "p5_terminal_R": -36.2,
+    "p95_terminal_R": 168.2
+  },
+  "success_pass_count": 3,
+  "final_classification": "D"
+}

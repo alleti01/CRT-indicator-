@@ -1,0 +1,17 @@
+{
+  "model_version": "phase49_frozen_v1",
+  "phase44_version": "phase44_quality_filtered_pine",
+  "phase45_version": "phase45_b1_wf_stitched",
+  "m0_version": "phase45_simulate_1m",
+  "b1_rule": "B1",
+  "b1_window_min": 10,
+  "git_commit": "defa0fa2a7ad501c66d2d9786bed0d2bfd47b9f9",
+  "file_hashes": {
+    "phase45/execution/confirm.py": "803bd75498e253bb",
+    "phase45/execution/simulate.py": "ea97da0c3f14a324",
+    "phase45/execution/config.py": "52f9d972103ac44f",
+    "phase45/frozen.py": "bb7760f85a953e01",
+    "phase48/simulate_mgmt.py": "c60bfa0da1eac693",
+    "phase49/config.py": "3513d94ba3f5d68e"
+  }
+}

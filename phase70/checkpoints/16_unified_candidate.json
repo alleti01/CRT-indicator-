@@ -1,0 +1,23 @@
+{
+  "entry_defense": null,
+  "time_rule": "T5",
+  "time_rule_spec": "after 15m if MFE < +1R \u2192 exit at market",
+  "failure_rule": null,
+  "reversal_rule": null,
+  "metrics": {
+    "N": 36174,
+    "AvgR": 0.017111137540534962,
+    "PF": 1.024545503014362,
+    "TotalR": 618.9782893913117,
+    "WinRate": 0.2975064963786145,
+    "MaxDD": 170.40348586066634,
+    "avg_winner": 2.4007212883753506,
+    "avg_loser": -0.9923494497129,
+    "incremental_AvgR": 0.001119102948452303,
+    "killed_winners": 0.006800464421960524,
+    "saved_stops": 0.013987947144357827,
+    "early_exit_pct": 0.02355282799800962,
+    "train_inc": 4.5796824042633466e-05,
+    "val_inc": 0.003935529698238953
+  }
+}

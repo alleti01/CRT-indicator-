@@ -1,0 +1,108 @@
+{
+  "phase": "Phase 37 \u2014 NQ 15M Concurrent Reversal State-Machine Parity",
+  "data_start": "2017-10-01 17:00:00-05:00",
+  "data_end": "2026-06-28 23:45:00-05:00",
+  "phase31_ls_parity": {
+    "matched": 3911,
+    "total_p36": 3911,
+    "total_p37": 3911,
+    "missing_in_p37": 0,
+    "extra_in_p37": 0,
+    "match_pct": 1.0
+  },
+  "original_phase33_RL": 976,
+  "original_phase33_RS": 925,
+  "phase36_RL": 677,
+  "phase36_RS": 622,
+  "phase37_RL": 976,
+  "phase37_RS": 925,
+  "match_rate_vs_batch": 1.0,
+  "parity_summary": {
+    "batch_RL_matched": 976,
+    "batch_RS_matched": 925,
+    "missing": 0,
+    "extra": 0,
+    "wrong_entry_price": 0
+  },
+  "performance": {
+    "ORIGINAL_PHASE33_BATCH": {
+      "N": 1901,
+      "WinRate": 0.5207785376117833,
+      "AvgR": 0.2401543684389479,
+      "TotalR": 456.53345440244,
+      "PF": 1.5876136381299126,
+      "MaxDD": 21.073909327248657,
+      "ReturnMaxDD": 21.663443991957404,
+      "implementation": "ORIGINAL_PHASE33_BATCH",
+      "signals_day": 0.8441385435168739,
+      "RL": 976,
+      "RS": 925
+    },
+    "PHASE36_SINGLE_TRACKER": {
+      "N": 1299,
+      "WinRate": 0.5073133179368745,
+      "AvgR": 0.21839027824850174,
+      "TotalR": 283.68897144480377,
+      "PF": 1.5179870636264197,
+      "MaxDD": 16.440293388692822,
+      "ReturnMaxDD": 17.255712214960663,
+      "implementation": "PHASE36_SINGLE_TRACKER",
+      "signals_day": 0.5768206039076377,
+      "RL": 677,
+      "RS": 622
+    },
+    "PHASE37_CONCURRENT": {
+      "N": 1901,
+      "WinRate": 0.5207785376117833,
+      "AvgR": 0.24015436843894927,
+      "TotalR": 456.53345440244254,
+      "PF": 1.5876136381299153,
+      "MaxDD": 21.073909327248856,
+      "ReturnMaxDD": 21.66344399195732,
+      "implementation": "PHASE37_CONCURRENT",
+      "signals_day": 0.8441385435168739,
+      "RL": 976,
+      "RS": 925
+    }
+  },
+  "restored": [
+    {
+      "segment": "COMMON",
+      "N": 1217,
+      "WinRate": 0.5036976170912079,
+      "AvgR": 0.21256101727793877,
+      "TotalR": 258.68675802725147,
+      "PF": 1.500644545839797,
+      "MaxDD": 18.896763993804555,
+      "ReturnMaxDD": 13.689473928555378
+    },
+    {
+      "segment": "RESTORED",
+      "N": 684,
+      "WinRate": 0.5511695906432749,
+      "AvgR": 0.28924955610408065,
+      "TotalR": 197.84669637519116,
+      "PF": 1.760304009831109,
+      "MaxDD": 9.512372448629975,
+      "ReturnMaxDD": 20.79888034700388
+    },
+    {
+      "segment": "SINGLE_ONLY",
+      "N": 0,
+      "WinRate": 0.0,
+      "AvgR": 0.0,
+      "TotalR": 0.0,
+      "PF": 0.0,
+      "MaxDD": 0.0,
+      "ReturnMaxDD": 0.0
+    }
+  ],
+  "concurrency": {
+    "max_concurrent": 5,
+    "median_concurrent": 1.0,
+    "p99_concurrent": 3.0,
+    "mean_concurrent": 1.1434225601499843
+  },
+  "lookahead_audit": "PASS",
+  "deterministic": "PASS"
+}

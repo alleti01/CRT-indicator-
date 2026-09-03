@@ -1,0 +1,2 @@
+name,description,bull_conditions,bear_conditions
+EXTENSION_REJECTION_RECLAIM,6-bar extension + rejection wick + reclaim/micro-structure + EMA20 stretch (walk-forward thresholds),"['ret_6_atr <= train_q75', 'lower_wick >= train_q25', 'close_loc >= 0.52', 'reclaim_or_higher_low', 'dist_ema20 <= train_q70']","['ret_6_atr >= train_q25', 'upper_wick >= train_q25', 'close_loc <= 0.48', 'lower_high_or_fail_reclaim', 'dist_ema20 >= train_q30']"

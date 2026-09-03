@@ -1,0 +1,4 @@
+{
+  "schema": "version,trader_hash,timestamp,instrument,action,direction,entry,stop,target,reason,state,signal_id",
+  "activated": false
+}

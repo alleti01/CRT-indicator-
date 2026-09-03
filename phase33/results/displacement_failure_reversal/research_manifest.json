@@ -1,0 +1,178 @@
+{
+  "phase": "Phase 33 \u2014 NQ 15M Displacement Failure / Reversal Entry Discovery",
+  "architecture": "DISPLACEMENT_FAILURE_REVERSAL",
+  "total_displacements": 8118,
+  "failure_events": 32245,
+  "failure_rate": 0.0001231830500123183,
+  "continuation_rate": 0.9982754372998276,
+  "unresolved_rate": 0.0016013796501600508,
+  "best_failure_definition": "A_MID_4",
+  "best_entry_model": "RECLAIM_RETEST",
+  "walk_forward": {
+    "N": 1031,
+    "WinRate": 0.49369544131910764,
+    "AvgR": 0.18453213951923567,
+    "TotalR": 190.25263584433196,
+    "PF": 1.4617874845283987,
+    "MaxDD": 21.241304668167487,
+    "ReturnMaxDD": 8.956730239336343
+  },
+  "trades_day": 0.4396709323583181,
+  "phase31_benchmark": {
+    "N": 2873,
+    "AvgR": 0.233,
+    "PF": 1.47,
+    "MaxDD": 15.1,
+    "trades_day": 1.22
+  },
+  "combined_best_policy": "INDEPENDENT",
+  "failure_strength_monotonicity": "NO",
+  "success_checks": [
+    [
+      "N>=500",
+      true
+    ],
+    [
+      "Net AvgR>=0.15",
+      true
+    ],
+    [
+      "Net PF>=1.30",
+      true
+    ],
+    [
+      "Net TotalR>0",
+      true
+    ],
+    [
+      "2024-2026 positive",
+      true
+    ],
+    [
+      "1.5x cost positive",
+      true
+    ],
+    [
+      "2.0x cost positive",
+      true
+    ],
+    [
+      "ex-top1% positive",
+      true
+    ],
+    [
+      "MC P>0 >= 95%",
+      true
+    ],
+    [
+      "failure strength monotonic",
+      false
+    ]
+  ],
+  "checks_passed": 9,
+  "classification": "B",
+  "ready_for_pine": true,
+  "monte_carlo": {
+    "P_terminal_R_gt_0": 1.0,
+    "p5_terminal_R": 127.07079950076493,
+    "median_terminal_R": 190.3297652742797,
+    "p95_terminal_R": 252.37995432397898,
+    "median_MaxDD": 14.062134013101527,
+    "p95_MaxDD": 22.595720296892225,
+    "median_losing_streak": 9.0,
+    "p95_losing_streak": 13.0
+  },
+  "selections": [
+    {
+      "failure_definition": "E_OPEN_BOS",
+      "entry_model": "RECLAIM_RETEST",
+      "stop_atr": 1.0,
+      "target_r": 2.0,
+      "hold_minutes": 60,
+      "management": "FIXED",
+      "max_bars": 4,
+      "train_signals": 247,
+      "test_signals": 130,
+      "architecture": "DISPLACEMENT_FAILURE_REVERSAL",
+      "test_end": "2020-12-31"
+    },
+    {
+      "failure_definition": "B_OPEN_4",
+      "entry_model": "RECLAIM_RETEST",
+      "stop_atr": 0.75,
+      "target_r": 2.5,
+      "hold_minutes": 45,
+      "management": "FIXED",
+      "max_bars": 3,
+      "train_signals": 595,
+      "test_signals": 197,
+      "architecture": "DISPLACEMENT_FAILURE_REVERSAL",
+      "test_end": "2021-12-31"
+    },
+    {
+      "failure_definition": "D_OPP_BOS",
+      "entry_model": "RECLAIM_RETEST",
+      "stop_atr": 0.75,
+      "target_r": 2.5,
+      "hold_minutes": 45,
+      "management": "FIXED",
+      "max_bars": 3,
+      "train_signals": 931,
+      "test_signals": 221,
+      "architecture": "DISPLACEMENT_FAILURE_REVERSAL",
+      "test_end": "2022-12-31"
+    },
+    {
+      "failure_definition": "D_OPP_BOS",
+      "entry_model": "RECLAIM_RETEST",
+      "stop_atr": 0.75,
+      "target_r": 2.5,
+      "hold_minutes": 45,
+      "management": "FIXED",
+      "max_bars": 3,
+      "train_signals": 1152,
+      "test_signals": 232,
+      "architecture": "DISPLACEMENT_FAILURE_REVERSAL",
+      "test_end": "2023-12-31"
+    },
+    {
+      "failure_definition": "A_MID_4",
+      "entry_model": "RECLAIM_RETEST",
+      "stop_atr": 0.75,
+      "target_r": 2.5,
+      "hold_minutes": 45,
+      "management": "FIXED",
+      "max_bars": 3,
+      "train_signals": 1772,
+      "test_signals": 301,
+      "architecture": "DISPLACEMENT_FAILURE_REVERSAL",
+      "test_end": "2024-12-31"
+    },
+    {
+      "failure_definition": "A_MID_4",
+      "entry_model": "RECLAIM_RETEST",
+      "stop_atr": 0.75,
+      "target_r": 2.5,
+      "hold_minutes": 45,
+      "management": "FIXED",
+      "max_bars": 3,
+      "train_signals": 2073,
+      "test_signals": 275,
+      "architecture": "DISPLACEMENT_FAILURE_REVERSAL",
+      "test_end": "2025-12-31"
+    },
+    {
+      "failure_definition": "A_MID_4",
+      "entry_model": "RECLAIM_RETEST",
+      "stop_atr": 0.75,
+      "target_r": 2.5,
+      "hold_minutes": 45,
+      "management": "FIXED",
+      "max_bars": 3,
+      "train_signals": 2350,
+      "test_signals": 136,
+      "architecture": "DISPLACEMENT_FAILURE_REVERSAL",
+      "test_end": "2026-06-26"
+    }
+  ]
+}

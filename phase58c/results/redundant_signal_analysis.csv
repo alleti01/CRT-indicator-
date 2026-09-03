@@ -1,0 +1,2 @@
+total_1m_trades,total_opportunity_clusters,mean_signals_per_opportunity,median_signals_per_opportunity,p90_signals_per_opportunity,max_signals_per_opportunity,redundant_signals,redundant_signal_pct,redundant_signal_ratio
+223162,87809,2.541447915361751,2.0,5.0,21,135353,60.652351206746665,2.541447915361751

@@ -1,0 +1,7 @@
+metric,value
+flip_count,48263.0
+correct_flips,9066.0
+incorrect_flips,39197.0
+flip_totalR_delta,-42578.523129988054
+original_losers_corrected,9066.0
+original_winners_destroyed,21049.0

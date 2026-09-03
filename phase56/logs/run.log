@@ -1,0 +1,27 @@
+/Users/anishalleti/CRT indicator/phase56/forward/metrics.py:36: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  df[c] = pd.to_datetime(df[c])
+/Users/anishalleti/CRT indicator/phase56/forward/metrics.py:36: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  df[c] = pd.to_datetime(df[c])
+/Users/anishalleti/CRT indicator/phase56/forward/metrics.py:110: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ev["date"] = pd.to_datetime(ev["timestamp_ct"]).dt.date
+Model hash OK: bccf4277f3d44d13, impl hash: 88c7555fa08fc243
+Running forward validation 2025-01-01 00:00:00 → 2026-06-26 ...
+Collecting forward structural events...
+  169951 events in holdout window
+Batch scoring + D10 qualification...
+Sequential bar replay (paper trades)...
+Forward run complete: {'events': 163272, 'signals': 3715, 'trades': 3715, 'd10_events': 15929, 'last_bar': '2026-06-26 00:00:00-05:00'}
+Traceback (most recent call last):
+  File "/Users/anishalleti/CRT indicator/phase56/run.py", line 216, in <module>
+    main()
+  File "/Users/anishalleti/CRT indicator/phase56/run.py", line 184, in main
+    daily_summary()
+  File "/Users/anishalleti/CRT indicator/phase56/forward/metrics.py", line 110, in daily_summary
+    ev["date"] = pd.to_datetime(ev["timestamp_ct"]).dt.date
+  File "/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/pandas/core/generic.py", line 6321, in __getattr__
+    return object.__getattribute__(self, name)
+  File "/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/pandas/core/accessor.py", line 224, in __get__
+    accessor_obj = self._accessor(obj)
+  File "/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/pandas/core/indexes/accessors.py", line 643, in __new__
+    raise AttributeError("Can only use .dt accessor with datetimelike values")
+AttributeError: Can only use .dt accessor with datetimelike values

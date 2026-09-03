@@ -1,0 +1,6 @@
+feature,importance_note
+buy_vol,pilot single-fold; no stable ranking
+delta,pilot single-fold; no stable ranking
+delta_norm,pilot single-fold; no stable ranking
+delta_30s,pilot single-fold; no stable ranking
+delta_norm_30s,pilot single-fold; no stable ranking

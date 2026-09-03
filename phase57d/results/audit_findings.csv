@@ -1,0 +1,3 @@
+finding_id,severity,category,description,affected_events,causality_impact,performance_impact,requires_fix,status
+F57D-0001,CRITICAL,DATA_PROVENANCE,No point-in-time historical options data in repository. All wall performance research blocked.,0,Cannot establish OI/IV/Greeks timing,No performance claims permitted,True,CONFIRMED
+F57D-0002,INFO,DATA_INVENTORY,"Found 9 NQ underlying datasets, 0 verified options datasets.",0,,,False,CONFIRMED

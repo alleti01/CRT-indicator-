@@ -1,0 +1,74 @@
+{
+  "phase": "44B",
+  "parity_pass": true,
+  "feature_parity": true,
+  "stitched_test_baseline": {
+    "N": 2788,
+    "WinRate": 0.5064562410329986,
+    "AvgR": 0.3499974318258542,
+    "TotalR": 975.7928399304815,
+    "PF": 1.7882353286265988,
+    "MaxDD": 17.42566144228806,
+    "ReturnMaxDD": 55.997463462847804
+  },
+  "stitched_test_filtered": {
+    "N": 1750,
+    "WinRate": 0.5605714285714286,
+    "AvgR": 0.566462162911332,
+    "TotalR": 991.3087850948309,
+    "PF": 2.440218048581611,
+    "MaxDD": 15.32039481187303,
+    "ReturnMaxDD": 64.70517224050809,
+    "retention": 0.6276901004304161,
+    "rejection": 0.37230989956958394,
+    "trades_per_day": 3.1934306569343067
+  },
+  "rejected": {
+    "N": 1038,
+    "WinRate": 0.41522157996146436,
+    "AvgR": -0.014947924050432932,
+    "TotalR": -15.515945164349382,
+    "PF": 0.9717707868248638,
+    "MaxDD": 36.532300215204735,
+    "ReturnMaxDD": -0.42471853874374027
+  },
+  "improvement": {
+    "AvgR": 0.2164647310854778,
+    "PF": 0.6519827199550121,
+    "MaxDD": 2.1052666304150307
+  },
+  "monotonicity": {
+    "classification": "STRONG_MONOTONIC",
+    "spearman": 0.9757575757575757,
+    "adjacent_improvements": 7
+  },
+  "bootstrap": {
+    "mean_improvement": 0.21677444573674023,
+    "ci_lo": 0.12767042190518937,
+    "ci_hi": 0.3026931524194833,
+    "ci_excludes_zero": true
+  },
+  "monte_carlo": {
+    "P_terminal_R_positive": 1.0,
+    "median_terminal_R": 991.3184028374736,
+    "p5_terminal_R": 888.1704930859504,
+    "p95_terminal_R": 1096.8064637355803,
+    "median_MaxDD": 9.90372863959945,
+    "p95_MaxDD": 14.292959069456792,
+    "median_losing_streak": 8.0,
+    "p95_losing_streak": 11.0
+  },
+  "fixed_rule": {
+    "N": 2275,
+    "WinRate": 0.5617582417582417,
+    "AvgR": 0.5683200798575244,
+    "TotalR": 1292.928181675868,
+    "PF": 2.430042753194928,
+    "MaxDD": 15.563767849085934,
+    "ReturnMaxDD": 83.07295471204309
+  },
+  "success_gates": 15.0,
+  "classification": "A",
+  "freeze_phase44": true,
+  "tier_validation": "YES"
+}

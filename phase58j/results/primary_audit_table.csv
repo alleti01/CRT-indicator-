@@ -1,0 +1,9 @@
+check,M0,M1,status,notes
+Trade count,60118,60118,PASS,60118 canonical
+Entry parity,100%,100%,PASS,Same executions
+Independent simulator parity,100.00%,100.00%,PASS,
+Risk normalization,0.7500000000000019,0.9999999999999981,PASS,
+TotalR reproduction,11581.432110031268,31788.946735468486,PASS,
+Closed-trade DD,2866.9139051904626,26.502162355242035,PASS,M0 MaxDD 2867R and M1 MaxDD 27R both use closed-trade-exit-order cumulative net_R (identical methodology). M0 clusters m
+Result attribution,11581.432110031268,31788.946735468486,PASS,attr sum 20208 vs delta 20208
+Parameter smoothness,-,see stop_neighborhood,PASS,

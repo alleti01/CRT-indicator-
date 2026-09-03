@@ -1,0 +1,52 @@
+Target week: 2026-08-24 → 2026-08-29 (exclusive end)
+Building extended MTF arrays...
+  Bars: 3,136,946 | last: 2026-08-28 15:59:00-05:00
+Running frozen Phase58 v1 trader engine (full causal replay)...
+  Engine done in 28s
+  Phase58 trades: 227,758
+Running Phase58D variant E (frozen opportunity memory)...
+Computing confidence + H1 filter...
+  Week entries (Phase58D TAKE): 131 | H1 KEEP: 126
+
+PHASE58J LAST-WEEK FROZEN REPLAY
+================================
+Target week: 2026-08-24 → 2026-08-28
+Instrument: NQ
+Data source: Databento NQ.v.0 + local stitch
+Exchange timezone: America/Chicago
+
+DATA COMPATIBILITY: PASS
+CAUSALITY: PASS
+FROZEN CONFIG: PASS
+DETERMINISM: PASS
+
+Canonical entries: 126
+LONG: 62
+SHORT: 64
+
+M1 TARGET: 55
+M1 STOP: 71
+M1 TIME: 0
+
+M1 TotalR: 66.50
+M1 AvgR: 0.5278
+
+M0 shadow TotalR: 76.34
+M0 shadow AvgR: 0.6059
+
+M0 STOP → M1 TARGET: 2
+
+P4 abstentions: 0
+H1 abstentions: 5
+
+Visual review trades created: 11
+
+PERFORMANCE INTERPRETATION: DIAGNOSTIC — post-research period, not combined with historical Phase58J
+
+READY FOR TRADINGVIEW REVIEW: YES
+
+NO STRATEGY LOGIC CHANGED
+NO PARAMETERS CHANGED
+NO RETUNING PERFORMED
+
+Completed in 5.5 min

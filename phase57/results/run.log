@@ -1,0 +1,54 @@
+/Users/anishalleti/CRT indicator/phase57/research/retests.py:77: RuntimeWarning: divide by zero encountered in scalar divide
+  if abs(dist) / bar_a > proximity_atr and pen / bar_a < 0.05:
+/Users/anishalleti/CRT indicator/phase57/research/retests.py:77: RuntimeWarning: invalid value encountered in scalar divide
+  if abs(dist) / bar_a > proximity_atr and pen / bar_a < 0.05:
+/Users/anishalleti/CRT indicator/phase57/research/retests.py:102: RuntimeWarning: invalid value encountered in scalar divide
+  penetration_atr=pen / bar_a,
+/Users/anishalleti/CRT indicator/phase57/research/outcomes.py:49: RuntimeWarning: invalid value encountered in scalar divide
+  bar_mfe = (ep - l) / risk
+/Users/anishalleti/CRT indicator/phase57/research/outcomes.py:50: RuntimeWarning: invalid value encountered in scalar divide
+  bar_mae = (h - ep) / risk
+/Users/anishalleti/CRT indicator/phase57/research/outcomes.py:44: RuntimeWarning: invalid value encountered in scalar divide
+  bar_mfe = (h - ep) / risk
+/Users/anishalleti/CRT indicator/phase57/research/outcomes.py:45: RuntimeWarning: invalid value encountered in scalar divide
+  bar_mae = (ep - l) / risk
+S54 model hash OK: bccf4277f3d44d13
+Loading markets...
+  m1: 3075087 bars, 2017-10-01 17:00:00-05:00 → 2026-06-26 15:59:00-05:00
+Detecting FVGs...
+  FVGs: 1M=680963, 5M=123576, 15M=41836
+Detecting ORB events...
+  ORB events: 20052
+Detecting legs...
+  Legs: 188266
+Detecting pullbacks...
+  Pullbacks: 76625
+Detecting retests...
+  Retests: swing=88276, FVG=1082, ORB=6220
+Building sequences...
+  Sequences: C1=39170, R1=37455, failed=7458
+Computing entry stages...
+  Entry stage rows: 383110
+Computing baselines...
+  Baselines computed: 6
+    B1_FVG: N=48699, AvgR=-1.1827926418614405
+    B2_ORB: N=16734, AvgR=-0.13939335129726052
+    B3_LEG_PB: N=76625, AvgR=1.553859501623563
+    B4_RETEST: N=79606, AvgR=-0.3939833313519104
+    B5_REVERSAL: N=37455, AvgR=1.5358809394761896
+    B6_CONTINUATION: N=39170, AvgR=1.5710508992551657
+
+Entry timing summary:
+stage     N     AvgR  median_R  move_capture  avg_delay
+   E0 76622 1.553863  2.199259      1.000000   0.000000
+   E1 76323 0.887391  2.037322      0.889189   1.308819
+   E2 72621 0.892398  2.041243      0.883629   1.212638
+   E3 45439 0.241944 -1.068872      0.721329   3.513898
+   E4 43527 0.067661 -1.096840      0.650665   5.980449
+
+Walk-forward evaluation...
+  LEG_PB WF OOS: {'N': 39632, 'trades_per_day': 21.716164383561644, 'AvgR': 1.6636234006276758, 'median_R': 2.2458528951487393, 'PF': 9.01314420387232, 'TotalR': 65932.72261367604, 'MaxDD': 10.038167958166014, 'win_rate': 0.8375807428340735, 'MAE': 0.48808247040298, 'MFE': 2.9297567486508025}
+
+Writing reports...
+
+Phase57 complete in 70.2 min. Configs tested: 1

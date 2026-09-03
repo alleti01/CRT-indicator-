@@ -1,0 +1,13 @@
+{
+  "window_start": "2026-07-01 00:00:00-05:00",
+  "window_end": "2026-09-01 00:00:00-05:00",
+  "n_sample": 100,
+  "n_available_in_window": 674,
+  "exit_reason_counts": {
+    "M0_STOP": 45,
+    "M0_TARGET": 38,
+    "T5_NO_PROGRESS": 16,
+    "MAX_HOLD_60M": 1
+  },
+  "random_seed": 202607
+}

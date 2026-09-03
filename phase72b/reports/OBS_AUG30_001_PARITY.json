@@ -1,0 +1,118 @@
+{
+  "observation_id": "OBS-AUG30-001",
+  "timestamp_chicago": "2026-08-30T20:46:00-05:00",
+  "bar_index": 3137172,
+  "python_bar": {
+    "open": 29327.75,
+    "high": 29328.25,
+    "low": 29308.0,
+    "close": 29308.75,
+    "atr": 15.5,
+    "state_after": "ARMED_SHORT",
+    "signal_short": false,
+    "ev_total_short": 6,
+    "raw_short": true,
+    "ctx_dir": "BEARISH"
+  },
+  "tv_reference": {
+    "close": 29308.75,
+    "atr": 15.5,
+    "state": "IN_SHORT",
+    "signal_short": true,
+    "ev_total_short": 6
+  },
+  "layer_results": [
+    {
+      "layer": "OHLC",
+      "tv_close": 29308.75,
+      "py_close": 29308.75,
+      "pass": true
+    },
+    {
+      "layer": "ATR",
+      "tv": 15.5,
+      "python": 15.5,
+      "pass": true
+    },
+    {
+      "layer": "FEATURES",
+      "tv_ev_short": 6,
+      "py_ev_short": 6,
+      "py_ctx": "BEARISH",
+      "pass": true
+    },
+    {
+      "layer": "STATE",
+      "tv": "IN_SHORT",
+      "python": "ARMED_SHORT",
+      "pass": false
+    },
+    {
+      "layer": "SIGNAL",
+      "tv_signal_short": true,
+      "py_signal_short": false,
+      "pass": false
+    }
+  ],
+  "first_divergence": {
+    "layer": "STATE",
+    "field": "state_after",
+    "tv": "IN_SHORT",
+    "python": "ARMED_SHORT"
+  },
+  "trace_row": {
+    "timestamp": "2026-08-30 20:46:00-05:00",
+    "timestamp_utc": "2026-08-31T01:46:00+00:00",
+    "timestamp_chicago": "2026-08-30T20:46:00-05:00",
+    "timestamp_ny": "2026-08-30T21:46:00-04:00",
+    "bar_index": 3137172,
+    "open": 29327.75,
+    "high": 29328.25,
+    "low": 29308.0,
+    "close": 29308.75,
+    "atr": 15.5,
+    "state_before": "ARMED_SHORT",
+    "state_after": "ARMED_SHORT",
+    "signal_long": false,
+    "signal_short": false,
+    "enter_long": false,
+    "enter_short": false,
+    "entry_price": NaN,
+    "in_trade": false,
+    "trade_direction": "",
+    "stop_price": NaN,
+    "target_price": NaN,
+    "exit_stop": false,
+    "exit_target": false,
+    "exit_time": false,
+    "reason_code": "",
+    "p58_state": -1,
+    "ctx_dir": "BEARISH",
+    "ev_total_long": 1,
+    "ev_total_short": 6,
+    "raw_long": false,
+    "raw_short": true,
+    "take_long": false,
+    "take_short": false,
+    "ctx_score_long": 1,
+    "ctx_score_short": 2,
+    "loc_long": 3,
+    "loc_short": 0,
+    "react_long": 0,
+    "react_short": 3,
+    "contra_long": 0,
+    "contra_short": 0,
+    "armed_direction": "SHORT",
+    "cooldown": false,
+    "cooldown_rem": 0,
+    "gate_open": true,
+    "p4_result": "KEEP",
+    "h1_result": "KEEP",
+    "decision": "",
+    "band_long": "LOW",
+    "band_short": "HIGH",
+    "dom_long": "DOWN",
+    "dom_short": "DOWN",
+    "known_at": "2026-08-30 20:46:00-05:00"
+  }
+}

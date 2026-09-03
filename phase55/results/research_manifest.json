@@ -1,0 +1,71 @@
+{
+  "phase": 55,
+  "model_hash": "bccf4277f3d44d13",
+  "advance": false,
+  "ref_meta": {
+    "total_events": 925486,
+    "scored_events": 542462,
+    "d10_events": 54247,
+    "episodes_full": 13007,
+    "episodes_oos": 10587,
+    "p53_ref": {
+      "total_events": 925486,
+      "scored_oos_n": 542462,
+      "d10_n": 54247,
+      "d10_avgr": 0.8139497113561064,
+      "d10_unauth_avgr": 0.8076213578383081,
+      "top20_n": 108493,
+      "top20_avgr": 0.6134566303895433,
+      "top20_epd": 59.44821917808219,
+      "d10_epd": 29.740679824561404
+    },
+    "p54_ref": {
+      "episodes_n": 10587,
+      "episodes_day": 7.271291208791209,
+      "avgr": 0.8294948177072894,
+      "pf": 2.6499530084335507,
+      "totalr": 8781.861635067073,
+      "maxdd": 126.009088598169,
+      "unauth_avgr": 0.8231322210329965,
+      "unauth_pf": 2.6303139776235045
+    },
+    "episode_perf_oos": {
+      "N": 10587,
+      "trades_per_day": 7.271291208791209,
+      "AvgR": 0.8294948177072894,
+      "median_R": 2.1552016985139284,
+      "PF": 2.6499530084335507,
+      "TotalR": 8781.861635067073,
+      "MaxDD": 126.009088598169,
+      "win_rate": 0.578917540379711,
+      "MAE": 0.9166809285947942,
+      "MFE": 2.3441749689625935
+    },
+    "wf_selection": [
+      {
+        "fold": 2,
+        "family": "A",
+        "window_min": 30.0,
+        "train_N": 10631
+      },
+      {
+        "fold": 3,
+        "family": "A",
+        "window_min": 30.0,
+        "train_N": 21025
+      },
+      {
+        "fold": 4,
+        "family": "B",
+        "window_min": NaN,
+        "train_N": 32259
+      },
+      {
+        "fold": 5,
+        "family": "A",
+        "window_min": 30.0,
+        "train_N": 43671
+      }
+    ]
+  }
+}

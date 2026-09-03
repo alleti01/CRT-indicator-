@@ -1,0 +1,118 @@
+//@version=6
+indicator("Phase71 Unified Trader", overlay=true, max_labels_count=500)
+
+// =============================================================================
+// PHASE71 — Frozen management overlay (T5 + M0)
+// Signal source: external / manual — this script implements MANAGEMENT ONLY
+// Entry next bar | 1 ATR stop | 2.5R target | T5 @15m MFE<1R | 60m max hold
+// STOP_FIRST on same-bar stop+target
+// =============================================================================
+
+grp = "Phase71 Frozen"
+m1StopAtr   = input.float(1.0, "Initial stop ATR", group=grp)
+targetR     = input.float(2.5, "Target R", group=grp)
+maxHoldBars = input.int(60, "Max hold bars", group=grp)
+t5Bars      = input.int(15, "T5 checkpoint bars", group=grp)
+t5MfeR      = input.float(1.0, "T5 MFE threshold R", group=grp)
+showDebug   = input.bool(false, "Debug table", group=grp)
+
+// Simulated position state (for overlay demo — full signal parity requires Phase59 Layer A)
+var string state = "FLAT"
+var float  entryPx = na
+var float  initAtr = na
+var float  stopPx = na
+var float  tgtPx = na
+var int    entryBar = na
+var float  runMfeR = 0.0
+var bool   t5Checked = false
+var int    dir = 0  // 1 long -1 short
+
+// External signal hooks (set via alert or manual marker bar)
+sigLong  = input.bool(false, "Signal LONG this bar", group=grp)
+sigShort = input.bool(false, "Signal SHORT this bar", group=grp)
+
+atr = ta.sma(high - low, 14)
+
+if barstate.isconfirmed
+    // Entry on next bar after signal (signal on prior bar)
+    if state == "FLAT" and sigLong[1]
+        state := "LONG_ACTIVE"
+        entryPx := open
+        initAtr := atr
+        entryBar := bar_index
+        runMfeR := 0.0
+        t5Checked := false
+        dir := 1
+        risk = m1StopAtr * initAtr
+        stopPx := entryPx - risk
+        tgtPx := entryPx + targetR * risk
+        label.new(bar_index, low, "ENTER LONG", style=label.style_label_up, color=color.green, size=size.small)
+
+    if state == "FLAT" and sigShort[1]
+        state := "SHORT_ACTIVE"
+        entryPx := open
+        initAtr := atr
+        entryBar := bar_index
+        runMfeR := 0.0
+        t5Checked := false
+        dir := -1
+        risk = m1StopAtr * initAtr
+        stopPx := entryPx + risk
+        tgtPx := entryPx - targetR * risk
+        label.new(bar_index, high, "ENTER SHORT", style=label.style_label_down, color=color.red, size=size.small)
+
+    if state == "LONG_ACTIVE" or state == "SHORT_ACTIVE"
+        mins = bar_index - entryBar
+        risk = m1StopAtr * initAtr
+        hitStop = dir == 1 ? low <= stopPx : high >= stopPx
+        hitTgt  = dir == 1 ? high >= tgtPx : low <= tgtPx
+        exited = false
+        reason = ""
+
+        if hitStop and hitTgt
+            exited := true
+            reason := "STOP"
+            label.new(bar_index, high, "STOP", color=color.red, style=label.style_label_down, size=size.tiny)
+        else if hitStop
+            exited := true
+            reason := "STOP"
+            label.new(bar_index, high, "STOP", color=color.red, style=label.style_label_down, size=size.tiny)
+        else if hitTgt
+            exited := true
+            reason := "TARGET"
+            label.new(bar_index, low, "TARGET", color=color.lime, style=label.style_label_up, size=size.tiny)
+
+        if not exited
+            fav = dir == 1 ? (high - entryPx) / risk : (entryPx - low) / risk
+            runMfeR := math.max(runMfeR, fav)
+            if not t5Checked and mins >= t5Bars
+                t5Checked := true
+                if runMfeR < t5MfeR
+                    exited := true
+                    reason := "T5"
+                    label.new(bar_index, close, "T5 EXIT", color=color.orange, style=label.style_label_left, size=size.tiny)
+            if not exited and mins >= maxHoldBars
+                exited := true
+                reason := "60M"
+                label.new(bar_index, close, "60M", color=color.gray, style=label.style_label_left, size=size.tiny)
+
+        if exited
+            state := "FLAT"
+            entryPx := na
+            runMfeR := 0.0
+            t5Checked := false
+
+if showDebug
+    var table dbg = table.new(position.top_right, 2, 6, bgcolor=color.new(color.black, 80))
+    if barstate.islast
+        table.cell(dbg, 0, 0, "state", text_color=color.white)
+        table.cell(dbg, 1, 0, state, text_color=color.white)
+        table.cell(dbg, 0, 1, "MFE_R", text_color=color.white)
+        table.cell(dbg, 1, 1, str.tostring(runMfeR, "#.##"), text_color=color.white)
+        table.cell(dbg, 0, 2, "T5 chk", text_color=color.white)
+        table.cell(dbg, 1, 2, str.tostring(t5Checked), text_color=color.white)
+        table.cell(dbg, 0, 3, "mins", text_color=color.white)
+        table.cell(dbg, 1, 3, str.tostring(bar_index - nz(entryBar)), text_color=color.white)
+
+plot(state == "LONG_ACTIVE" ? stopPx : na, "Stop", color=color.red, style=plot.style_linebr)
+plot(state == "LONG_ACTIVE" ? tgtPx : na, "Target", color=color.green, style=plot.style_linebr)

@@ -1,0 +1,8 @@
+{
+  "N": 10000,
+  "exact_match_pct": 0.9999,
+  "max_error": 0.0,
+  "median_error": 0.0,
+  "method": "SMA(14) of high-low range",
+  "pass": true
+}

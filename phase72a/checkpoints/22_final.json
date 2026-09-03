@@ -1,0 +1,10 @@
+{
+  "freeze": true,
+  "pine_causal": true,
+  "htf_causal": true,
+  "mgmt_logic_parity": true,
+  "one_position": true,
+  "signal_translation": "BUILT_PENDING_TV_COUNT",
+  "pine_hash": "8b74254eeee9fc20",
+  "elapsed_s": 323.98485708236694
+}

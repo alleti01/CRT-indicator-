@@ -1,0 +1,47 @@
+{
+  "phase": "Phase 35 \u2014 NQ 15M Historical LONG/SHORT Entry Re-Discovery",
+  "label": "DEVELOPMENT / DISCOVERY",
+  "period": "2018-01-01 \u2192 2026-06-26",
+  "total_rth_decision_bars": 54851,
+  "strong_long_opportunities": 9028,
+  "strong_short_opportunities": 9963,
+  "baseline_strong_long_rate": 0.16459134746859674,
+  "baseline_strong_short_rate": 0.18163752711892217,
+  "simple_long_rule": "atr_expansion>1.145 AND minutes_since_open<75 AND rel_volume>1.392",
+  "simple_short_rule": "atr_expansion>1.145 AND break_low_8>0",
+  "discovery_execution": {
+    "entry_model": "CURRENT",
+    "stop_atr": 0.75,
+    "target_r": 2.0
+  },
+  "walk_forward_net": {
+    "N": 5560,
+    "WinRate": 0.36726618705035974,
+    "AvgR": -0.03602386234212708,
+    "TotalR": -200.29267462222657,
+    "PF": 0.942280987994118,
+    "MaxDD": 241.52167872805896,
+    "ReturnMaxDD": -0.8292948097952973
+  },
+  "long_net": {
+    "N": 4191,
+    "WinRate": 0.37222619899785253,
+    "AvgR": -0.037248307239078494,
+    "TotalR": -156.10765563897797,
+    "PF": 0.9402611025636917,
+    "MaxDD": 193.10479514599788,
+    "ReturnMaxDD": -0.8084090067310445
+  },
+  "short_net": {
+    "N": 1369,
+    "WinRate": 0.352081811541271,
+    "AvgR": -0.03227539735810712,
+    "TotalR": -44.185018983248646,
+    "PF": 0.9484402603091797,
+    "MaxDD": 82.58922091202788,
+    "ReturnMaxDD": -0.5349974063844664
+  },
+  "long_precision_monotonic": false,
+  "short_precision_monotonic": false,
+  "lookahead_audit": "PASS"
+}

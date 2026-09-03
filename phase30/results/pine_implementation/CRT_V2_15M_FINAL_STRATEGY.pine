@@ -1,0 +1,889 @@
+//@version=6
+// CRT V2 @ 15m — Frozen Phase 30 Strategy
+// Architecture: CRT_V2_B_LEGACY_EXP6
+// Signal flow: LIQUIDITY SWEEP → NEXT-BAR RECLAIM → LEGACY QUALIFICATION →
+//   LATER SWING_2_2 BOS → HARD RETEST → CONFIRM → BOS_RETEST ENTRY →
+//   FIXED STOP / TARGET / HOLD
+//
+// ── Signal flow (strict causal ordering) ─────────────────────────────────────
+//   IDLE
+//     → [sweep bar S, no same-bar reclaim] → WAIT_NEXT_BAR_RECLAIM
+//     → [bar S+1 reclaim + legacy qual]    → WAIT_BOS  (setup bar = S+1)
+//     → [SWING_2_2 BOS, bar > setup]     → WAIT_RETEST
+//     → [hard retest touch]                → WAIT_CONFIRM
+//     → [confirm candle]                   → WAIT_BOS_ENTRY_RETEST
+//     → [BOS bar H/L retest within 2 bars] → TRADE_ACTIVE → IDLE
+//
+// ── V2-B liquidity reference ─────────────────────────────────────────────────
+//   crt_high = high[1], crt_low = low[1]  (prior completed chart bar)
+//   Long sweep:  low < crt_low;  reclaim: close > crt_low on bar S+1 ONLY
+//   Short sweep: high > crt_high; reclaim: close < crt_high on bar S+1 ONLY
+//
+// ── Legacy qualification (evaluated at reclaim bar S+1) ──────────────────────
+//   htf_regime != 0  (60m EMA regime from previous closed HTF bar)
+//   session_bucket != 6  (not after-hours)
+//   setup score >= 70  (liquidity 25 + structure 30 + bias 20 + disp 15 + sess 10)
+//   anti-chase enabled, cooldown = 5 bars
+//
+// ── BOS definition ───────────────────────────────────────────────────────────
+//   SWING_2_2 causal pivots (ta.pivothigh/low 2,2), close break
+//   funnelBosLevel = broken swing level (retest/confirm reference)
+//   entryBosLevel  = high/low of BOS bar stored at BOS time (entry retest)
+//   setup→BOS expiry = 6 bars; bos→retest/confirm expiry = 8 bars each stage
+//
+// ── BOS_RETEST entry (phase29.simulator.resolve_entry) ───────────────────────
+//   Wait up to 2 bars AFTER confirm bar closes (causal: entry only after confirm)
+//   Long:  low <= entryBosLevel + 0.10×ATR(confirm); fill min(level+tol, close)
+//   Short: high >= entryBosLevel - 0.10×ATR(confirm); fill max(level-tol, close)
+//
+// ── Trade management (FIXED — no BE, partials, trail) ────────────────────────
+//   Stop:  0.75 × ATR at entry bar (fixed, not trailing)
+//   Target: 3R fixed
+//   Max hold: 4 bars (60 min on 15m)
+//   Ambiguous bar: STOP checked before TARGET (conservative)
+//
+// Frozen execution constants (DO NOT expose as inputs):
+//   STOP_ATR = 0.75, TARGET_R = 3.0, MAX_HOLD_BARS = 4 (60 min @ 15m)
+//   SETUP_BOS_EXPIRY = 6, P12_RETEST_TOL = 0.10 ATR, P12_EXPIRY = 8 bars
+//   BOS_RETEST_TOL = 0.10 ATR, BOS_RETEST_WINDOW = 2 bars after confirm
+//   SE_MIN_SCORE = 70, SE_COOLDOWN = 5 bars, MANAGEMENT = FIXED
+//
+// ── Invalidation reasons (sequential_bos.py / crt_setup_v2.py parity) ────────
+//   same_bar_setup_bos       — BOS on same bar as setup (SWING_2_2)
+//   opposite_bos_before_retest — Phase-3 structural BOS against setup direction
+//   setup_bos_expiry         — no SWING_2_2 BOS within 6 bars after setup
+//   same_bar_bos_retest      — retest touch on BOS bar (bar_index <= bos_bar)
+//   retest_structure_failed  — close through funnelBosLevel ± tolerance
+//   bos_retest_expiry        — no retest within 8 bars after BOS
+//   same_bar_retest_confirm  — confirm on same bar as retest
+//   confirm_failed_or_expiry — hard confirm fail or 8-bar retest→confirm expiry
+//   bos_retest_entry_expiry  — BOS bar H/L not retested within 2 bars post-confirm
+//   pending_sweep_no_reclaim — bar S+1 failed to close beyond swept CRT level
+//   legacy_qualification_failed — score < 70, neutral HTF, or after-hours session
+//
+// ── Phase 30 Python parity targets (15m, 2018-01-01 → 2026-06-26) ───────────
+//   Architecture: CRT_V2_B_LEGACY_EXP6 | Entry: BOS_RETEST | N ≈ 210 trades
+//   Baseline net AvgR ≈ +0.094R, net PF ≈ 1.31 (pre-cost reference)
+//
+// Ambiguous bar policy (conservative):
+//   If stop and target are both touched within the same bar and intrabar order
+//   is unknown, STOP is assumed first. Matches phase16.trade_engine.manage_bar
+//   and phase29.simulator.simulate_trade.
+
+strategy(
+     "CRT V2 15M FINAL",
+     shorttitle = "CRT_V2_15M",
+     overlay = true,
+     pyramiding = 0,
+     initial_capital = 100000,
+     default_qty_type = strategy.fixed,
+     default_qty_value = 1,
+     commission_type = strategy.commission.cash_per_order,
+     commission_value = 0,
+     process_orders_on_close = true,
+     calc_on_every_tick = false,
+     max_labels_count = 500,
+     max_lines_count = 500)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TIMEFRAME ENFORCEMENT — 15m only
+// ═══════════════════════════════════════════════════════════════════════════════
+bool is15m = timeframe.period == "15"
+bool tfOk = is15m
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FROZEN CONSTANTS (hardcoded — not inputs)
+// ═══════════════════════════════════════════════════════════════════════════════
+const float FROZEN_STOP_ATR           = 0.75
+const float FROZEN_TARGET_R           = 3.0
+const int   FROZEN_MAX_HOLD_BARS      = 4
+const int   FROZEN_SETUP_BOS_EXPIRY   = 6
+const float FROZEN_P12_RETEST_TOL     = 0.10
+const int   FROZEN_P12_EXPIRY         = 8
+const float FROZEN_BOS_RETEST_TOL     = 0.10
+const int   FROZEN_BOS_RETEST_WINDOW  = 2
+const int   FROZEN_SE_MIN_SCORE       = 70
+const int   FROZEN_SE_COOLDOWN        = 5
+const int   FROZEN_SE_LIQ_LOOKBACK    = 20
+const int   FROZEN_SE_DISP_LOOKBACK   = 10
+const float FROZEN_SE_DISP_MULT       = 1.5
+const float FROZEN_SE_CHASE_ATR_MAX   = 3.0
+const string FROZEN_SE_SESSION        = "0930-1600"
+const int   FROZEN_STR_LEFT           = 5
+const int   FROZEN_STR_RIGHT          = 5
+const int   FROZEN_LIQ_LEFT           = 5
+const int   FROZEN_LIQ_RIGHT          = 5
+const int   FROZEN_LIQ_EQ_TICKS       = 4
+const int   FROZEN_LIQ_MAX_LEVELS     = 100
+const int   FROZEN_SWING_BOS_LR       = 2
+const string FROZEN_HTF_TF            = "60"
+const int   FROZEN_HTF_FAST           = 20
+const int   FROZEN_HTF_SLOW           = 50
+const float FROZEN_HTF_NEUT_THRESH    = 0.10
+const int   FROZEN_ATR_LEN            = 14
+
+// State machine IDs
+const int ST_IDLE                  = 0
+const int ST_WAIT_NEXT_BAR_RECLAIM = 1
+const int ST_WAIT_BOS              = 2
+const int ST_WAIT_RETEST           = 3
+const int ST_WAIT_CONFIRM          = 4
+const int ST_WAIT_BOS_ENTRY_RETEST = 5
+const int ST_TRADE_ACTIVE          = 6
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISUALIZATION INPUTS (toggles only — do not affect strategy logic)
+// ═══════════════════════════════════════════════════════════════════════════════
+string GRP_VIS = "Visualization"
+bool showTfWarning    = input.bool(true,  "Show 15m timeframe warning", group = GRP_VIS)
+bool showSetup        = input.bool(true,  "Show Setup markers", group = GRP_VIS)
+bool showBos          = input.bool(true,  "Show BOS markers", group = GRP_VIS)
+bool showRetest       = input.bool(true,  "Show Retest markers", group = GRP_VIS)
+bool showConfirm      = input.bool(true,  "Show Confirm markers", group = GRP_VIS)
+bool showEntry        = input.bool(true,  "Show Entry markers (prominent)", group = GRP_VIS)
+bool showStopTarget   = input.bool(true,  "Show Stop / Target lines", group = GRP_VIS)
+bool showInvalidations = input.bool(true, "Show Invalidation markers", group = GRP_VIS)
+bool showDebugDash    = input.bool(true,  "Show Debug Dashboard", group = GRP_VIS)
+bool showCrtLevels    = input.bool(false, "Show CRT prior-bar levels", group = GRP_VIS)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+sessionBucket() =>
+    int hm = hour * 60 + minute
+    hm >= 18 * 60 or hm < 4 * 60 ? 0 :
+     hm < 9 * 60 + 30 ? 1 :
+     hm < 10 * 60 + 30 ? 2 :
+     hm < 12 * 60 ? 3 :
+     hm < 14 * 60 ? 4 :
+     hm < 16 * 60 ? 5 : 6
+
+inPreferredSession(string sess) =>
+    int sh = int(str.tonumber(str.substring(sess, 0, 2)))
+    int sm = int(str.tonumber(str.substring(sess, 2, 4)))
+    int eh = int(str.tonumber(str.substring(sess, 5, 7)))
+    int em = int(str.tonumber(str.substring(sess, 7, 9)))
+    int startM = sh * 60 + sm
+    int endM = eh * 60 + em
+    int curM = hour * 60 + minute
+    startM <= endM ? curM >= startM and curM < endM : curM >= startM or curM < endM
+
+stateName(int s) =>
+    s == ST_IDLE ? "IDLE" :
+     s == ST_WAIT_NEXT_BAR_RECLAIM ? "WAIT_NEXT_BAR_RECLAIM" :
+     s == ST_WAIT_BOS ? "WAIT_BOS" :
+     s == ST_WAIT_RETEST ? "WAIT_RETEST" :
+     s == ST_WAIT_CONFIRM ? "WAIT_CONFIRM" :
+     s == ST_WAIT_BOS_ENTRY_RETEST ? "WAIT_BOS_ENTRY_RETEST" :
+     s == ST_TRADE_ACTIVE ? "TRADE_ACTIVE" : "?"
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BASE INDICATORS
+// ═══════════════════════════════════════════════════════════════════════════════
+float atrVal = ta.atr(FROZEN_ATR_LEN)
+float bodyAvg = ta.sma(math.abs(close - open), FROZEN_SE_DISP_LOOKBACK)
+
+// V2-B CRT reference: prior completed bar
+float crtHigh = high[1]
+float crtLow  = low[1]
+
+// HTF regime — previous closed 60m bar (Phase 15 p7HtfRegime logic)
+[p7HtfCl, p7HtfFast, p7HtfSlow, p7HtfFastPrev, p7HtfAtr] = request.security(
+     syminfo.tickerid, FROZEN_HTF_TF,
+     [close[1], ta.ema(close, FROZEN_HTF_FAST)[1], ta.ema(close, FROZEN_HTF_SLOW)[1],
+      ta.ema(close, FROZEN_HTF_FAST)[2], ta.atr(FROZEN_ATR_LEN)[1]],
+     lookahead = barmerge.lookahead_on)
+
+float p7EmaSep  = math.abs(nz(p7HtfFast) - nz(p7HtfSlow))
+bool  p7EmaWide = not na(p7HtfAtr) and p7HtfAtr > 0 and p7EmaSep >= FROZEN_HTF_NEUT_THRESH * p7HtfAtr
+bool  p7IsBull  = p7EmaWide and not na(p7HtfCl) and p7HtfCl > p7HtfFast and p7HtfFast > p7HtfSlow and p7HtfFast > p7HtfFastPrev
+bool  p7IsBear  = p7EmaWide and not na(p7HtfCl) and p7HtfCl < p7HtfFast and p7HtfFast < p7HtfSlow and p7HtfFast < p7HtfFastPrev
+int   htfRegime = p7IsBull ? 1 : p7IsBear ? -1 : 0
+
+// HTF regime mirrors phase16.indicators.add_previous_closed_htf_regime:
+//   Resample chart bars to 60m (label=left, closed=left).
+//   Each chart bar receives the regime of the immediately preceding CLOSED HTF bucket.
+//   Bull: wide EMA sep + close > fast > slow + fast rising (fast > fast[1] on HTF).
+//   Bear: wide EMA sep + close < fast < slow + fast falling.
+//   Neutral: EMA separation < 0.10 × HTF ATR.
+//
+int sessBucket = sessionBucket()
+bool seInSession = inPreferredSession(FROZEN_SE_SESSION)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHASE 3 — STRUCTURE ENGINE (5/5 pivots, close break)
+// Used for setup scoring, opposite-BOS invalidation before retest, liquidity context
+// ═══════════════════════════════════════════════════════════════════════════════
+float strPh = ta.pivothigh(high, FROZEN_STR_LEFT, FROZEN_STR_RIGHT)
+float strPl = ta.pivotlow(low, FROZEN_STR_LEFT, FROZEN_STR_RIGHT)
+
+var float activeStrHigh = na
+var float activeStrLow  = na
+var bool  activeStrHighUsed = false
+var bool  activeStrLowUsed  = false
+var int   structureBias = 0
+var int   bullStructBar = -1
+var int   bearStructBar = -1
+var bool  bullIsChoch = false
+var bool  bearIsChoch = false
+
+bool bullBreakEvent = not na(activeStrHigh) and not activeStrHighUsed and close > activeStrHigh
+bool bearBreakEvent = not na(activeStrLow) and not activeStrLowUsed and close < activeStrLow
+bool bothStructBreak = bullBreakEvent and bearBreakEvent
+bool bullBosNow = bothStructBreak ? false : bullBreakEvent
+bool bearBosNow = bothStructBreak ? false : bearBreakEvent
+
+if bullBosNow
+    activeStrHighUsed := true
+    bullIsChoch := structureBias == -1
+    bullStructBar := bar_index
+    if structureBias <= 0
+        structureBias := 1
+if bearBosNow
+    activeStrLowUsed := true
+    bearIsChoch := structureBias == 1
+    bearStructBar := bar_index
+    if structureBias >= 0
+        structureBias := -1
+
+if not na(strPh)
+    activeStrHigh := strPh
+    activeStrHighUsed := false
+if not na(strPl)
+    activeStrLow := strPl
+    activeStrLowUsed := false
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHASE 4 — LIQUIDITY ENGINE (5/5 pivots, BSL/SSL sweeps)
+// ═══════════════════════════════════════════════════════════════════════════════
+type LiqLvl
+    float price
+    int   confirmBar
+
+float lePh = ta.pivothigh(high, FROZEN_LIQ_LEFT, FROZEN_LIQ_RIGHT)
+float lePl = ta.pivotlow(low, FROZEN_LIQ_LEFT, FROZEN_LIQ_RIGHT)
+float eqTol = FROZEN_LIQ_EQ_TICKS * syminfo.mintick
+
+var array<LiqLvl> bslLevels = array.new<LiqLvl>()
+var array<LiqLvl> sslLevels = array.new<LiqLvl>()
+var float lePrevHi = na
+var float lePrevLo = na
+var int sslSweepBar = -1
+var int bslSweepBar = -1
+
+bool leBslSweepEvt = false
+bool leSslSweepEvt = false
+
+checkBsl(array<LiqLvl> levels) =>
+    bool swept = false
+    if array.size(levels) > 0
+        for i = array.size(levels) - 1 to 0
+            LiqLvl lvl = array.get(levels, i)
+            if bar_index > lvl.confirmBar
+                if high > lvl.price and close < lvl.price
+                    swept := true
+                    array.remove(levels, i)
+                else if close > lvl.price
+                    array.remove(levels, i)
+    swept
+
+checkSsl(array<LiqLvl> levels) =>
+    bool swept = false
+    if array.size(levels) > 0
+        for i = array.size(levels) - 1 to 0
+            LiqLvl lvl = array.get(levels, i)
+            if bar_index > lvl.confirmBar
+                if low < lvl.price and close > lvl.price
+                    swept := true
+                    array.remove(levels, i)
+                else if close < lvl.price
+                    array.remove(levels, i)
+    swept
+
+if barstate.isconfirmed
+    leBslSweepEvt := checkBsl(bslLevels)
+    leSslSweepEvt := checkSsl(sslLevels)
+    if leBslSweepEvt
+        bslSweepBar := bar_index
+    if leSslSweepEvt
+        sslSweepBar := bar_index
+
+    if not na(lePh)
+        bool dup = false
+        if array.size(bslLevels) > 0
+            for j = 0 to array.size(bslLevels) - 1
+                if math.abs(array.get(bslLevels, j).price - lePh) < syminfo.mintick
+                    dup := true
+                    break
+        if not dup
+            array.push(bslLevels, LiqLvl.new(lePh, bar_index))
+            if array.size(bslLevels) > FROZEN_LIQ_MAX_LEVELS
+                array.shift(bslLevels)
+        lePrevHi := lePh
+
+    if not na(lePl)
+        bool dupLo = false
+        if array.size(sslLevels) > 0
+            for j = 0 to array.size(sslLevels) - 1
+                if math.abs(array.get(sslLevels, j).price - lePl) < syminfo.mintick
+                    dupLo := true
+                    break
+        if not dupLo
+            array.push(sslLevels, LiqLvl.new(lePl, bar_index))
+            if array.size(sslLevels) > FROZEN_LIQ_MAX_LEVELS
+                array.shift(sslLevels)
+        lePrevLo := lePl
+
+// ── Setup Engine scoring detail (Phase 5 / setup_engine.py) ──────────────────
+//   Liquidity  (25): recent SSL sweep (long) or BSL sweep (short) within 20 bars
+//   Structure  (30): recent bull/bear BOS within 20 bars; CHoCH gets full 30
+//   Bias       (20): aligned with structure bias (+20), neutral (+10), counter (+5)
+//   Displacement (15): body > 1.5× 10-bar average body, direction-aligned
+//   Session    (10): inside preferred 09:30-16:00 exchange window
+//   Anti-chase: zero score if close extended > 3.0× ATR beyond active structure
+//   Note: V2-B uses scoring for legacy qualification only — NOT canonical Phase-5 triggers
+//
+var int longCoolUntil  = 0
+var int shortCoolUntil = 0
+
+calcScores() =>
+    bool recentSsl = sslSweepBar >= 0 and bar_index - sslSweepBar <= FROZEN_SE_LIQ_LOOKBACK
+    bool recentBsl = bslSweepBar >= 0 and bar_index - bslSweepBar <= FROZEN_SE_LIQ_LOOKBACK
+    bool recentBull = bullStructBar >= 0 and bar_index - bullStructBar <= FROZEN_SE_LIQ_LOOKBACK
+    bool recentBear = bearStructBar >= 0 and bar_index - bearStructBar <= FROZEN_SE_LIQ_LOOKBACK
+
+    float longLiq = recentSsl ? 25.0 : 0.0
+    float shortLiq = recentBsl ? 25.0 : 0.0
+    float longStr = recentBull ? (bullIsChoch ? 30.0 : structureBias == 1 ? 30.0 : 20.0) : 0.0
+    float shortStr = recentBear ? (bearIsChoch ? 30.0 : structureBias == -1 ? 30.0 : 20.0) : 0.0
+    float longBias = structureBias == 1 ? 20.0 : structureBias == 0 ? 10.0 : 5.0
+    float shortBias = structureBias == -1 ? 20.0 : structureBias == 0 ? 10.0 : 5.0
+    bool bullDisp = close > open and not na(bodyAvg) and bodyAvg > 0 and (close - open) > FROZEN_SE_DISP_MULT * bodyAvg
+    bool bearDisp = close < open and not na(bodyAvg) and bodyAvg > 0 and (open - close) > FROZEN_SE_DISP_MULT * bodyAvg
+    float longSess = seInSession ? 10.0 : 0.0
+    float shortSess = seInSession ? 10.0 : 0.0
+
+    float lScore = math.min(longLiq + longStr + longBias + (bullDisp ? 15.0 : 0.0) + longSess, 100.0)
+    float sScore = math.min(shortLiq + shortStr + shortBias + (bearDisp ? 15.0 : 0.0) + shortSess, 100.0)
+
+    if not na(atrVal) and atrVal > 0
+        if not na(activeStrHigh) and close > activeStrHigh and (close - activeStrHigh) > FROZEN_SE_CHASE_ATR_MAX * atrVal
+            lScore := 0.0
+        if not na(activeStrLow) and close < activeStrLow and (activeStrLow - close) > FROZEN_SE_CHASE_ATR_MAX * atrVal
+            sScore := 0.0
+
+    [int(lScore), int(sScore)]
+
+passesLegacy(int dir, int lScore, int sScore) =>
+    bool liveFilter = htfRegime != 0 and sessBucket != 6
+    int score = dir == 1 ? lScore : sScore
+    liveFilter and score >= FROZEN_SE_MIN_SCORE
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SWING 2/2 BOS ENGINE (causal pivots, close break)
+// ═══════════════════════════════════════════════════════════════════════════════
+float ph22 = ta.pivothigh(high, FROZEN_SWING_BOS_LR, FROZEN_SWING_BOS_LR)
+float pl22 = ta.pivotlow(low, FROZEN_SWING_BOS_LR, FROZEN_SWING_BOS_LR)
+
+var float swing22High = na
+var float swing22Low  = na
+var bool  swing22HighUsed = false
+var bool  swing22LowUsed  = false
+
+bool swing22BullBreak = not na(swing22High) and not swing22HighUsed and close > swing22High
+bool swing22BearBreak = not na(swing22Low) and not swing22LowUsed and close < swing22Low
+if swing22BullBreak and swing22BearBreak
+    swing22BullBreak := false
+    swing22BearBreak := false
+if swing22BullBreak
+    swing22HighUsed := true
+if swing22BearBreak
+    swing22LowUsed := true
+if not na(ph22)
+    swing22High := ph22
+    swing22HighUsed := false
+if not na(pl22)
+    swing22Low := pl22
+    swing22LowUsed := false
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATE MACHINE
+// ═══════════════════════════════════════════════════════════════════════════════
+var int   smState       = ST_IDLE
+var int   smDir         = 0
+var int   smSetupBar    = na
+var int   smSweepBar    = na
+var int   smBosBar      = na
+var int   smRetestBar   = na
+var int   smConfirmBar  = na
+var int   smEntryDeadline = na
+var float smFunnelBosLevel = na
+var float smEntryBosLevel  = na
+var float smConfirmAtr     = na
+var int   smScore       = 0
+var string smInvalidReason = ""
+
+// Pending V2-B sweep (internal WAIT_NEXT_BAR_RECLAIM)
+var int   pendDir       = 0
+var int   pendSweepBar  = na
+var float pendLiqLevel  = na
+
+// Trade management
+var float tradeEntry    = na
+var float tradeStop     = na
+var float tradeTarget   = na
+var float tradeRisk     = na
+var int   tradeEntryBar = na
+var int   tradeDir      = 0
+var int   tradeBarsHeld = 0
+
+// Visual / event flags (reset each bar)
+var bool evtSetup     = false
+var bool evtBos       = false
+var bool evtRetest    = false
+var bool evtConfirm   = false
+var bool evtEntry     = false
+var bool evtInvalid   = false
+var bool evtStop      = false
+var bool evtTarget    = false
+var bool evtTimeExit  = false
+
+// Marker direction snapshots (survive funnel reset on same bar)
+var int evtSetupDir   = 0
+var int evtBosDir     = 0
+var int evtConfirmDir = 0
+var int evtEntryDir   = 0
+
+// Funnel diagnostics (debug dashboard)
+var int dbgSetups    = 0
+var int dbgBos       = 0
+var int dbgRetests   = 0
+var int dbgConfirms  = 0
+var int dbgEntries   = 0
+var int dbgInvalids  = 0
+
+// Active stop/target lines
+var line lnStop   = na
+var line lnTarget = na
+
+// Funnel reset is applied inline at bar close — Pine CE10088 forbids mutating
+// global `var` state inside user functions. Mode 1 = clear funnel only (post-entry);
+// mode 2 = full invalidation reset to IDLE.
+const int FUNNEL_RESET_NONE    = 0
+const int FUNNEL_RESET_PARTIAL = 1
+const int FUNNEL_RESET_FULL    = 2
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STRICT ORDERING ASSERTIONS (phase16.sequential_bos.assert_strict_order)
+// Enforced by state machine transitions — same-bar transitions are rejected:
+//   setup_bar < bos_bar < retest_bar < confirm_bar <= entry_bar
+//   setup_bar != bos_bar, bos_bar != retest_bar, retest_bar != confirm_bar
+// Entry bar may equal confirm_bar + 1 or confirm_bar + 2 (BOS_RETEST window).
+//
+// Retest stage (sequential_bos.py state 2) — evaluated each confirmed bar:
+//   tol = atr × 0.10
+//   eligible = bar_index > bos_bar  (strict: no same-bar BOS+retest)
+//   touch  = eligible AND wick within bos_level ± tol
+//   invalid = eligible AND close beyond bos_level ∓ tol (hard structure fail)
+//   expiry = bar_index - bos_bar > 8
+//
+// Confirm stage (sequential_bos.py state 3):
+//   eligible = bar_index > retest_bar  (strict: no same-bar retest+confirm)
+//   confirm long  = eligible AND close > open AND close > bos_level
+//   confirm short = eligible AND close < open AND close < bos_level
+//   invalid = eligible AND close beyond bos_level ∓ tol
+//   expiry = bar_index - retest_bar > 8
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN BAR LOGIC (confirmed bars only — causal)
+// ═══════════════════════════════════════════════════════════════════════════════
+if barstate.isconfirmed and tfOk
+    evtSetup := false
+    evtBos := false
+    evtRetest := false
+    evtConfirm := false
+    evtEntry := false
+    evtInvalid := false
+    evtStop := false
+    evtTarget := false
+    evtTimeExit := false
+    int funnelResetMode = FUNNEL_RESET_NONE
+    string funnelResetReason = ""
+
+    [longScore, shortScore] = calcScores()
+
+    // ── V2-B: resolve pending next-bar reclaim (bar S+1 ONLY) ────────────────
+    // If S+1 does not reclaim, expire pending sweep and return to IDLE.
+    if smState == ST_WAIT_NEXT_BAR_RECLAIM and not na(pendSweepBar) and bar_index == pendSweepBar + 1
+        bool reclaimed = pendDir == 1 ? close > pendLiqLevel : close < pendLiqLevel
+        if reclaimed and passesLegacy(pendDir, longScore, shortScore)
+            smState := ST_WAIT_BOS
+            smDir := pendDir
+            smSetupBar := bar_index
+            smSweepBar := pendSweepBar
+            smScore := pendDir == 1 ? longScore : shortScore
+            evtSetup := true
+            evtSetupDir := pendDir
+            dbgSetups += 1
+        else
+            smState := ST_IDLE
+            if not reclaimed
+                smInvalidReason := "pending_sweep_no_reclaim"
+            else
+                smInvalidReason := "legacy_qualification_failed"
+                evtInvalid := true
+                dbgInvalids += 1
+        pendDir := 0
+        pendSweepBar := na
+        pendLiqLevel := na
+
+    // ── V2-B: detect new sweeps (only when funnel idle & no active trade) ────
+    bool funnelIdle = smState == ST_IDLE and strategy.position_size == 0
+    bool longSweep  = not na(crtLow) and low < crtLow
+    bool shortSweep = not na(crtHigh) and high > crtHigh
+    bool longSame   = longSweep and close > crtLow
+    bool shortSame  = shortSweep and close < crtHigh
+
+    if funnelIdle and smState == ST_IDLE
+        if longSweep and not longSame
+            pendDir := 1
+            pendSweepBar := bar_index
+            pendLiqLevel := crtLow
+            smState := ST_WAIT_NEXT_BAR_RECLAIM
+        else if shortSweep and not shortSame
+            pendDir := -1
+            pendSweepBar := bar_index
+            pendLiqLevel := crtHigh
+            smState := ST_WAIT_NEXT_BAR_RECLAIM
+
+    // ── WAIT_BOS: SWING_2_2 break after setup, expiry = 6 bars ──────────────
+    if smState == ST_WAIT_BOS
+        bool sameBarBos = not na(smSetupBar) and bar_index == smSetupBar and
+             ((smDir == 1 and swing22BullBreak) or (smDir == -1 and swing22BearBreak))
+        bool bosOk = not na(smSetupBar) and bar_index > smSetupBar and
+             ((smDir == 1 and swing22BullBreak) or (smDir == -1 and swing22BearBreak))
+
+        if sameBarBos
+            evtInvalid := true
+            funnelResetMode := FUNNEL_RESET_FULL
+            funnelResetReason := "same_bar_setup_bos"
+        else if bosOk
+            smBosBar := bar_index
+            smFunnelBosLevel := smDir == 1 ? swing22High : swing22Low
+            smEntryBosLevel := smDir == 1 ? high : low
+            smState := ST_WAIT_RETEST
+            evtBos := true
+            evtBosDir := smDir
+            dbgBos += 1
+        else if (smDir == 1 and bearBosNow) or (smDir == -1 and bullBosNow)
+            // Opposite Phase-3 structural BOS invalidates before retest (sequential_bos.py)
+            evtInvalid := true
+            funnelResetMode := FUNNEL_RESET_FULL
+            funnelResetReason := "opposite_bos_before_retest"
+        else if not na(smSetupBar) and bar_index - smSetupBar > FROZEN_SETUP_BOS_EXPIRY
+            evtInvalid := true
+            funnelResetMode := FUNNEL_RESET_FULL
+            funnelResetReason := "setup_bos_expiry"
+
+    // ── WAIT_RETEST: match sequential_bos.py p12_retest_atr_tolerance ────────
+    else if smState == ST_WAIT_RETEST and not na(smFunnelBosLevel)
+        float tol = nz(atrVal, 1.0) * FROZEN_P12_RETEST_TOL
+        bool eligible = not na(smBosBar) and bar_index > smBosBar
+        bool wouldTouch = smDir == 1 ? low <= smFunnelBosLevel + tol : high >= smFunnelBosLevel - tol
+        bool touched = eligible and wouldTouch
+        bool invalid = eligible and (smDir == 1 ? close < smFunnelBosLevel - tol : close > smFunnelBosLevel + tol)
+
+        if not eligible and wouldTouch
+            evtInvalid := true
+            funnelResetMode := FUNNEL_RESET_FULL
+            funnelResetReason := "same_bar_bos_retest"
+        else if invalid
+            evtInvalid := true
+            funnelResetMode := FUNNEL_RESET_FULL
+            funnelResetReason := "retest_structure_failed"
+        else if touched
+            smRetestBar := bar_index
+            smState := ST_WAIT_CONFIRM
+            evtRetest := true
+            dbgRetests += 1
+        else if not na(smBosBar) and bar_index - smBosBar > FROZEN_P12_EXPIRY
+            evtInvalid := true
+            funnelResetMode := FUNNEL_RESET_FULL
+            funnelResetReason := "bos_retest_expiry"
+
+    // ── WAIT_CONFIRM: strict bar ordering, hard invalidation ───────────────
+    else if smState == ST_WAIT_CONFIRM and not na(smFunnelBosLevel) and not na(smRetestBar)
+        float tol = nz(atrVal, 1.0) * FROZEN_P12_RETEST_TOL
+        bool eligible = bar_index > smRetestBar
+        bool wouldConfirm = smDir == 1 ? (close > open and close > smFunnelBosLevel) :
+             (close < open and close < smFunnelBosLevel)
+        bool confirmed = eligible and wouldConfirm
+        bool invalid = eligible and (smDir == 1 ? close < smFunnelBosLevel - tol : close > smFunnelBosLevel + tol)
+
+        if not eligible and wouldConfirm
+            evtInvalid := true
+            funnelResetMode := FUNNEL_RESET_FULL
+            funnelResetReason := "same_bar_retest_confirm"
+        else if confirmed
+            smConfirmBar := bar_index
+            smConfirmAtr := nz(atrVal, 1.0)
+            smEntryDeadline := bar_index + FROZEN_BOS_RETEST_WINDOW
+            smState := ST_WAIT_BOS_ENTRY_RETEST
+            evtConfirm := true
+            evtConfirmDir := smDir
+            dbgConfirms += 1
+        else if invalid or bar_index - smRetestBar > FROZEN_P12_EXPIRY
+            evtInvalid := true
+            funnelResetMode := FUNNEL_RESET_FULL
+            funnelResetReason := "confirm_failed_or_expiry"
+
+    // ── WAIT_BOS_ENTRY_RETEST: up to 2 bars after confirm ──────────────────
+    else if smState == ST_WAIT_BOS_ENTRY_RETEST and not na(smConfirmBar) and not na(smEntryBosLevel)
+        // ATR frozen at confirm bar for tolerance (phase29 resolve_entry semantics)
+        float entryTol = FROZEN_BOS_RETEST_TOL * nz(smConfirmAtr, 1.0)
+        bool inWindow = bar_index > smConfirmBar and bar_index <= smEntryDeadline
+
+        if inWindow
+            bool touched = smDir == 1 ?
+                 low <= smEntryBosLevel + entryTol :
+                 high >= smEntryBosLevel - entryTol
+            if touched
+                float fillPx = smDir == 1 ?
+                     math.min(smEntryBosLevel + entryTol, close) :
+                     math.max(smEntryBosLevel - entryTol, close)
+                float entryAtr = nz(atrVal, 1.0)
+                float risk = FROZEN_STOP_ATR * entryAtr
+                tradeEntry := fillPx
+                tradeRisk := risk
+                tradeStop := smDir == 1 ? fillPx - risk : fillPx + risk
+                tradeTarget := smDir == 1 ? fillPx + FROZEN_TARGET_R * risk : fillPx - FROZEN_TARGET_R * risk
+                tradeEntryBar := bar_index
+                tradeDir := smDir
+                tradeBarsHeld := 0
+                smState := ST_TRADE_ACTIVE
+                evtEntry := true
+                evtEntryDir := smDir
+                dbgEntries += 1
+
+                if smDir == 1
+                    strategy.entry("LONG", strategy.long, comment = "BOS_RETEST LONG")
+                else
+                    strategy.entry("SHORT", strategy.short, comment = "BOS_RETEST SHORT")
+
+                if showStopTarget
+                    if not na(lnStop)
+                        line.delete(lnStop)
+                    if not na(lnTarget)
+                        line.delete(lnTarget)
+                    lnStop := line.new(bar_index, tradeStop, bar_index + FROZEN_MAX_HOLD_BARS, tradeStop,
+                         color = color.new(#f23645, 0), width = 2, style = line.style_dashed)
+                    lnTarget := line.new(bar_index, tradeTarget, bar_index + FROZEN_MAX_HOLD_BARS, tradeTarget,
+                         color = color.new(#089981, 0), width = 2, style = line.style_dashed)
+
+                funnelResetMode := FUNNEL_RESET_PARTIAL
+
+        if smState == ST_WAIT_BOS_ENTRY_RETEST and bar_index > smEntryDeadline
+            evtInvalid := true
+            funnelResetMode := FUNNEL_RESET_FULL
+            funnelResetReason := "bos_retest_entry_expiry"
+
+    // ── TRADE ACTIVE: FIXED management, STOP before TARGET on ambiguous bar ──
+    if smState == ST_TRADE_ACTIVE and not na(tradeEntryBar) and bar_index > tradeEntryBar
+        tradeBarsHeld += 1
+        bool hitStop = tradeDir == 1 ? low <= tradeStop : high >= tradeStop
+        bool hitTarget = tradeDir == 1 ? high >= tradeTarget : low <= tradeTarget
+
+        // Conservative: STOP checked before TARGET
+        if hitStop
+            evtStop := true
+            if tradeDir == 1
+                strategy.close("LONG", comment = "STOP")
+            else
+                strategy.close("SHORT", comment = "STOP")
+            smState := ST_IDLE
+            tradeEntryBar := na
+            if not na(lnStop)
+                line.delete(lnStop)
+                lnStop := na
+            if not na(lnTarget)
+                line.delete(lnTarget)
+                lnTarget := na
+        else if hitTarget
+            evtTarget := true
+            if tradeDir == 1
+                strategy.close("LONG", comment = "TARGET")
+            else
+                strategy.close("SHORT", comment = "TARGET")
+            smState := ST_IDLE
+            tradeEntryBar := na
+            if not na(lnStop)
+                line.delete(lnStop)
+                lnStop := na
+            if not na(lnTarget)
+                line.delete(lnTarget)
+                lnTarget := na
+        else if tradeBarsHeld >= FROZEN_MAX_HOLD_BARS
+            evtTimeExit := true
+            if tradeDir == 1
+                strategy.close("LONG", comment = "TIME")
+            else
+                strategy.close("SHORT", comment = "TIME")
+            smState := ST_IDLE
+            tradeEntryBar := na
+            if not na(lnStop)
+                line.delete(lnStop)
+                lnStop := na
+            if not na(lnTarget)
+                line.delete(lnTarget)
+                lnTarget := na
+
+    // Extend stop/target lines while trade active
+    if showStopTarget and smState == ST_TRADE_ACTIVE
+        if not na(lnStop)
+            line.set_x2(lnStop, bar_index)
+        if not na(lnTarget)
+            line.set_x2(lnTarget, bar_index)
+
+    // Apply deferred funnel reset (inline — CE10088 safe)
+    if funnelResetMode == FUNNEL_RESET_FULL
+        smState := ST_IDLE
+        smDir := 0
+        smSetupBar := na
+        smSweepBar := na
+        smBosBar := na
+        smRetestBar := na
+        smConfirmBar := na
+        smEntryDeadline := na
+        smFunnelBosLevel := na
+        smEntryBosLevel := na
+        smConfirmAtr := na
+        smScore := 0
+        smInvalidReason := funnelResetReason
+        if funnelResetReason != ""
+            dbgInvalids += 1
+        pendDir := 0
+        pendSweepBar := na
+        pendLiqLevel := na
+    else if funnelResetMode == FUNNEL_RESET_PARTIAL
+        smDir := 0
+        smSetupBar := na
+        smSweepBar := na
+        smBosBar := na
+        smRetestBar := na
+        smConfirmBar := na
+        smEntryDeadline := na
+        smFunnelBosLevel := na
+        smEntryBosLevel := na
+        smConfirmAtr := na
+        smScore := 0
+        pendDir := 0
+        pendSweepBar := na
+        pendLiqLevel := na
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TIMEFRAME WARNING (prominent)
+// ═══════════════════════════════════════════════════════════════════════════════
+var table tfWarnTbl = na
+if showTfWarning and barstate.islast
+    if na(tfWarnTbl)
+        tfWarnTbl := table.new(position.top_center, 1, 1, bgcolor = color.new(#f23645, 15))
+    if not is15m
+        table.cell(tfWarnTbl, 0, 0, "⚠ WRONG TIMEFRAME — Use 15m (recommended timeframe 15m)",
+             text_color = #ffffff, bgcolor = color.new(#f23645, 0), text_size = size.normal)
+    else
+        table.cell(tfWarnTbl, 0, 0, "✓ CRT V2 @ 15m — CRT_V2_B_LEGACY_EXP6",
+             text_color = #089981, bgcolor = color.new(#000000, 80), text_size = size.small)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISUALIZATION MARKERS
+// ═══════════════════════════════════════════════════════════════════════════════
+plot(showCrtLevels ? crtHigh : na, "CRT High [1]", color = color.new(#4c8bf5, 50), linewidth = 1, style = plot.style_stepline)
+plot(showCrtLevels ? crtLow : na, "CRT Low [1]", color = color.new(#4c8bf5, 50), linewidth = 1, style = plot.style_stepline)
+
+plotshape(showSetup and evtSetup and evtSetupDir == 1, title = "Setup Long", style = shape.circle,
+     location = location.belowbar, color = #089981, size = size.small, text = "SETUP")
+plotshape(showSetup and evtSetup and evtSetupDir == -1, title = "Setup Short", style = shape.circle,
+     location = location.abovebar, color = #f23645, size = size.small, text = "SETUP")
+
+plotshape(showBos and evtBos and evtBosDir == 1, title = "BOS Long", style = shape.triangleup,
+     location = location.belowbar, color = #00bcd4, size = size.small, text = "BOS")
+plotshape(showBos and evtBos and evtBosDir == -1, title = "BOS Short", style = shape.triangledown,
+     location = location.abovebar, color = #00bcd4, size = size.small, text = "BOS")
+
+plotshape(showRetest and evtRetest, title = "Retest", style = shape.diamond,
+     location = location.absolute, color = #ff9800, size = size.tiny, text = "RT")
+
+plotshape(showConfirm and evtConfirm and evtConfirmDir == 1, title = "Confirm Long", style = shape.square,
+     location = location.belowbar, color = #ab47bc, size = size.small, text = "CFM")
+plotshape(showConfirm and evtConfirm and evtConfirmDir == -1, title = "Confirm Short", style = shape.square,
+     location = location.abovebar, color = #ab47bc, size = size.small, text = "CFM")
+
+// ENTRY markers — much more prominent; final LONG/SHORT label only at BOS_RETEST fill
+plotshape(showEntry and evtEntry and evtEntryDir == 1, title = "Entry Long", style = shape.labelup,
+     location = location.belowbar, color = #00e676, size = size.large, text = "LONG")
+plotshape(showEntry and evtEntry and evtEntryDir == -1, title = "Entry Short", style = shape.labeldown,
+     location = location.abovebar, color = #ff1744, size = size.large, text = "SHORT")
+
+plotshape(showInvalidations and evtInvalid, title = "Invalidation", style = shape.xcross,
+     location = location.abovebar, color = #787b86, size = size.tiny, text = "X")
+
+bgcolor(showInvalidations and evtInvalid ? color.new(#787b86, 90) : na, title = "Invalidation flash")
+
+// BOS level reference during funnel (retest zone)
+plot(smState >= ST_WAIT_RETEST and smState <= ST_WAIT_BOS_ENTRY_RETEST and not na(smFunnelBosLevel) ?
+     smFunnelBosLevel : na, "Funnel BOS Level", color = color.new(#00bcd4, 60), linewidth = 1, style = plot.style_circles)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DEBUG DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════
+var table dbgTbl = na
+if showDebugDash and barstate.islast
+    if na(dbgTbl)
+        dbgTbl := table.new(position.bottom_right, 2, 16, bgcolor = color.new(#000000, 20), border_width = 1)
+    string regTxt = htfRegime == 1 ? "Bull" : htfRegime == -1 ? "Bear" : "Neutral"
+    string sessTxt = sessBucket == 6 ? "After-hours" :
+         sessBucket == 0 ? "Overnight" : sessBucket == 1 ? "Premarket" :
+         sessBucket == 2 ? "Opening" : sessBucket == 3 ? "Morning" :
+         sessBucket == 4 ? "Midday" : "Afternoon"
+    table.cell(dbgTbl, 0, 0, "Architecture", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 0, "CRT_V2_B_LEGACY_EXP6", text_color = #ffffff, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 1, "Timeframe", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 1, is15m ? "15m ✓" : "WRONG — use 15m", text_color = is15m ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 2, "State", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 2, stateName(smState), text_color = #ffffff, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 3, "Direction", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 3, smDir == 1 ? "LONG" : smDir == -1 ? "SHORT" : "—", text_color = smDir == 1 ? #089981 : smDir == -1 ? #f23645 : #787b86, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 4, "HTF Regime", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 4, regTxt, text_color = htfRegime == 1 ? #089981 : htfRegime == -1 ? #f23645 : #787b86, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 5, "Session", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 5, sessTxt, text_color = sessBucket == 6 ? #f23645 : #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 6, "Score", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 6, str.tostring(smScore), text_color = smScore >= FROZEN_SE_MIN_SCORE ? #089981 : #f23645, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 7, "Setup Bar", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 7, na(smSetupBar) ? "—" : str.tostring(smSetupBar), text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 8, "BOS Bar", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 8, na(smBosBar) ? "—" : str.tostring(smBosBar), text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 9, "Funnel BOS Lvl", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 9, na(smFunnelBosLevel) ? "—" : str.tostring(smFunnelBosLevel, "#.##"), text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 10, "Entry BOS Lvl", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 10, na(smEntryBosLevel) ? "—" : str.tostring(smEntryBosLevel, "#.##"), text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 11, "Stop/Target", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 11, str.tostring(FROZEN_STOP_ATR) + "ATR / " + str.tostring(FROZEN_TARGET_R) + "R", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 12, "Max Hold", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 12, str.tostring(FROZEN_MAX_HOLD_BARS) + " bars (60m)", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 13, "Last Invalid", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 13, smInvalidReason == "" ? "—" : smInvalidReason, text_color = #787b86, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 14, "Funnel Counts", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 14, str.tostring(dbgSetups) + "→" + str.tostring(dbgBos) + "→" + str.tostring(dbgRetests) + "→" + str.tostring(dbgConfirms) + "→" + str.tostring(dbgEntries), text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 0, 15, "Invalidations", text_color = #aaaaaa, text_size = size.tiny)
+    table.cell(dbgTbl, 1, 15, str.tostring(dbgInvalids), text_color = #787b86, text_size = size.tiny)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════════════════════
+alertcondition(evtEntry and evtEntryDir == 1, title = "LONG ENTRY", message = "CRT V2 15M: LONG ENTRY (BOS_RETEST)")
+alertcondition(evtEntry and evtEntryDir == -1, title = "SHORT ENTRY", message = "CRT V2 15M: SHORT ENTRY (BOS_RETEST)")
+alertcondition(evtStop, title = "STOP HIT", message = "CRT V2 15M: STOP HIT")
+alertcondition(evtTarget, title = "TARGET HIT", message = "CRT V2 15M: TARGET HIT")
+alertcondition(evtTimeExit, title = "TIME EXIT", message = "CRT V2 15M: TIME EXIT (max hold)")

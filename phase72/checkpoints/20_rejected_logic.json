@@ -1,0 +1,11 @@
+{
+  "active_leakage": false,
+  "scan": {
+    "PASS_LATE": false,
+    "PASS_CHASE": false,
+    "EXIT_AND_REVERSE": false,
+    "runner_frac": false,
+    "trail_atr": false,
+    "partial_frac": false
+  }
+}

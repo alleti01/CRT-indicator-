@@ -1,0 +1,130 @@
+{
+  "phase": "Phase 39 \u2014 NQ 15M Entry Timing + Static/Chop Signal Precision",
+  "parity": {
+    "counts": {
+      "L": 2075,
+      "S": 1836,
+      "RL": 976,
+      "RS": 925,
+      "total": 5812
+    },
+    "parity_pass": true
+  },
+  "baseline_signals": {
+    "L": 2075,
+    "S": 1836,
+    "RL": 976,
+    "RS": 925,
+    "total": 5812
+  },
+  "behavior_rates": {
+    "IMMEDIATE_EXPANSION": 0.39160357880247765,
+    "CLEAN_WINNER": 0.2789057123193393,
+    "WRONG_DIRECTION": 0.2255677907777013,
+    "DELAYED_EXPANSION": 0.08706125258086717,
+    "STATIC_CHOP": 0.01686166551961459
+  },
+  "primary_movement_definition": "MFE >= 1.0R within max hold",
+  "baseline_performance": {
+    "N": 5812,
+    "WinRate": 0.4741913282863042,
+    "AvgR": 0.2285851995579937,
+    "TotalR": 1328.5371798310593,
+    "PF": 1.4779205868355416,
+    "MaxDD": 14.178086803282326,
+    "ReturnMaxDD": 93.7035580515344
+  },
+  "walk_forward": {
+    "mean_auc_lr": 0.6456212149249387,
+    "mean_auc_et": 0.6987079640197134
+  },
+  "top_features": [
+    {
+      "feature": "impulse_3bar",
+      "mean_importance": 0.16971506505892098,
+      "folds": 7
+    },
+    {
+      "feature": "directional_efficiency",
+      "mean_importance": 0.14643406528162178,
+      "folds": 7
+    },
+    {
+      "feature": "pre_entry_move_3_atr",
+      "mean_importance": 0.11851918387123114,
+      "folds": 7
+    },
+    {
+      "feature": "price_vs_ema8",
+      "mean_importance": 0.06956852010333418,
+      "folds": 7
+    },
+    {
+      "feature": "body_atr",
+      "mean_importance": 0.06599161106574518,
+      "folds": 7
+    },
+    {
+      "feature": "ema8_slope",
+      "mean_importance": 0.06074332104904075,
+      "folds": 7
+    },
+    {
+      "feature": "pre_entry_move_5_atr",
+      "mean_importance": 0.0528109415284864,
+      "folds": 7
+    },
+    {
+      "feature": "rel_volume",
+      "mean_importance": 0.05007254782360347,
+      "folds": 7
+    },
+    {
+      "feature": "range_atr",
+      "mean_importance": 0.04837999895324944,
+      "folds": 7
+    },
+    {
+      "feature": "pre_entry_efficiency_5",
+      "mean_importance": 0.0338207173865497,
+      "folds": 7
+    }
+  ],
+  "best_filter": {
+    "type": "p_expansion_et",
+    "threshold": 0.47324241322692023,
+    "description": "Keep if ExtraTrees expansion probability >= 0.473",
+    "baseline": {
+      "N": 4271,
+      "WinRate": 0.4827909154764692,
+      "AvgR": 0.2708933115076147,
+      "TotalR": 1156.9853334490224,
+      "PF": 1.6008157031522467,
+      "MaxDD": 12.799129585796095,
+      "ReturnMaxDD": 90.39562617859525
+    },
+    "filtered": {
+      "N": 2776,
+      "WinRate": 0.5417867435158501,
+      "AvgR": 0.44199711843753325,
+      "TotalR": 1226.9840007825924,
+      "PF": 2.123686737886239,
+      "MaxDD": 10.464722782894796,
+      "ReturnMaxDD": 117.24954652293033
+    },
+    "retention": 0.6499648794193398
+  },
+  "best_static_exit": {
+    "rule": "FROZEN",
+    "N": 5812.0,
+    "WinRate": 0.4803854094975912,
+    "AvgR": 0.27202599029322233,
+    "TotalR": 1581.0150555842083,
+    "PF": 1.5975568399914861,
+    "MaxDD": 12.799129585796209,
+    "ReturnMaxDD": 123.52520106826127
+  },
+  "classification": "A",
+  "lookahead_audit": "PASS",
+  "deterministic": "PASS"
+}

@@ -1,0 +1,17 @@
+{
+  "1.0x": {
+    "incremental_AvgR": -0.02620595746150249,
+    "incremental_TotalR": -947.9743052123911,
+    "pass": false
+  },
+  "1.5x": {
+    "incremental_AvgR": -0.026210330839588826,
+    "incremental_TotalR": -948.1325077912861,
+    "pass": false
+  },
+  "2.0x": {
+    "incremental_AvgR": -0.026214704217675158,
+    "incremental_TotalR": -948.2907103701812,
+    "pass": false
+  }
+}

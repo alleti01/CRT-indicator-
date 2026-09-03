@@ -1,0 +1,2 @@
+event_id,timestamp,event_type,direction,tv_ohlc,python_ohlc,ohlc_pass,tv_atr,python_atr,atr_pass,tv_state,python_state,state_pass,tv_evidence,python_evidence,evidence_pass,tv_signal,python_signal,signal_pass,tv_entry,python_entry,entry_pass,tv_exit,python_exit,exit_pass,tv_price,python_price,price_pass,first_divergence,status
+OBS-AUG30-003,2026-08-30 20:35:00-05:00,ENTER_SHORT,SHORT,29310.75,29310.75,True,14.7679,14.767857142857142,True,SHORT_ACTIVE,COOLDOWN,False,7,8,False,False,False,True,True,False,False,False,False,True,29312.5,,False,FEATURES:evidence tv=7 py=8,FAIL

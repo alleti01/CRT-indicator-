@@ -1,0 +1,10 @@
+component,classification,notes
+causal_swings,PINE-IMPLEMENTABLE,Pine swing arrays with confirmation lag
+E1_E16_events,PINE-IMPLEMENTABLE,State machine per event type
+htf_5m_15m,DIFFICULT,Requires request.security lookahead_off + bar alignment tests
+phase44_core_context,DIFFICULT,External CSV/state feed or simplified parity mode
+logistic_score_8feat,PINE-IMPLEMENTABLE,Manual coef/scaler application
+standard_scaler,PINE-IMPLEMENTABLE,Precomputed mean/scale constants
+global_qcut_d10,DIFFICULT,Not causal live; frozen threshold from spec
+30m_episode_state,PINE-NATIVE,Two timestamps per direction
+0.75ATR_2.5R_60m,PINE-NATIVE,strategy.exit pattern

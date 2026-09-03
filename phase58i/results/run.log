@@ -1,0 +1,16 @@
+Integrity verified
+Canonical H1: 60,118 trades, TotalR 11,581
+Part A: management forensics...
+H1/P4 rejected forensics...
+Part B: management models...
+
+Phase58I complete in 1.8 min
+  model  trades     AvgR       TotalR  delta_vs_m0
+     M0   60118 0.192645 11581.432110     0.000000
+ M1_1.0   60118 0.528776 31788.946735 20207.514625
+M1_1.25   60118 0.483973 29095.487880 17514.055770
+     M2   60118 0.979507 58885.978395 47304.546285
+    M3A   60118 0.310710 18679.259791  7097.827681
+    M3B   60118 0.288700 17356.054095  5774.621985
+    M3C   60118 0.569347 34228.006496 22646.574386
+     M4   60118 0.571037 34329.577835 22748.145725

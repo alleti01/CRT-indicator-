@@ -1,0 +1,44 @@
+{
+  "phase": "Phase 26 \u2014 High-Expectancy Entry Trigger Discovery",
+  "total_bars": 598238,
+  "eligible_bars": 598214,
+  "unconditional_long_rate": 0.3313580090068103,
+  "unconditional_short_rate": 0.322461527145804,
+  "stitched_walk_forward": {
+    "N": 387444,
+    "target_hit_rate": 0.3334365740597351,
+    "win_rate": 0.3351452080816841,
+    "Avg_MFE": 0.7517779732508874,
+    "Avg_MAE": 0.7101082117852129,
+    "median_MFE": 0.5820608971460645,
+    "median_MAE": 0.6206420796333567,
+    "MFE_MAE": 6.206186335359574,
+    "gross_AvgR": 0.0038525032171692706,
+    "net_AvgR": -0.12662125029903207,
+    "net_TotalR": -49058.643700858185,
+    "net_PF": 0.8314564119812402,
+    "MaxDD": 49062.39720151696
+  },
+  "precision_top10": [
+    {
+      "top_fraction": 0.1,
+      "N": 38744,
+      "target_hit_rate": 0.35406772661573405,
+      "win_rate": 0.35631323559776995,
+      "Avg_MFE": 0.7733465896769344,
+      "Avg_MAE": 0.6862199710651439,
+      "median_MFE": 0.6172370236128781,
+      "median_MAE": 0.6026630645737121,
+      "MFE_MAE": 7.972228711850125,
+      "gross_AvgR": 0.06643810263402466,
+      "net_AvgR": -0.14571069030486877,
+      "net_TotalR": -5645.414985171836,
+      "net_PF": 0.8135927791826721,
+      "MaxDD": 5650.484473894518,
+      "signals_per_year": 7079.162581290646,
+      "false_signal_rate": 0.645932273384266
+    }
+  ],
+  "score_monotonicity_corr": -0.5750486826027952,
+  "final_classification": "D"
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "58C",
+  "analysis_only": true,
+  "phase58_v1_hash": "facad8ebfae648be",
+  "phase58b_config_hash": "321a158a0ce9a58e",
+  "s54_model_hash": "bccf4277f3d44d13",
+  "structural_gap_bars": 30,
+  "armed_cycle_gap_bars": 5,
+  "match_window_bars": 30,
+  "direction_disagreement_window_bars": 15,
+  "price_buckets_atr": {
+    "near_identical": 0.25,
+    "material_difference": 1.0
+  },
+  "meaningful_move_thresholds_atr": [0.5, 1.0, 1.5, 2.0, 2.5],
+  "time_cluster_minutes": [5, 10, 15, 30],
+  "retention_high_pct": 70,
+  "retention_medium_pct": 40
+}

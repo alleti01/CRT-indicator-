@@ -1,0 +1,624 @@
+{
+  "causality": {
+    "sequential_parity": true,
+    "prefix_invariance": true
+  },
+  "baseline": {
+    "N": 87798,
+    "AvgR": -0.007496343962242616,
+    "PF": 0.9895111780206278,
+    "TotalR": -658.1640071969772,
+    "WinRate": 0.28466479874256817,
+    "MaxDD": 1038.6067336931137,
+    "realization_efficiency_median": -0.7142857142857792,
+    "realization_efficiency_mean": -1.8528611234931605,
+    "winner_25r_retention": 0.9922617377009743,
+    "winner_3r_retention": 2.479995989170761,
+    "avg_risk_atr": 1.0,
+    "median_risk_atr": 1.0,
+    "median_hold": 3.0,
+    "avg_hold": 5.905202852001184
+  },
+  "baseline_long": {
+    "N": 44141,
+    "AvgR": 0.00486365573887858,
+    "PF": 1.00684340580861,
+    "TotalR": 214.6866279698394,
+    "WinRate": 0.2885299381527378,
+    "MaxDD": 238.21502404139775,
+    "realization_efficiency_median": -0.7142857142857143,
+    "realization_efficiency_mean": -1.8520617787403035,
+    "winner_25r_retention": 0.9933649289099526,
+    "winner_3r_retention": 2.6295521138551696,
+    "avg_risk_atr": 1.0,
+    "median_risk_atr": 1.0,
+    "median_hold": 3.0,
+    "avg_hold": 6.477266033846084
+  },
+  "baseline_short": {
+    "N": 43657,
+    "AvgR": -0.01999337185713211,
+    "PF": 0.9721825189574894,
+    "TotalR": -872.8506351668166,
+    "WinRate": 0.28075680875919096,
+    "MaxDD": 945.5423235138348,
+    "realization_efficiency_median": -0.7142857142857904,
+    "realization_efficiency_mean": -1.8536693301206382,
+    "winner_25r_retention": 0.9911245012621122,
+    "winner_3r_retention": 2.342444658325313,
+    "avg_risk_atr": 1.0,
+    "median_risk_atr": 1.0,
+    "median_hold": 3.0,
+    "avg_hold": 5.326797535332249
+  },
+  "path_ordering": {
+    "LONG_+1_before_-1": 0.4975325700750099,
+    "LONG_+1.5_before_-1": 0.399624765478424,
+    "LONG_+2_before_-1": 0.3317507418397626,
+    "LONG_+2.5_before_-1": 0.2867340868530637,
+    "LONG_+1_before_-1.5": 0.5941327538522323,
+    "LONG_+2_before_-1.5": 0.42844382691544264,
+    "LONG_+2.5_before_-1.5": 0.3784673717820794,
+    "SHORT_+1_before_-1": 0.48555206326675454,
+    "SHORT_+1.5_before_-1": 0.3869397688095721,
+    "SHORT_+2_before_-1": 0.3242009132420091,
+    "SHORT_+2.5_before_-1": 0.27638395124428644,
+    "SHORT_+1_before_-1.5": 0.5890883277558057,
+    "SHORT_+2_before_-1.5": 0.42258392675483214,
+    "SHORT_+2.5_before_-1.5": 0.36653061224489797,
+    "+1_before_-1": 0.4916229057264316,
+    "+1.5_before_-1": 0.39336635149332133,
+    "+2_before_-1": 0.32802404207362884,
+    "+2.5_before_-1": 0.2816215945010285,
+    "+1_before_-1.5": 0.5916437327995997,
+    "+2_before_-1.5": 0.4255500854013865,
+    "+2.5_before_-1.5": 0.3725658359398648
+  },
+  "path_ordering_long": {
+    "LONG_+1_before_-1": 0.4975325700750099,
+    "LONG_+1.5_before_-1": 0.399624765478424,
+    "LONG_+2_before_-1": 0.3317507418397626,
+    "LONG_+2.5_before_-1": 0.2867340868530637,
+    "LONG_+1_before_-1.5": 0.5941327538522323,
+    "LONG_+2_before_-1.5": 0.42844382691544264,
+    "LONG_+2.5_before_-1.5": 0.3784673717820794
+  },
+  "path_ordering_short": {
+    "SHORT_+1_before_-1": 0.48555206326675454,
+    "SHORT_+1.5_before_-1": 0.3869397688095721,
+    "SHORT_+2_before_-1": 0.3242009132420091,
+    "SHORT_+2.5_before_-1": 0.27638395124428644,
+    "SHORT_+1_before_-1.5": 0.5890883277558057,
+    "SHORT_+2_before_-1.5": 0.42258392675483214,
+    "SHORT_+2.5_before_-1.5": 0.36653061224489797
+  },
+  "bad_stop": {
+    "count": 12783,
+    "pct": {
+      "too_tight": 0.3260580458421341,
+      "bad_entry_recovery": 0.06954549010404443,
+      "structure_valid": 0.17398106860674334,
+      "ambiguous": 0.43041539544707813
+    }
+  },
+  "invalidation": {
+    "fixed_1.0": {
+      "N": 87798,
+      "AvgR": -0.007496343962242616,
+      "PF": 0.9895111780206278,
+      "TotalR": -658.1640071969772,
+      "WinRate": 0.28466479874256817,
+      "MaxDD": 1038.6067336931137,
+      "realization_efficiency_median": -0.7142857142857792,
+      "realization_efficiency_mean": -1.8528611234931605,
+      "winner_25r_retention": 0.9922617377009743,
+      "winner_3r_retention": 2.479995989170761,
+      "avg_risk_atr": 1.0,
+      "median_risk_atr": 1.0,
+      "median_hold": 3.0,
+      "avg_hold": 5.905202852001184
+    },
+    "fixed_1.25": {
+      "N": 87798,
+      "AvgR": -0.001973570629972664,
+      "PF": 0.997217702938104,
+      "TotalR": -173.27555417033994,
+      "WinRate": 0.28891318708854413,
+      "MaxDD": 536.2217716817329,
+      "realization_efficiency_median": -0.75,
+      "realization_efficiency_mean": -2.0483120243120454,
+      "winner_25r_retention": 0.995580782485303,
+      "winner_3r_retention": 2.971158507028599,
+      "avg_risk_atr": 1.25,
+      "median_risk_atr": 1.25,
+      "median_hold": 5.0,
+      "avg_hold": 9.25367320440101
+    },
+    "structure": {
+      "N": 87798,
+      "AvgR": 0.007663359940441689,
+      "PF": 1.0142071275482831,
+      "TotalR": 672.8276760508994,
+      "WinRate": 0.3875031321897993,
+      "MaxDD": 174.53489249864367,
+      "realization_efficiency_median": -0.5038482031851281,
+      "realization_efficiency_mean": -2.472362943137574,
+      "winner_25r_retention": 1.0241181553931966,
+      "winner_3r_retention": 3.7829386763812995,
+      "avg_risk_atr": 3.5039426485847818,
+      "median_risk_atr": 3.375,
+      "median_hold": 34.0,
+      "avg_hold": 33.87323173648603
+    },
+    "hybrid": {
+      "N": 87798,
+      "AvgR": -0.00029203688950119755,
+      "PF": 0.9995767229580903,
+      "TotalR": -25.640254824426144,
+      "WinRate": 0.302410077678307,
+      "MaxDD": 419.29677815738347,
+      "realization_efficiency_median": -0.782608695652174,
+      "realization_efficiency_mean": -2.2781773091672295,
+      "winner_25r_retention": 1.0049969317086,
+      "winner_3r_retention": 3.6813685746716396,
+      "avg_risk_atr": 1.6761742812692755,
+      "median_risk_atr": 1.75,
+      "median_hold": 9.0,
+      "avg_hold": 15.70362650629855
+    }
+  },
+  "profit_states": {
+    "after_0.5R": {
+      "n": 9170,
+      "eventual_2.5R": 0.6918211559432933,
+      "eventual_stop": 0.6877862595419847,
+      "median_giveback": 3.92239926574584
+    },
+    "after_1.0R": {
+      "n": 8436,
+      "eventual_2.5R": 0.7520151730678046,
+      "eventual_stop": 0.5980322427690848,
+      "median_giveback": 4.172133095662508
+    },
+    "after_1.5R": {
+      "n": 7675,
+      "eventual_2.5R": 0.8265798045602606,
+      "eventual_stop": 0.5175244299674268,
+      "median_giveback": 4.454545454545455
+    },
+    "after_2.0R": {
+      "n": 7021,
+      "eventual_2.5R": 0.903574989317761,
+      "eventual_stop": 0.4448084318473152,
+      "median_giveback": 4.64
+    },
+    "after_2.5R": {
+      "n": 6344,
+      "eventual_2.5R": 1.0,
+      "eventual_stop": 0.37673392181588905,
+      "median_giveback": 4.842436279377689
+    }
+  },
+  "protection": {
+    "none": {
+      "N": 87798,
+      "AvgR": -0.00029203688950119755,
+      "PF": 0.9995767229580903,
+      "TotalR": -25.640254824426144,
+      "WinRate": 0.302410077678307,
+      "MaxDD": 419.29677815738347,
+      "realization_efficiency_median": -0.782608695652174,
+      "realization_efficiency_mean": -2.2781773091672295,
+      "winner_25r_retention": 1.0049969317086,
+      "winner_3r_retention": 3.6813685746716396,
+      "avg_risk_atr": 1.6761742812692755,
+      "median_risk_atr": 1.75,
+      "median_hold": 9.0,
+      "avg_hold": 15.70362650629855
+    },
+    "be_1r": {
+      "N": 87798,
+      "AvgR": -0.10347191336974321,
+      "PF": 0.7923910440184366,
+      "TotalR": -9084.627050036714,
+      "WinRate": 0.16674639513428552,
+      "MaxDD": 9084.62705003673,
+      "realization_efficiency_median": 0.0,
+      "realization_efficiency_mean": -2.2538459215009126,
+      "winner_25r_retention": 0.9653776653415251,
+      "winner_3r_retention": 3.820852534562212,
+      "avg_risk_atr": 1.6761742812692755,
+      "median_risk_atr": 1.75,
+      "median_hold": 7.0,
+      "avg_hold": 11.054602610537826
+    },
+    "be_15r": {
+      "N": 87798,
+      "AvgR": -0.05095582284725512,
+      "PF": 0.9142782223694116,
+      "TotalR": -4473.819334343305,
+      "WinRate": 0.23265905829289962,
+      "MaxDD": 4476.319334343316,
+      "realization_efficiency_median": -0.782608695652174,
+      "realization_efficiency_mean": -2.2793254450418003,
+      "winner_25r_retention": 0.9727151612043698,
+      "winner_3r_retention": 3.7414220752377014,
+      "avg_risk_atr": 1.6761742812692755,
+      "median_risk_atr": 1.75,
+      "median_hold": 9.0,
+      "avg_hold": 13.737328868539146
+    },
+    "partial_05r": {
+      "N": 87798,
+      "AvgR": -0.08108355325468829,
+      "PF": 0.863595052867039,
+      "TotalR": -7118.973808655122,
+      "WinRate": 0.4021048315451377,
+      "MaxDD": 7123.973808655153,
+      "realization_efficiency_median": -0.782608695652174,
+      "realization_efficiency_mean": -2.2688566181388836,
+      "winner_25r_retention": 0.9300854819653902,
+      "winner_3r_retention": 3.5990783410138247,
+      "avg_risk_atr": 1.6761742812692755,
+      "median_risk_atr": 1.75,
+      "median_hold": 8.0,
+      "avg_hold": 12.434884621517574
+    },
+    "mfe_giveback_50": {
+      "N": 87798,
+      "AvgR": -0.12019852672623707,
+      "PF": 0.7977928565605358,
+      "TotalR": -10553.190249510162,
+      "WinRate": 0.4021048315451377,
+      "MaxDD": 10555.654549825958,
+      "realization_efficiency_median": -0.782608695652174,
+      "realization_efficiency_mean": -2.2533835768607267,
+      "winner_25r_retention": 0.6516899141630901,
+      "winner_3r_retention": 2.3043696634856854,
+      "avg_risk_atr": 1.6761742812692755,
+      "median_risk_atr": 1.75,
+      "median_hold": 7.0,
+      "avg_hold": 11.148112713273651
+    },
+    "structure_trail": {
+      "N": 87798,
+      "AvgR": -0.003754181331760938,
+      "PF": 0.9942216551832543,
+      "TotalR": -329.6096125659468,
+      "WinRate": 0.3158841887058931,
+      "MaxDD": 667.9197403312763,
+      "realization_efficiency_median": -0.782608695652174,
+      "realization_efficiency_mean": -2.270717823251151,
+      "winner_25r_retention": 0.9968766517706982,
+      "winner_3r_retention": 3.6755745590593265,
+      "avg_risk_atr": 1.6761742812692755,
+      "median_risk_atr": 1.75,
+      "median_hold": 9.0,
+      "avg_hold": 14.369416159821409
+    }
+  },
+  "targets": {
+    "fixed_25r": {
+      "N": 87798,
+      "AvgR": -0.12019852672623707,
+      "PF": 0.7977928565605358,
+      "TotalR": -10553.190249510162,
+      "WinRate": 0.4021048315451377,
+      "MaxDD": 10555.654549825958,
+      "realization_efficiency_median": -0.782608695652174,
+      "realization_efficiency_mean": -2.2533835768607267,
+      "winner_25r_retention": 0.6516899141630901,
+      "winner_3r_retention": 2.3043696634856854,
+      "avg_risk_atr": 1.6761742812692755,
+      "median_risk_atr": 1.75,
+      "median_hold": 7.0,
+      "avg_hold": 11.148112713273651
+    },
+    "fixed_3r": {
+      "N": 87798,
+      "AvgR": -0.1216545862653223,
+      "PF": 0.7953433619777379,
+      "TotalR": -10681.029364922768,
+      "WinRate": 0.4021048315451377,
+      "MaxDD": 10683.993665238586,
+      "realization_efficiency_median": -0.782608695652174,
+      "realization_efficiency_mean": -2.2598733846379715,
+      "winner_25r_retention": 0.46633583690987124,
+      "winner_3r_retention": 0.7197687861271677,
+      "avg_risk_atr": 1.6761742812692755,
+      "median_risk_atr": 1.75,
+      "median_hold": 7.0,
+      "avg_hold": 11.38471263582314
+    },
+    "runner": {
+      "N": 87798,
+      "AvgR": -0.11778032044305184,
+      "PF": 0.8018609478931688,
+      "TotalR": -10340.876574259066,
+      "WinRate": 0.4021048315451377,
+      "MaxDD": 10342.840874574837,
+      "realization_efficiency_median": -0.782608695652174,
+      "realization_efficiency_mean": -2.269624724611357,
+      "winner_25r_retention": 0.31223175965665234,
+      "winner_3r_retention": 0.3522884882108183,
+      "avg_risk_atr": 1.6761742812692755,
+      "median_risk_atr": 1.75,
+      "median_hold": 7.0,
+      "avg_hold": 12.008918198592223
+    }
+  },
+  "judgment": {
+    "J1_not_chased": {
+      "bad_removed": 0,
+      "good_removed": 0,
+      "selectivity_ratio": 999,
+      "winner_retention": 1.0,
+      "large_move_retention": 1.0,
+      "take_count": 30000
+    },
+    "J2_location_ok": {
+      "bad_removed": 2751,
+      "good_removed": 1107,
+      "selectivity_ratio": 2.4850948509485096,
+      "winner_retention": 0.8032349804479204,
+      "large_move_retention": 0.8090102128471891,
+      "take_count": 24168
+    },
+    "J3_no_conflict": {
+      "bad_removed": 1070,
+      "good_removed": 442,
+      "selectivity_ratio": 2.420814479638009,
+      "winner_retention": 0.9214361891219339,
+      "large_move_retention": 0.9198243772072158,
+      "take_count": 27618
+    }
+  },
+  "candidates": {
+    "A": {
+      "logic": "early entry, hybrid invalidation, fixed 2.5R",
+      "N": 87798,
+      "AvgR": -0.00029203688950119755,
+      "PF": 0.9995767229580903,
+      "TotalR": -25.640254824426144,
+      "WinRate": 0.302410077678307,
+      "MaxDD": 419.29677815738347,
+      "realization_efficiency_median": -0.782608695652174,
+      "realization_efficiency_mean": -2.2781773091672295,
+      "winner_25r_retention": 1.0049969317086,
+      "winner_3r_retention": 3.6813685746716396,
+      "avg_risk_atr": 1.6761742812692755,
+      "median_risk_atr": 1.75,
+      "median_hold": 9.0,
+      "avg_hold": 15.70362650629855
+    },
+    "B": {
+      "logic": "early entry, hybrid invalidation, MFE 50% giveback protection",
+      "N": 87798,
+      "AvgR": -0.12019852672623707,
+      "PF": 0.7977928565605358,
+      "TotalR": -10553.190249510162,
+      "WinRate": 0.4021048315451377,
+      "MaxDD": 10555.654549825958,
+      "realization_efficiency_median": -0.782608695652174,
+      "realization_efficiency_mean": -2.2533835768607267,
+      "winner_25r_retention": 0.6516899141630901,
+      "winner_3r_retention": 2.3043696634856854,
+      "avg_risk_atr": 1.6761742812692755,
+      "median_risk_atr": 1.75,
+      "median_hold": 7.0,
+      "avg_hold": 11.148112713273651
+    },
+    "C": {
+      "logic": "not-chased filter, hybrid invalidation, partial +0.5R floor after +1.5R",
+      "N": 30000,
+      "AvgR": -0.0794774493804882,
+      "PF": 0.866280647864512,
+      "TotalR": -2384.3234814146463,
+      "WinRate": 0.40213333333333334,
+      "MaxDD": 2385.8234814146463,
+      "realization_efficiency_median": -0.7792892156862745,
+      "realization_efficiency_mean": -2.273767976175635,
+      "winner_25r_retention": 0.9284414796846574,
+      "winner_3r_retention": 3.4957854406130267,
+      "avg_risk_atr": 1.675085174652218,
+      "median_risk_atr": 1.75,
+      "median_hold": 8.0,
+      "avg_hold": 12.395733333333334
+    }
+  },
+  "best_candidate": "A",
+  "walkforward": {
+    "train": {
+      "N": 52678,
+      "AvgR": -0.004016970010646576,
+      "PF": 0.9941906308193431,
+      "TotalR": -211.60594622084034,
+      "WinRate": 0.3011124188465773,
+      "MaxDD": 419.29677815738347
+    },
+    "validation": {
+      "N": 17560,
+      "AvgR": 0.014292961601826732,
+      "PF": 1.0208716473406683,
+      "TotalR": 250.98440572807743,
+      "WinRate": 0.30723234624145784,
+      "MaxDD": 147.078873846259
+    },
+    "holdout": {
+      "N": 17560,
+      "AvgR": -0.003702660269456908,
+      "PF": 0.9946378554473678,
+      "TotalR": -65.0187143316633,
+      "WinRate": 0.3014806378132118,
+      "MaxDD": 179.95875973192668
+    }
+  },
+  "years": {
+    "2017": {
+      "N": 2264,
+      "AvgR": -0.029306177841496032,
+      "PF": 0.9583535518401803,
+      "TotalR": -66.34918663314701,
+      "WinRate": 0.2879858657243816,
+      "MaxDD": 130.58475671299607
+    },
+    "2018": {
+      "N": 9762,
+      "AvgR": 0.0025071373752557895,
+      "PF": 1.0036138835453745,
+      "TotalR": 24.47467505724702,
+      "WinRate": 0.30086047940995697,
+      "MaxDD": 161.55097510456454
+    },
+    "2019": {
+      "N": 9745,
+      "AvgR": -0.02155378323458632,
+      "PF": 0.9689648277018301,
+      "TotalR": -210.04161762104368,
+      "WinRate": 0.2972806567470498,
+      "MaxDD": 296.6484505200789
+    },
+    "2020": {
+      "N": 9639,
+      "AvgR": 0.0016009609703269893,
+      "PF": 1.0023192995832464,
+      "TotalR": 15.43166279298185,
+      "WinRate": 0.3022097727980081,
+      "MaxDD": 165.81903754035488
+    },
+    "2021": {
+      "N": 9982,
+      "AvgR": 0.012256806390293981,
+      "PF": 1.0179054902266615,
+      "TotalR": 122.34744138791453,
+      "WinRate": 0.30845521939491083,
+      "MaxDD": 164.7684463723997
+    },
+    "2022": {
+      "N": 9992,
+      "AvgR": -0.010448750118737471,
+      "PF": 0.9849012680602071,
+      "TotalR": -104.4039111864248,
+      "WinRate": 0.2993394715772618,
+      "MaxDD": 149.0129151609141
+    },
+    "2023": {
+      "N": 9930,
+      "AvgR": 0.005973762847389963,
+      "PF": 1.008697203784541,
+      "TotalR": 59.31946507458234,
+      "WinRate": 0.305337361530715,
+      "MaxDD": 147.07887384625903
+    },
+    "2024": {
+      "N": 9916,
+      "AvgR": 0.011536262619399574,
+      "PF": 1.0168009814744785,
+      "TotalR": 114.39358013396617,
+      "WinRate": 0.3054659136748689,
+      "MaxDD": 104.95916765728212
+    },
+    "2025": {
+      "N": 9907,
+      "AvgR": 0.002557734262768311,
+      "PF": 1.0037144311019983,
+      "TotalR": 25.339473341245657,
+      "WinRate": 0.3037246391440396,
+      "MaxDD": 153.9149348391479
+    },
+    "2026": {
+      "N": 6661,
+      "AvgR": -0.0009235606022741564,
+      "PF": 0.9986596477375237,
+      "TotalR": -6.151837171748156,
+      "WinRate": 0.3020567482360006,
+      "MaxDD": 138.84331976419804
+    }
+  },
+  "long_short_best": {
+    "LONG": {
+      "N": 44141,
+      "AvgR": 0.017983054197267576,
+      "PF": 1.0264443537784007,
+      "TotalR": 793.789995321588,
+      "WinRate": 0.3119775265626062,
+      "MaxDD": 137.2492551074771
+    },
+    "SHORT": {
+      "N": 43657,
+      "AvgR": -0.018769733379435462,
+      "PF": 0.973184616007132,
+      "TotalR": -819.4302501460139,
+      "WinRate": 0.29273656000183246,
+      "MaxDD": 864.8374732434208
+    }
+  },
+  "sensitivity": {
+    "cap_1.55": {
+      "N": 87798,
+      "AvgR": -0.13382834035558186,
+      "PF": 0.7759591858720822,
+      "TotalR": -11749.860626539376,
+      "WinRate": 0.4008291760632361,
+      "MaxDD": 11751.478799606772,
+      "realization_efficiency_median": -0.775,
+      "realization_efficiency_mean": -2.171816754811091,
+      "winner_25r_retention": 0.5802883942321153,
+      "winner_3r_retention": 1.7816251154201292,
+      "avg_risk_atr": 1.4987565122119646,
+      "median_risk_atr": 1.55,
+      "median_hold": 5.0,
+      "avg_hold": 8.848413403494385
+    },
+    "cap_1.75": {
+      "N": 87798,
+      "AvgR": -0.12019852672623707,
+      "PF": 0.7977928565605358,
+      "TotalR": -10553.190249510162,
+      "WinRate": 0.4021048315451377,
+      "MaxDD": 10555.654549825958,
+      "realization_efficiency_median": -0.782608695652174,
+      "realization_efficiency_mean": -2.2533835768607267,
+      "winner_25r_retention": 0.6516899141630901,
+      "winner_3r_retention": 2.3043696634856854,
+      "avg_risk_atr": 1.6761742812692755,
+      "median_risk_atr": 1.75,
+      "median_hold": 7.0,
+      "avg_hold": 11.148112713273651
+    },
+    "cap_1.95": {
+      "N": 87798,
+      "AvgR": -0.1088082378994454,
+      "PF": 0.8158484905099249,
+      "TotalR": -9553.145671095506,
+      "WinRate": 0.40341465637030455,
+      "MaxDD": 9559.631315824772,
+      "realization_efficiency_median": -0.7850649350649374,
+      "realization_efficiency_mean": -2.3115442867858715,
+      "winner_25r_retention": 0.7017703722988805,
+      "winner_3r_retention": 2.6650992685475443,
+      "avg_risk_atr": 1.8476403570477726,
+      "median_risk_atr": 1.95,
+      "median_hold": 9.0,
+      "avg_hold": 13.540650128704526
+    }
+  },
+  "cost_stress": {
+    "N": 87798,
+    "AvgR": -0.26402203991075224,
+    "PF": 0.683960905599394,
+    "TotalR": -23180.607060084225,
+    "WinRate": 0.30218228205653885,
+    "MaxDD": 23181.449917230122,
+    "realization_efficiency_median": -0.9502113771643977,
+    "realization_efficiency_mean": -2.7626747068789403,
+    "winner_25r_retention": 0.872375186199606,
+    "winner_3r_retention": 0.0005344735435595938,
+    "avg_risk_atr": 1.6761742812692755,
+    "median_risk_atr": 1.75,
+    "median_hold": 9.0,
+    "avg_hold": 14.369416159821409
+  },
+  "mixed_direction_opps": 0,
+  "n_opportunities": 87798
+}

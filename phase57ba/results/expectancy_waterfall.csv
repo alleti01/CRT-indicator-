@@ -1,0 +1,8 @@
+step,AvgR,N
+Phase57A causal next-bar (reported),1.03,76621
+Phase57A reproduced,0.09889496488518286,76621
+57A causally-qualified only,0.12447286067444097,70057
+57A future-dependent only,-0.1740956879649166,6564
+Matched legs (57A exec),0.0991808416182991,76598
+Matched legs (57B first-turn exec),0.05961290025567504,76598
+Phase57B raw,-0.3663758122227158,186843

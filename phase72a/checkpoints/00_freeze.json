@@ -1,0 +1,12 @@
+{
+  "pass": true,
+  "signal_hash": "0da41f282174679f",
+  "trader_hash": "b6adfc04e8885a3d",
+  "signals": 36174,
+  "executed": 35902,
+  "skipped": 272,
+  "avg_r": 0.01687465228217089,
+  "total_r": 605.8337662344993,
+  "t5_exits": 775,
+  "killed_winners": 243
+}

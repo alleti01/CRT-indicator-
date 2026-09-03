@@ -1,0 +1,39 @@
+//@version=5
+indicator("Phase58I Management Audit", overlay=true, max_labels_count=100)
+
+showM0 = input.bool(true, "Show M0 stop/target")
+showCandidate = input.bool(false, "Show candidate management")
+showDebugTable = input.bool(true, "Debug table")
+
+atr1 = ta.atr(14)
+var float entryP = na
+var float m0Stop = na
+var float m0Target = na
+var string dir = na
+
+longSig = ta.crossover(close, ta.lowest(low, 10))
+shortSig = ta.crossunder(close, ta.highest(high, 10))
+
+if longSig or shortSig
+    dir := longSig ? "LONG" : "SHORT"
+    entryP := close
+    risk = atr1 * 0.75
+    m0Stop := dir == "LONG" ? entryP - risk : entryP + risk
+    m0Target := dir == "LONG" ? entryP + risk * 2.5 : entryP - risk * 2.5
+    label.new(bar_index, close, dir == "LONG" ? "L" : "S", style=label.style_triangleup, color=dir == "LONG" ? color.green : color.red, size=size.tiny)
+
+plot(showM0 and not na(m0Stop) ? m0Stop : na, color=color.red, title="M0 Stop")
+plot(showM0 and not na(m0Target) ? m0Target : na, color=color.green, title="M0 Target")
+
+var table dbg = table.new(position.bottom_right, 2, 8)
+if barstate.islast and showDebugTable
+    table.cell(dbg, 0, 0, "DIR", text_color=color.gray)
+    table.cell(dbg, 1, 0, str.tostring(dir), text_color=color.white)
+    table.cell(dbg, 0, 1, "ENTRY", text_color=color.gray)
+    table.cell(dbg, 1, 1, str.tostring(entryP), text_color=color.white)
+    table.cell(dbg, 0, 2, "M0 STOP", text_color=color.gray)
+    table.cell(dbg, 1, 2, str.tostring(m0Stop), text_color=color.white)
+    table.cell(dbg, 0, 3, "M0 TARGET", text_color=color.gray)
+    table.cell(dbg, 1, 3, str.tostring(m0Target), text_color=color.white)
+    table.cell(dbg, 0, 4, "MODEL", text_color=color.gray)
+    table.cell(dbg, 1, 4, "M0", text_color=color.white)

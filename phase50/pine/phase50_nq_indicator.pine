@@ -1,0 +1,914 @@
+//@version=6
+// Phase 50 — NQ 1M execution + 15M Phase44 context + B1 Micro-BOS + M0
+// Python: phase44/, phase45/execution/confirm.py, phase45/execution/simulate.py
+
+indicator(
+     "Phase50 NQ Phase44 + B1 + M0",
+     shorttitle = "P50_NQ",
+     overlay = true,
+     max_labels_count = 500,
+     max_lines_count = 500,
+     max_boxes_count = 100)
+
+bool chart1m = timeframe.period == "1"
+// ═══ FROZEN CONSTANTS — DO NOT EXPOSE AS INPUTS ═══
+const float FZ_BODY_MULT       = 1.5
+const int   FZ_BODY_AVG_LEN    = 20
+const float FZ_CL_LONG         = 0.80
+const float FZ_CL_SHORT        = 0.20
+const float FZ_BOS_RETEST_TOL  = 0.10
+const int   FZ_BOS_RETEST_WIN  = 2
+const int   FZ_ATR_LEN         = 14
+const string FZ_RTH            = "0930-1600"
+const int   FZ_DEDUPE_ACTIVE   = 6
+const int   FZ_DEDUPE_SAME_DIR = 4
+const int   FZ_DEDUPE_DAY_CAP  = 2
+const float FZ_P31_STOP_ATR    = 0.75
+const float FZ_P31_TARGET_R    = 3.0
+const int   FZ_P31_MAX_HOLD    = 4
+const int   FZ_P33_FAIL_WIN    = 4
+const int   FZ_P33_RETEST_WIN  = 2
+const float FZ_P33_STOP_ATR    = 0.75
+const float FZ_P33_TARGET_R    = 2.5
+const int   FZ_P33_MAX_HOLD    = 3
+const int   FZ_RV_POOL_CAP     = 8
+
+const float FZ_IMPULSE_MIN     = 0.65
+const float FZ_Q_RAW_LO          = -0.00496580294121185
+const float FZ_Q_RAW_HI          = 0.02060542475082916
+const float FZ_Q_PASS_MIN        = 36.49346328963349
+const float FZ_Q_TIER_APLUS      = 63.198239617422814
+const float FZ_Q_TIER_A          = 46.076841180646284
+const float FZ_Q_TIER_B          = 36.49346328963349
+
+const float FZ_NQ_TICK          = 0.25
+const string FZ_TZ_CT           = "America/Chicago"
+const int ST_IDLE = 0
+const int ST_WAIT = 1
+const int ST_ACTIVE = 2
+const int RV_ST_RECLAIM = 1
+const int RV_ST_RETEST = 2
+
+type ReversalCand
+    int state
+    int dispDir
+    int revDir
+    float mid
+    int dispBar
+    int expiryBar
+    int confirmBar
+    float reclaim
+    float tol
+    int retestDeadline
+    bool dedupeOk
+    int candId
+    int dispTime
+
+type RvOpenTrade
+    int dir
+    float entry
+    float stop
+    float target
+    int held
+    int entryBar
+
+inRth(string sess) =>
+    int sh = int(str.tonumber(str.substring(sess, 0, 2)))
+    int sm = int(str.tonumber(str.substring(sess, 2, 4)))
+    int eh = int(str.tonumber(str.substring(sess, 5, 7)))
+    int em = int(str.tonumber(str.substring(sess, 7, 9)))
+    int startM = sh * 60 + sm
+    int endM = eh * 60 + em
+    int curM = hour * 60 + minute
+    startM <= endM ? curM >= startM and curM < endM : curM >= startM or curM < endM
+
+cmeDayKey() =>
+    str.format("{0,number,0000}-{1,number,00}-{2,number,00}", year, month, dayofmonth)
+
+dedupePass(int dir, int activeUntil, int lastLongBar, int lastShortBar, string dayKey, int dayCount) =>
+    bool sameDirOk = dir == 1 ? bar_index - lastLongBar >= FZ_DEDUPE_SAME_DIR : bar_index - lastShortBar >= FZ_DEDUPE_SAME_DIR
+    bool activeOk = bar_index > activeUntil
+    string dk = cmeDayKey()
+    bool dayOk = dk != dayKey ? true : dayCount < FZ_DEDUPE_DAY_CAP
+    activeOk and sameDirOk and dayOk
+
+tryBosRetestFill(int dir, float level, float tol) =>
+    bool filled = false
+    float px = na
+    if dir == 1 and low <= level + tol
+        px := math.min(level + tol, close)
+        filled := true
+    if dir == -1 and high >= level - tol
+        px := math.max(level - tol, close)
+        filled := true
+    [filled, px]
+
+midpointReclaimed(int dispDir, float mid) =>
+    dispDir == -1 ? close > mid : close < mid
+
+tryReclaimRetestFill(int dir, float level, float tol) =>
+    bool filled = false
+    float px = na
+    if dir == 1 and low <= level + tol
+        px := math.min(level + tol, close)
+        filled := true
+    if dir == -1 and high >= level - tol
+        px := math.max(level - tol, close)
+        filled := true
+    [filled, px]
+
+newReversalCand(int dispDir, float mid, int dBar, int cid) =>
+    int rDir = dispDir == -1 ? 1 : -1
+    ReversalCand.new(RV_ST_RECLAIM, dispDir, rDir, mid, dBar, dBar + FZ_P33_FAIL_WIN, -1, na, na, -1, false, cid, int(time))
+
+float atrVal1m = ta.atr(FZ_ATR_LEN)
+
+qualityRaw(int dir) =>
+    float r1 = close[1] != 0 ? ((close - close[1]) / close[1]) * dir : 0.0
+    float r2 = close[2] != 0 ? ((close - close[2]) / close[2]) * dir : 0.0
+    float r3 = close[3] != 0 ? ((close - close[3]) / close[3]) * dir : 0.0
+    r1 + r2 + r3
+
+qualityScore(int dir) =>
+    float raw = qualityRaw(dir)
+    float span = FZ_Q_RAW_HI - FZ_Q_RAW_LO
+    span > 0 ? math.max(0.0, math.min(100.0, (raw - FZ_Q_RAW_LO) / span * 100.0)) : 50.0
+
+qualityPass(int dir) =>
+    qualityScore(dir) >= FZ_Q_PASS_MIN
+
+confidenceTier(int dir) =>
+    float s = qualityScore(dir)
+    s >= FZ_Q_TIER_APLUS ? "A+" : s >= FZ_Q_TIER_A ? "A" : s >= FZ_Q_TIER_B ? "B" : "C"
+
+priceLevelOk(float lvl, float anchor) =>
+    not na(lvl) and not na(anchor) and not na(atrVal1m) and atrVal1m > 0 and math.abs(lvl - anchor) <= atrVal1m * 30.0
+
+tradeLevelsOk(float entryPx, float stopPx, float targetPx) =>
+    priceLevelOk(entryPx, close) and priceLevelOk(stopPx, entryPx) and priceLevelOk(targetPx, entryPx)
+
+newLevelLine(int x1, float y1, int x2, float y2, color col, int transp) =>
+    priceLevelOk(y1, close) ? line.new(x1, y1, x2, y2, xloc = xloc.bar_index, color = color.new(col, transp), width = 1) : na
+
+deleteLine(line ln) =>
+    if not na(ln)
+        line.delete(ln)
+
+archiveLines(line lnE, line lnS, line lnT, array<line> histE, array<line> histS, array<line> histT) =>
+    if not na(lnE) and not na(lnS) and not na(lnT)
+        line.set_x2(lnE, bar_index)
+        line.set_x2(lnS, bar_index)
+        line.set_x2(lnT, bar_index)
+        deleteLine(lnE)
+        deleteLine(lnS)
+        deleteLine(lnT)
+
+extendLines(line lnE, line lnS, line lnT) =>
+    if not na(lnE) and not na(lnS) and not na(lnT)
+        line.set_x2(lnE, bar_index)
+        line.set_x2(lnS, bar_index)
+        line.set_x2(lnT, bar_index)
+
+phase44ExportBundle() =>
+    // All Phase44 inputs must be computed here — this runs on 15M inside request.security().
+    float atrVal = ta.atr(FZ_ATR_LEN)
+    float barBody = math.abs(close - open)
+    float avgBody = ta.sma(barBody, FZ_BODY_AVG_LEN)
+    float barRange = high - low
+    float closeLoc = barRange > 0 ? (close - low) / barRange : na
+    bool rthOk = inRth(FZ_RTH)
+    bool bodyReady = bar_index >= FZ_BODY_AVG_LEN
+    bool longDisp = rthOk and bodyReady and not na(avgBody) and barBody > FZ_BODY_MULT * avgBody and closeLoc >= FZ_CL_LONG
+    bool shortDisp = rthOk and bodyReady and not na(avgBody) and barBody > FZ_BODY_MULT * avgBody and closeLoc <= FZ_CL_SHORT
+    float imp3Bar = atrVal > 0 ? math.abs(close - close[3]) / atrVal : na
+    bool impulsePass = not na(imp3Bar) and imp3Bar >= FZ_IMPULSE_MIN
+
+    bool p44OutFill = false
+    float p44OutDir = 0
+    float p44OutSetup = 0
+    float p44OutTier = 0
+    float p44OutEntry = na
+    float p44OutStop = na
+    float p44OutTarget = na
+    float p44OutScore = na
+    // ═══ PHASE 31 CONTINUATION STATE (FROZEN) — data only, no drawing ═══
+    var int   p31State = ST_IDLE
+    var int   p31Dir = 0
+    var float p31Bos = na
+    var float p31Tol = na
+    var int   p31DispBar = na
+    var int   p31Deadline = na
+    var float p31Entry = na
+    var float p31Stop = na
+    var float p31Target = na
+    var int   p31Held = 0
+    var int   p31DdActive = -1
+    var int   p31DdLong = -999
+    var int   p31DdShort = -999
+    var string p31DdDay = ""
+    var int   p31DdCount = 0
+
+    // ═══ PHASE 33 CONCURRENT REVERSAL POOL ═══
+    var array<ReversalCand> rvPool = array.new<ReversalCand>()
+    var array<RvOpenTrade> rvOpen = array.new<RvOpenTrade>()
+    var int rvCandSeq = 0
+    var int rvDdActive = -1
+    var int rvDdLong = -999
+    var int rvDdShort = -999
+    var string rvDdDay = ""
+    var int rvDdCount = 0
+
+    var string p31ConfTier = ""
+    float lastQualityScore = na
+    var string rvConfTier = ""
+
+    if barstate.isconfirmed
+        p31ConfTier := ""
+        rvConfTier := ""
+
+        if p31State == ST_ACTIVE
+            p31Held += 1
+            bool hitStop = p31Dir == 1 ? low <= p31Stop : high >= p31Stop
+            bool hitTgt = p31Dir == 1 ? high >= p31Target : low <= p31Target
+            if hitStop or hitTgt or p31Held >= FZ_P31_MAX_HOLD
+                p31State := ST_IDLE
+                p31Dir := 0
+
+        else if p31State == ST_WAIT
+            if bar_index > p31Deadline
+                p31State := ST_IDLE
+                p31Dir := 0
+            else if bar_index > p31DispBar
+                [filled, px] = tryBosRetestFill(p31Dir, p31Bos, p31Tol)
+                if filled
+                    if impulsePass and qualityPass(p31Dir)
+                        p31Entry := px
+                        float risk = FZ_P31_STOP_ATR * atrVal
+                        p31Stop := p31Dir == 1 ? p31Entry - risk : p31Entry + risk
+                        p31Target := p31Dir == 1 ? p31Entry + FZ_P31_TARGET_R * risk : p31Entry - FZ_P31_TARGET_R * risk
+                        p31Held := 0
+                        p31State := ST_ACTIVE
+                        lastQualityScore := qualityScore(p31Dir)
+                        p31ConfTier := confidenceTier(p31Dir)
+                        p44OutFill := true
+                        p44OutDir := p31Dir
+                        p44OutSetup := p31Dir == 1 ? 1 : 2
+                        p44OutTier := p31ConfTier == "A+" ? 1 : p31ConfTier == "A" ? 2 : 3
+                        p44OutEntry := p31Entry
+                        p44OutStop := p31Stop
+                        p44OutTarget := p31Target
+                        p44OutScore := lastQualityScore
+                    else
+                        p31State := ST_IDLE
+                        p31Dir := 0
+
+        else if p31State == ST_IDLE
+            string p31Dk = cmeDayKey()
+            if p31Dk != p31DdDay
+                p31DdDay := p31Dk
+                p31DdCount := 0
+            if longDisp and dedupePass(1, p31DdActive, p31DdLong, p31DdShort, p31DdDay, p31DdCount)
+                p31Dir := 1
+                p31Bos := high
+                p31Tol := FZ_BOS_RETEST_TOL * atrVal
+                p31DispBar := bar_index
+                p31Deadline := bar_index + FZ_BOS_RETEST_WIN
+                p31State := ST_WAIT
+                p31DdActive := bar_index + FZ_DEDUPE_ACTIVE
+                p31DdLong := bar_index
+                if cmeDayKey() != p31DdDay
+                    p31DdDay := cmeDayKey()
+                    p31DdCount := 1
+                else
+                    p31DdCount += 1
+            else if shortDisp and dedupePass(-1, p31DdActive, p31DdLong, p31DdShort, p31DdDay, p31DdCount)
+                p31Dir := -1
+                p31Bos := low
+                p31Tol := FZ_BOS_RETEST_TOL * atrVal
+                p31DispBar := bar_index
+                p31Deadline := bar_index + FZ_BOS_RETEST_WIN
+                p31State := ST_WAIT
+                p31DdActive := bar_index + FZ_DEDUPE_ACTIVE
+                p31DdShort := bar_index
+                if cmeDayKey() != p31DdDay
+                    p31DdDay := cmeDayKey()
+                    p31DdCount := 1
+                else
+                    p31DdCount += 1
+
+        if array.size(rvOpen) > 0
+            for ti = array.size(rvOpen) - 1 to 0
+                RvOpenTrade tr = array.get(rvOpen, ti)
+                tr.held += 1
+                bool trStop = tr.dir == 1 ? low <= tr.stop : high >= tr.stop
+                bool trTgt = tr.dir == 1 ? high >= tr.target : low <= tr.target
+                if trStop or trTgt or tr.held >= FZ_P33_MAX_HOLD
+                    array.remove(rvOpen, ti)
+                else
+                    array.set(rvOpen, ti, tr)
+
+        if longDisp and array.size(rvPool) < FZ_RV_POOL_CAP
+            rvCandSeq += 1
+            array.push(rvPool, newReversalCand(1, (high + low) / 2.0, bar_index, rvCandSeq))
+        if shortDisp and array.size(rvPool) < FZ_RV_POOL_CAP
+            rvCandSeq += 1
+            array.push(rvPool, newReversalCand(-1, (high + low) / 2.0, bar_index, rvCandSeq))
+
+        string rvDk = cmeDayKey()
+        if rvDk != rvDdDay
+            rvDdDay := rvDk
+            rvDdCount := 0
+
+        array<ReversalCand> nextPool = array.new<ReversalCand>()
+        array<int> reclaimIdx = array.new_int()
+        array<int> reclaimDispBar = array.new_int()
+        array<int> reclaimCandId = array.new_int()
+        array<int> fireIdx = array.new_int()
+        array<int> fireDispBar = array.new_int()
+        array<int> fireCandId = array.new_int()
+        array<float> firePx = array.new_float()
+        array<float> fireStop = array.new_float()
+        array<float> fireTarget = array.new_float()
+        array<int> fireRevDir = array.new_int()
+
+        if array.size(rvPool) > 0
+            for ci = 0 to array.size(rvPool) - 1
+                ReversalCand c = array.get(rvPool, ci)
+                if c.state == RV_ST_RECLAIM
+                    if bar_index > c.expiryBar
+                        continue
+                    if bar_index > c.dispBar and midpointReclaimed(c.dispDir, c.mid)
+                        array.push(reclaimIdx, ci)
+                        array.push(reclaimDispBar, c.dispBar)
+                        array.push(reclaimCandId, c.candId)
+                    else
+                        array.push(nextPool, c)
+                else if c.state == RV_ST_RETEST and c.dedupeOk
+                    if bar_index > c.retestDeadline
+                        continue
+                    if bar_index > c.confirmBar
+                        [rvFill, rvPx] = tryReclaimRetestFill(c.revDir, c.reclaim, c.tol)
+                        if rvFill
+                            float rvRisk = FZ_P33_STOP_ATR * atrVal
+                            float rvSt = c.revDir == 1 ? rvPx - rvRisk : rvPx + rvRisk
+                            float rvTg = c.revDir == 1 ? rvPx + FZ_P33_TARGET_R * rvRisk : rvPx - FZ_P33_TARGET_R * rvRisk
+                            array.push(fireIdx, ci)
+                            array.push(fireDispBar, c.dispBar)
+                            array.push(fireCandId, c.candId)
+                            array.push(firePx, rvPx)
+                            array.push(fireStop, rvSt)
+                            array.push(fireTarget, rvTg)
+                            array.push(fireRevDir, c.revDir)
+                        else
+                            array.push(nextPool, c)
+                    else
+                        array.push(nextPool, c)
+
+        int nReclaim = array.size(reclaimIdx)
+        if nReclaim > 0
+            for ri = 0 to nReclaim - 1
+                int best = ri
+                if ri + 1 <= nReclaim - 1
+                    for rj = ri + 1 to nReclaim - 1
+                        int dbj = array.get(reclaimDispBar, rj)
+                        int dbi = array.get(reclaimDispBar, best)
+                        int idj = array.get(reclaimCandId, rj)
+                        int idi = array.get(reclaimCandId, best)
+                        if dbj < dbi or (dbj == dbi and idj < idi)
+                            best := rj
+                if best != ri
+                    int tIdx = array.get(reclaimIdx, ri)
+                    int tDb = array.get(reclaimDispBar, ri)
+                    int tId = array.get(reclaimCandId, ri)
+                    array.set(reclaimIdx, ri, array.get(reclaimIdx, best))
+                    array.set(reclaimDispBar, ri, array.get(reclaimDispBar, best))
+                    array.set(reclaimCandId, ri, array.get(reclaimCandId, best))
+                    array.set(reclaimIdx, best, tIdx)
+                    array.set(reclaimDispBar, best, tDb)
+                    array.set(reclaimCandId, best, tId)
+                int ci = array.get(reclaimIdx, ri)
+                ReversalCand c = array.get(rvPool, ci)
+                bool dedupeOk = dedupePass(c.revDir, rvDdActive, rvDdLong, rvDdShort, rvDdDay, rvDdCount)
+                if dedupeOk
+                    rvDdActive := bar_index + FZ_DEDUPE_ACTIVE
+                    if c.revDir == 1
+                        rvDdLong := bar_index
+                    else
+                        rvDdShort := bar_index
+                    if cmeDayKey() != rvDdDay
+                        rvDdDay := cmeDayKey()
+                        rvDdCount := 1
+                    else
+                        rvDdCount += 1
+                    c.confirmBar := bar_index
+                    c.reclaim := c.mid
+                    c.tol := FZ_BOS_RETEST_TOL * atrVal
+                    c.retestDeadline := bar_index + FZ_P33_RETEST_WIN
+                    c.dedupeOk := true
+                    c.state := RV_ST_RETEST
+                    array.push(nextPool, c)
+
+        rvPool := nextPool
+
+        bool seenRl = false
+        bool seenRs = false
+        int nFire = array.size(fireIdx)
+        if nFire > 0
+            for fi = 0 to nFire - 1
+                int best = fi
+                if fi + 1 <= nFire - 1
+                    for fj = fi + 1 to nFire - 1
+                        int dbj = array.get(fireDispBar, fj)
+                        int dbi = array.get(fireDispBar, best)
+                        int idj = array.get(fireCandId, fj)
+                        int idi = array.get(fireCandId, best)
+                        if dbj < dbi or (dbj == dbi and idj < idi)
+                            best := fj
+                if best != fi
+                    int tI = array.get(fireIdx, fi)
+                    int tD = array.get(fireDispBar, fi)
+                    int tC = array.get(fireCandId, fi)
+                    float tP = array.get(firePx, fi)
+                    float tS = array.get(fireStop, fi)
+                    float tT = array.get(fireTarget, fi)
+                    int tR = array.get(fireRevDir, fi)
+                    array.set(fireIdx, fi, array.get(fireIdx, best))
+                    array.set(fireDispBar, fi, array.get(fireDispBar, best))
+                    array.set(fireCandId, fi, array.get(fireCandId, best))
+                    array.set(firePx, fi, array.get(firePx, best))
+                    array.set(fireStop, fi, array.get(fireStop, best))
+                    array.set(fireTarget, fi, array.get(fireTarget, best))
+                    array.set(fireRevDir, fi, array.get(fireRevDir, best))
+                    array.set(fireIdx, best, tI)
+                    array.set(fireDispBar, best, tD)
+                    array.set(fireCandId, best, tC)
+                    array.set(firePx, best, tP)
+                    array.set(fireStop, best, tS)
+                    array.set(fireTarget, best, tT)
+                    array.set(fireRevDir, best, tR)
+                int rDir = array.get(fireRevDir, fi)
+                if rDir == 1 and seenRl
+                    continue
+                if rDir == -1 and seenRs
+                    continue
+                float px = array.get(firePx, fi)
+                float st = array.get(fireStop, fi)
+                float tg = array.get(fireTarget, fi)
+                if impulsePass and qualityPass(rDir)
+                    if rDir == 1
+                        seenRl := true
+                    else
+                        seenRs := true
+                    lastQualityScore := qualityScore(rDir)
+                    rvConfTier := confidenceTier(rDir)
+                    p44OutFill := true
+                    p44OutDir := rDir
+                    p44OutSetup := rDir == 1 ? 3 : 4
+                    p44OutTier := rvConfTier == "A+" ? 1 : rvConfTier == "A" ? 2 : 3
+                    p44OutEntry := px
+                    p44OutStop := st
+                    p44OutTarget := tg
+                    p44OutScore := lastQualityScore
+                    array.push(rvOpen, RvOpenTrade.new(rDir, px, st, tg, 0, bar_index))
+
+    [p44OutFill ? 1.0 : 0.0, p44OutDir, p44OutSetup, p44OutTier, p44OutEntry, p44OutStop, p44OutTarget, float(time), p44OutScore]
+// ═══ PHASE50: 1M EXECUTION LAYER (B1 + M0) ═══
+// Python: phase45/execution/confirm.py confirm_b1(), simulate_1m()
+
+const int   P50_B1_WINDOW_MIN   = 10
+const int   P50_CHART_15M_MIN   = 15
+const int   P50_MAX_HOLD_CONT   = 60
+const int   P50_MAX_HOLD_REV    = 45
+const float P50_TARGET_R_CONT   = 3.0
+const float P50_TARGET_R_REV    = 2.5
+
+const int P50_ST_NO_SETUP = 0
+const int P50_ST_WAIT_B1 = 1
+const int P50_ST_TRADE = 2
+const int P50_ST_EXPIRED = 3
+
+string GRP50 = "Phase50 Display"
+bool p50ShowSetup = input.bool(true, "Show Phase44 setup markers", group = GRP50)
+bool p50ShowB1 = input.bool(true, "Show B1 confirmation markers", group = GRP50)
+bool p50ShowEntryLabels = input.bool(true, "Show entry detail labels (snapshot at entry)", group = GRP50)
+bool p50ShowExitMarkers = input.bool(true, "Show M0 exit markers (SL/TP/TIME)", group = GRP50)
+bool p50ShowLevels = input.bool(true, "Show entry/stop/target lines", group = GRP50)
+bool p50ShowDash = input.bool(true, "Show status dashboard", group = GRP50)
+bool p50ShowDebug = input.bool(false, "Debug mode (functional counters + P44L/S B1L/S markers)", group = GRP50)
+bool p50ShowExpired = input.bool(false, "Show expired setups", group = GRP50)
+
+causalSwingHigh() =>
+    float sh = na
+    int lim = math.min(bar_index - 1, 500)
+    if lim >= 1
+        for p = 1 to lim
+            if high[p] > high[p + 1] and high[p] > high[p - 1]
+                sh := high[p]
+                break
+    sh
+
+causalSwingLow() =>
+    float sl = na
+    int lim = math.min(bar_index - 1, 500)
+    if lim >= 1
+        for p = 1 to lim
+            if low[p] < low[p + 1] and low[p] < low[p - 1]
+                sl := low[p]
+                break
+    sl
+
+setupCodeToStr(int code) =>
+    code == 1 ? "L" : code == 2 ? "S" : code == 3 ? "RL" : code == 4 ? "RS" : "?"
+
+tierCodeToStr(int code) =>
+    code == 1 ? "A+" : code == 2 ? "A" : code == 3 ? "B" : "—"
+
+p50FmtCt(int ms) =>
+    na(ms) ? "—" : str.format_time(ms, "yyyy-MM-dd HH:mm", FZ_TZ_CT) + " CT"
+
+p50FmtUtc(int ms) =>
+    na(ms) ? "—" : str.format_time(ms, "yyyy-MM-dd HH:mm", "UTC") + " UTC"
+
+p50FmtPx(float px) =>
+    na(px) ? "—" : str.tostring(math.round(px / FZ_NQ_TICK) * FZ_NQ_TICK, "#.##")
+
+m0ExitLabel(string exitType) =>
+    exitType == "STOP" ? "SL" : exitType == "TARGET" ? "TP" : exitType == "TIME" ? "TIME" : "EXIT"
+
+// Pull confirmed Phase44 fills from 15M (causal — no lookahead)
+[p44Fill, p44Dir, p44Setup, p44Tier, p44Entry, p44Stop, p44Target, p44MarkerMs, p44Score] = request.security(
+     syminfo.tickerid, "15", phase44ExportBundle(),
+     gaps = barmerge.gaps_off, lookahead = barmerge.lookahead_off)
+
+var int   p50ExecState = P50_ST_NO_SETUP
+var int   p50SetupDir = 0
+var int   p50SetupCode = 0
+var int   p50TierCode = 0
+var float p50SetupEntry = na
+var float p50SetupStop = na
+var float p50SetupTarget = na
+var int   p50MarkerMs = na
+var int   p50ActionableMs = na
+var int   p50WindowEndMs = na
+var float p50LastP44Marker = na
+
+var int   p50PosDir = 0
+var float p50PosEntry = na
+var float p50PosStop = na
+var float p50PosTarget = na
+var int   p50PosHeld = 0
+var string p50PosSetup = ""
+var int   p50B1Delay = na
+
+var line p50LnE = na
+var line p50LnS = na
+var line p50LnT = na
+
+var bool p50LongConfirmed = false
+var bool p50ShortConfirmed = false
+var bool p50LongExit = false
+var bool p50ShortExit = false
+var bool p50SetupLongActive = false
+var bool p50SetupShortActive = false
+var bool p50B1Expired = false
+
+// One-bar plot flags — var + per-bar reset (Pine: typed `bool x = false` + `:=` does not reach plotshape)
+var bool p50LongEntryPlot = false
+var bool p50ShortEntryPlot = false
+var bool p50PlotP44Long = false
+var bool p50PlotP44Short = false
+p50LongEntryPlot := false
+p50ShortEntryPlot := false
+p50PlotP44Long := false
+p50PlotP44Short := false
+
+// Cumulative debug counters — all loaded historical bars, not session-scoped
+var int p50CntP44Long = 0
+var int p50CntP44Short = 0
+var int p50CntB1Windows = 0
+var int p50CntB1Long = 0
+var int p50CntB1Short = 0
+var int p50CntLongEntry = 0
+var int p50CntShortEntry = 0
+var int p50CntExpired = 0
+var int p50FirstBarMs = na
+var int p50LastBarMs = na
+var int p50LastLongEntryMs = na
+var int p50PrevLongEntryMs = na
+var int p50LastShortEntryMs = na
+var int p50PrevShortEntryMs = na
+
+// Immutable snap at entry / exit for labels, lines, and LAST TRADE dashboard
+var int   p50ActEntryMs = na
+var float p50ActEntry = na
+var float p50ActStop = na
+var float p50ActTarget = na
+var int   p50ActDir = 0
+var int   p50ActTier = 0
+var int   p50ActSetup = 0
+var int   p50ActB1Delay = na
+
+var string p50LtSide = ""
+var int    p50LtEntryMs = na
+var float  p50LtEntry = na
+var float  p50LtStop = na
+var float  p50LtTarget = na
+var int    p50LtExitMs = na
+var float  p50LtExitPx = na
+var string p50LtExitType = ""
+
+// One-bar exit plot flags (M0: STOP / TARGET / TIME)
+var bool p50ExitSlPlot = false
+var bool p50ExitTpPlot = false
+var bool p50ExitTimePlot = false
+p50ExitSlPlot := false
+p50ExitTpPlot := false
+p50ExitTimePlot := false
+
+p50LongConfirmed := false
+p50ShortConfirmed := false
+p50LongExit := false
+p50ShortExit := false
+p50SetupLongActive := false
+p50SetupShortActive := false
+p50B1Expired := false
+
+if chart1m and barstate.isconfirmed
+    if na(p50FirstBarMs)
+        p50FirstBarMs := time
+    p50LastBarMs := time
+
+    // New Phase44 accepted setup from 15M
+    bool newP44 = p44Fill > 0 and (na(p50LastP44Marker) or p44MarkerMs != p50LastP44Marker)
+    if newP44 and p50ExecState != P50_ST_TRADE
+        p50LastP44Marker := p44MarkerMs
+        p50MarkerMs := int(p44MarkerMs)
+        p50ActionableMs := p50MarkerMs + P50_CHART_15M_MIN * 60 * 1000
+        p50WindowEndMs := p50ActionableMs + P50_B1_WINDOW_MIN * 60 * 1000
+        p50SetupDir := int(p44Dir)
+        p50SetupCode := int(p44Setup)
+        p50TierCode := int(p44Tier)
+        p50SetupEntry := p44Entry
+        p50SetupStop := p44Stop
+        p50SetupTarget := p44Target
+        p50ExecState := P50_ST_WAIT_B1
+        p50SetupLongActive := p50SetupDir == 1
+        p50SetupShortActive := p50SetupDir == -1
+        p50PlotP44Long := p50SetupDir == 1
+        p50PlotP44Short := p50SetupDir == -1
+        if p50SetupDir == 1
+            p50CntP44Long += 1
+        else
+            p50CntP44Short += 1
+        p50CntB1Windows += 1
+
+    // B1 window — Python confirm_b1 inclusive [actionable, actionable+10min]
+    if p50ExecState == P50_ST_WAIT_B1
+        if time > p50WindowEndMs
+            p50ExecState := P50_ST_EXPIRED
+            p50B1Expired := p50ShowExpired
+            p50CntExpired += 1
+        else if time >= p50ActionableMs
+            float sh = causalSwingHigh()
+            float sl = causalSwingLow()
+            bool b1Long = p50SetupDir == 1 and not na(sh) and close > sh
+            bool b1Short = p50SetupDir == -1 and not na(sl) and close < sl
+            if b1Long or b1Short
+                p50PosDir := p50SetupDir
+                p50PosEntry := close
+                p50PosStop := p50SetupStop
+                p50PosTarget := p50SetupTarget
+                p50PosSetup := setupCodeToStr(p50SetupCode)
+                p50PosHeld := 0
+                p50B1Delay := int(math.round((time - p50ActionableMs) / 60000.0))
+                p50ExecState := P50_ST_TRADE
+                p50ActEntryMs := time
+                p50ActEntry := p50PosEntry
+                p50ActStop := p50PosStop
+                p50ActTarget := p50PosTarget
+                p50ActDir := p50PosDir
+                p50ActTier := p50TierCode
+                p50ActSetup := p50SetupCode
+                p50ActB1Delay := p50B1Delay
+                if p50PosDir == 1
+                    p50LongConfirmed := true
+                    p50CntB1Long += 1
+                    p50CntLongEntry += 1
+                    p50LongEntryPlot := true
+                    p50PrevLongEntryMs := p50LastLongEntryMs
+                    p50LastLongEntryMs := time
+                else
+                    p50ShortConfirmed := true
+                    p50CntB1Short += 1
+                    p50CntShortEntry += 1
+                    p50ShortEntryPlot := true
+                    p50PrevShortEntryMs := p50LastShortEntryMs
+                    p50LastShortEntryMs := time
+                if p50ShowLevels
+                    if not na(p50LnE)
+                        line.delete(p50LnE)
+                        line.delete(p50LnS)
+                        line.delete(p50LnT)
+                    p50LnE := line.new(bar_index, p50ActEntry, bar_index + 1, p50ActEntry, xloc = xloc.bar_index, color = color.blue, width = 1)
+                    p50LnS := line.new(bar_index, p50ActStop, bar_index + 1, p50ActStop, xloc = xloc.bar_index, color = color.red, width = 1)
+                    p50LnT := line.new(bar_index, p50ActTarget, bar_index + 1, p50ActTarget, xloc = xloc.bar_index, color = color.lime, width = 1)
+                if p50ShowEntryLabels
+                    string sideLbl = p50ActDir == 1 ? "LONG" : "SHORT"
+                    string entLbl = sideLbl + "\nClass:" + tierCodeToStr(p50ActTier) + "\nSetup:" + setupCodeToStr(p50ActSetup) + "\nB1:CONF\nDelay:" + str.tostring(p50ActB1Delay) + "m\nE:" + p50FmtPx(p50ActEntry) + "\nS:" + p50FmtPx(p50ActStop) + "\nT:" + p50FmtPx(p50ActTarget)
+                    label.new(bar_index, p50ActDir == 1 ? low : high, entLbl, style = p50ActDir == 1 ? label.style_label_up : label.style_label_down, color = color.new(color.black, 30), textcolor = color.white, size = size.small, xloc = xloc.bar_index)
+
+    // M0 management — Python simulate_1m: manage from bar AFTER entry (entry_i+1)
+    if p50ExecState == P50_ST_TRADE
+        int maxHold = (p50PosSetup == "L" or p50PosSetup == "S") ? P50_MAX_HOLD_CONT : P50_MAX_HOLD_REV
+        bool hitStop = p50PosDir == 1 ? low <= p50PosStop : high >= p50PosStop
+        bool hitTgt = p50PosDir == 1 ? high >= p50PosTarget : low <= p50PosTarget
+        if p50PosHeld >= 1
+            string exitType = ""
+            float exitPx = na
+            if hitStop
+                exitType := "STOP"
+                exitPx := p50ActStop
+                p50ExitSlPlot := p50ShowExitMarkers
+                if p50PosDir == 1
+                    p50LongExit := true
+                else
+                    p50ShortExit := true
+            else if hitTgt
+                exitType := "TARGET"
+                exitPx := p50ActTarget
+                p50ExitTpPlot := p50ShowExitMarkers
+                if p50PosDir == 1
+                    p50LongExit := true
+                else
+                    p50ShortExit := true
+            else if p50PosHeld >= maxHold
+                exitType := "TIME"
+                exitPx := close
+                p50ExitTimePlot := p50ShowExitMarkers
+                if p50PosDir == 1
+                    p50LongExit := true
+                else
+                    p50ShortExit := true
+            if exitType != ""
+                p50LtSide := p50ActDir == 1 ? "LONG" : "SHORT"
+                p50LtEntryMs := p50ActEntryMs
+                p50LtEntry := p50ActEntry
+                p50LtStop := p50ActStop
+                p50LtTarget := p50ActTarget
+                p50LtExitMs := time
+                p50LtExitPx := exitPx
+                p50LtExitType := exitType
+                if p50ShowExitMarkers
+                    string exLbl = m0ExitLabel(exitType) + "\n" + p50FmtPx(exitPx)
+                    float exY = p50ActDir == 1 ? high : low
+                    label.new(bar_index, exY, exLbl, style = p50ActDir == 1 ? label.style_label_down : label.style_label_up, color = color.new(color.black, 30), textcolor = color.white, size = size.tiny, xloc = xloc.bar_index)
+                if p50ShowLevels and not na(p50LnE)
+                    line.set_x2(p50LnE, bar_index)
+                    line.set_x2(p50LnS, bar_index)
+                    line.set_x2(p50LnT, bar_index)
+                    p50LnE := na
+                    p50LnS := na
+                    p50LnT := na
+                p50ExecState := P50_ST_NO_SETUP
+                p50PosDir := 0
+        p50PosHeld += 1
+        if p50ShowLevels and p50ExecState == P50_ST_TRADE and not na(p50LnE)
+            line.set_x2(p50LnE, bar_index)
+            line.set_x2(p50LnS, bar_index)
+            line.set_x2(p50LnT, bar_index)
+
+    if p50ExecState == P50_ST_EXPIRED
+        p50ExecState := P50_ST_NO_SETUP
+
+// ═══ VISUALS ═══
+plotshape(p50LongEntryPlot, "P50 LONG ENTRY", shape.triangleup, location.belowbar, color.lime, size = size.large, text = "LONG", textcolor = color.white)
+plotshape(p50ShortEntryPlot, "P50 SHORT ENTRY", shape.triangledown, location.abovebar, color.red, size = size.large, text = "SHORT", textcolor = color.white)
+plotshape(p50ExitSlPlot, "P50 EXIT SL", shape.xcross, location.abovebar, color.red, size = size.small, text = "SL", textcolor = color.white)
+plotshape(p50ExitTpPlot, "P50 EXIT TP", shape.xcross, location.belowbar, color.lime, size = size.small, text = "TP", textcolor = color.white)
+plotshape(p50ExitTimePlot, "P50 EXIT TIME", shape.xcross, location.top, color.orange, size = size.small, text = "TIME", textcolor = color.white)
+plotshape(p50ShowSetup and p50PlotP44Long, "P44 Long Setup", shape.diamond, location.belowbar, color.new(color.blue, 40), size = size.tiny, text = "P44")
+plotshape(p50ShowSetup and p50PlotP44Short, "P44 Short Setup", shape.diamond, location.abovebar, color.new(color.orange, 40), size = size.tiny, text = "P44")
+plotshape(p50ShowExpired and p50B1Expired, "B1 EXPIRED", shape.xcross, location.top, color.new(color.gray, 50), size = size.tiny, text = "EXP")
+
+plotshape(p50ShowDebug and p50PlotP44Long, "DBG P44L", shape.circle, location.belowbar, color.new(color.blue, 0), size = size.tiny, text = "P44L")
+plotshape(p50ShowDebug and p50PlotP44Short, "DBG P44S", shape.circle, location.abovebar, color.new(color.orange, 0), size = size.tiny, text = "P44S")
+plotshape(p50ShowDebug and p50LongEntryPlot, "DBG B1L", shape.square, location.belowbar, color.new(color.aqua, 0), size = size.tiny, text = "B1L")
+plotshape(p50ShowDebug and p50ShortEntryPlot, "DBG B1S", shape.square, location.abovebar, color.new(color.fuchsia, 0), size = size.tiny, text = "B1S")
+
+// Parity export codes (plot for CSV export when debug enabled)
+plot(p50ShowDebug and p50LongConfirmed ? 1 : p50ShowDebug and p50ShortConfirmed ? -1 : na, "P50_EVENT_CODE", display = display.data_window)
+plot(p50ShowDebug ? p50PosEntry : na, "P50_ENTRY", display = display.data_window)
+plot(p50ShowDebug ? p50PosStop : na, "P50_STOP", display = display.data_window)
+plot(p50ShowDebug ? p50PosTarget : na, "P50_TARGET", display = display.data_window)
+
+// Dashboard
+bool p50HasActiveSetup = p50ExecState == P50_ST_WAIT_B1 or p50ExecState == P50_ST_TRADE
+bool p50InTrade = p50ExecState == P50_ST_TRADE
+string p50DashClass = p50HasActiveSetup ? tierCodeToStr(p50TierCode) : "—"
+string p50DashSetup = p50HasActiveSetup ? setupCodeToStr(p50SetupCode) : "—"
+string p50DashContext = p50ExecState == P50_ST_WAIT_B1 ? (p50SetupDir == 1 ? "LONG" : "SHORT") : "NONE"
+string p50DashExec = p50ExecState == P50_ST_WAIT_B1 ? "WAITING" : p50InTrade ? "ACTIVE" : "FLAT"
+string p50DashRem = p50ExecState == P50_ST_WAIT_B1 and time <= p50WindowEndMs ? str.tostring(int(math.max(0, (p50WindowEndMs - time) / 60000))) + "m" : "—"
+string p50DashPos = p50InTrade ? (p50PosDir == 1 ? "LONG" : "SHORT") : "FLAT"
+string p50DashEntry = p50InTrade and not na(p50PosEntry) ? p50FmtPx(p50PosEntry) : "—"
+string p50DashStop = p50InTrade and not na(p50PosStop) ? p50FmtPx(p50PosStop) : "—"
+string p50DashTarget = p50InTrade and not na(p50PosTarget) ? p50FmtPx(p50PosTarget) : "—"
+string p50LtExitLbl = p50LtExitType != "" ? m0ExitLabel(p50LtExitType) : "—"
+
+var table p50Dash = table.new(position.top_right, 2, p50ShowDebug ? 41 : 10, bgcolor = color.new(color.black, 80))
+if p50ShowDash and barstate.islast and chart1m
+    table.cell(p50Dash, 0, 0, "MODEL", text_color = color.gray)
+    table.cell(p50Dash, 1, 0, "PHASE44+B1+M0", text_color = color.white)
+    table.cell(p50Dash, 0, 1, "15M CONTEXT", text_color = color.gray)
+    table.cell(p50Dash, 1, 1, p50DashContext, text_color = color.white)
+    table.cell(p50Dash, 0, 2, "CLASS", text_color = color.gray)
+    table.cell(p50Dash, 1, 2, p50DashClass, text_color = color.white)
+    table.cell(p50Dash, 0, 3, "SETUP", text_color = color.gray)
+    table.cell(p50Dash, 1, 3, p50DashSetup, text_color = color.white)
+    table.cell(p50Dash, 0, 4, "EXEC STATE", text_color = color.gray)
+    table.cell(p50Dash, 1, 4, p50DashExec, text_color = color.white)
+    table.cell(p50Dash, 0, 5, "B1 WINDOW", text_color = color.gray)
+    table.cell(p50Dash, 1, 5, p50DashRem, text_color = color.white)
+    table.cell(p50Dash, 0, 6, "POSITION", text_color = color.gray)
+    table.cell(p50Dash, 1, 6, p50DashPos, text_color = color.white)
+    table.cell(p50Dash, 0, 7, "ENTRY", text_color = color.gray)
+    table.cell(p50Dash, 1, 7, p50DashEntry, text_color = color.white)
+    table.cell(p50Dash, 0, 8, "STOP", text_color = color.gray)
+    table.cell(p50Dash, 1, 8, p50DashStop, text_color = color.white)
+    table.cell(p50Dash, 0, 9, "TARGET", text_color = color.gray)
+    table.cell(p50Dash, 1, 9, p50DashTarget, text_color = color.white)
+    if p50ShowDebug
+        table.cell(p50Dash, 0, 10, "— LOADED —", text_color = color.yellow)
+        table.cell(p50Dash, 1, 10, "HISTORY", text_color = color.yellow)
+        table.cell(p50Dash, 0, 11, "FIRST BAR CT", text_color = color.gray)
+        table.cell(p50Dash, 1, 11, p50FmtCt(p50FirstBarMs), text_color = color.white)
+        table.cell(p50Dash, 0, 12, "LAST BAR CT", text_color = color.gray)
+        table.cell(p50Dash, 1, 12, p50FmtCt(p50LastBarMs), text_color = color.white)
+        table.cell(p50Dash, 0, 13, "— COUNTERS —", text_color = color.yellow)
+        table.cell(p50Dash, 1, 13, "CUMULATIVE", text_color = color.yellow)
+        table.cell(p50Dash, 0, 14, "P44 LONG", text_color = color.gray)
+        table.cell(p50Dash, 1, 14, str.tostring(p50CntP44Long), text_color = color.white)
+        table.cell(p50Dash, 0, 15, "P44 SHORT", text_color = color.gray)
+        table.cell(p50Dash, 1, 15, str.tostring(p50CntP44Short), text_color = color.white)
+        table.cell(p50Dash, 0, 16, "B1 WINDOWS", text_color = color.gray)
+        table.cell(p50Dash, 1, 16, str.tostring(p50CntB1Windows), text_color = color.white)
+        table.cell(p50Dash, 0, 17, "B1 LONG", text_color = color.gray)
+        table.cell(p50Dash, 1, 17, str.tostring(p50CntB1Long), text_color = color.white)
+        table.cell(p50Dash, 0, 18, "B1 SHORT", text_color = color.gray)
+        table.cell(p50Dash, 1, 18, str.tostring(p50CntB1Short), text_color = color.white)
+        table.cell(p50Dash, 0, 19, "LONG ENTRIES", text_color = color.gray)
+        table.cell(p50Dash, 1, 19, str.tostring(p50CntLongEntry), text_color = color.white)
+        table.cell(p50Dash, 0, 20, "SHORT ENTRIES", text_color = color.gray)
+        table.cell(p50Dash, 1, 20, str.tostring(p50CntShortEntry), text_color = color.white)
+        table.cell(p50Dash, 0, 21, "EXPIRED", text_color = color.gray)
+        table.cell(p50Dash, 1, 21, str.tostring(p50CntExpired), text_color = color.white)
+        table.cell(p50Dash, 0, 22, "— ENTRIES —", text_color = color.yellow)
+        table.cell(p50Dash, 1, 22, "TIMESTAMPS CT", text_color = color.yellow)
+        table.cell(p50Dash, 0, 23, "LAST LONG CT", text_color = color.gray)
+        table.cell(p50Dash, 1, 23, p50FmtCt(p50LastLongEntryMs), text_color = color.white)
+        table.cell(p50Dash, 0, 24, "PREV LONG CT", text_color = color.gray)
+        table.cell(p50Dash, 1, 24, p50FmtCt(p50PrevLongEntryMs), text_color = color.white)
+        table.cell(p50Dash, 0, 25, "LAST SHORT CT", text_color = color.gray)
+        table.cell(p50Dash, 1, 25, p50FmtCt(p50LastShortEntryMs), text_color = color.white)
+        table.cell(p50Dash, 0, 26, "PREV SHORT CT", text_color = color.gray)
+        table.cell(p50Dash, 1, 26, p50FmtCt(p50PrevShortEntryMs), text_color = color.white)
+        table.cell(p50Dash, 0, 27, "LAST LONG UTC", text_color = color.gray)
+        table.cell(p50Dash, 1, 27, p50FmtUtc(p50LastLongEntryMs), text_color = color.white)
+        table.cell(p50Dash, 0, 28, "— LAST TRADE —", text_color = color.yellow)
+        table.cell(p50Dash, 1, 28, "COMPLETED", text_color = color.yellow)
+        table.cell(p50Dash, 0, 29, "SIDE", text_color = color.gray)
+        table.cell(p50Dash, 1, 29, p50LtSide != "" ? p50LtSide : "—", text_color = color.white)
+        table.cell(p50Dash, 0, 30, "ENTRY CT", text_color = color.gray)
+        table.cell(p50Dash, 1, 30, p50FmtCt(p50LtEntryMs), text_color = color.white)
+        table.cell(p50Dash, 0, 31, "ENTRY PRICE", text_color = color.gray)
+        table.cell(p50Dash, 1, 31, p50FmtPx(p50LtEntry), text_color = color.white)
+        table.cell(p50Dash, 0, 32, "STOP", text_color = color.gray)
+        table.cell(p50Dash, 1, 32, p50FmtPx(p50LtStop), text_color = color.white)
+        table.cell(p50Dash, 0, 33, "TARGET", text_color = color.gray)
+        table.cell(p50Dash, 1, 33, p50FmtPx(p50LtTarget), text_color = color.white)
+        table.cell(p50Dash, 0, 34, "EXIT CT", text_color = color.gray)
+        table.cell(p50Dash, 1, 34, p50FmtCt(p50LtExitMs), text_color = color.white)
+        table.cell(p50Dash, 0, 35, "EXIT PRICE", text_color = color.gray)
+        table.cell(p50Dash, 1, 35, p50FmtPx(p50LtExitPx), text_color = color.white)
+        table.cell(p50Dash, 0, 36, "EXIT TYPE", text_color = color.gray)
+        table.cell(p50Dash, 1, 36, p50LtExitLbl, text_color = color.white)
+        table.cell(p50Dash, 0, 37, "— THIS BAR —", text_color = color.yellow)
+        table.cell(p50Dash, 1, 37, "FLAGS", text_color = color.yellow)
+        table.cell(p50Dash, 0, 38, "ENTRY EVENT", text_color = color.gray)
+        table.cell(p50Dash, 1, 38, p50LongEntryPlot or p50ShortEntryPlot ? "TRUE" : "FALSE", text_color = color.white)
+        table.cell(p50Dash, 0, 39, "LONG PLOT FLAG", text_color = color.gray)
+        table.cell(p50Dash, 1, 39, p50LongEntryPlot ? "TRUE" : "FALSE", text_color = color.white)
+        table.cell(p50Dash, 0, 40, "EXIT EVENT", text_color = color.gray)
+        table.cell(p50Dash, 1, 40, p50ExitSlPlot or p50ExitTpPlot or p50ExitTimePlot ? "TRUE" : "FALSE", text_color = color.white)
+
+if not chart1m and barstate.islast
+    label.new(bar_index, high, "Use 1-minute chart", style = label.style_label_down, color = color.red, textcolor = color.white)
+
+// Alerts
+alertcondition(p50LongConfirmed, "LONG CONFIRMED", "MODEL=PHASE50|SIDE=LONG|B1=CONFIRMED")
+alertcondition(p50ShortConfirmed, "SHORT CONFIRMED", "MODEL=PHASE50|SIDE=SHORT|B1=CONFIRMED")
+alertcondition(p50LongExit, "LONG EXIT", "MODEL=PHASE50|SIDE=LONG|EXIT=1")
+alertcondition(p50ShortExit, "SHORT EXIT", "MODEL=PHASE50|SIDE=SHORT|EXIT=1")
+alertcondition(p50SetupLongActive, "PHASE44 LONG SETUP ACTIVE", "MODEL=PHASE50|PHASE44=LONG_ACTIVE")
+alertcondition(p50SetupShortActive, "PHASE44 SHORT SETUP ACTIVE", "MODEL=PHASE50|PHASE44=SHORT_ACTIVE")
+alertcondition(p50B1Expired, "B1 WINDOW EXPIRED", "MODEL=PHASE50|B1=EXPIRED")

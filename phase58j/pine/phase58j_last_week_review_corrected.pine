@@ -1,0 +1,173 @@
+// CORRECTED: explicit America/Chicago timestamp — Phase58J-T forensic audit
+
+// VISUAL_DIAGNOSTIC_ONLY — last-week frozen forward replay
+
+//@version=5
+indicator("Phase58J Last Week Review (Corrected TZ)", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=50)
+
+// =============================================================================
+// Phase58J — frozen canonical entry + M0 vs M1 management review overlay
+// NO new strategy logic. Load levels from phase58j/review/*.csv
+// =============================================================================
+
+grpDisp = "Display"
+showTargets     = input.bool(false, "Show M0/M1 targets", group=grpDisp)
+showM0Levels    = input.bool(true,  "Show M0 stop", group=grpDisp)
+showM1Levels    = input.bool(true,  "Show M1 stop", group=grpDisp)
+showM0Outcome   = input.bool(false, "Show M0 outcome label", group=grpDisp)
+showM1Outcome   = input.bool(true,  "Show M1 outcome label", group=grpDisp)
+showChangedOnly = input.bool(false, "Only draw when outcomes differ", group=grpDisp)
+showDebug       = input.bool(true,  "Show debug table", group=grpDisp)
+holdMin         = input.int(60, "Max hold (minutes)", minval=1, maxval=240, group=grpDisp)
+
+grpTrade = "Frozen trade (from review CSV)"
+tradeId     = input.string("LW-063138", "Trade ID", group=grpTrade)
+// 1787769660000 = 2026-08-26 13:41:00 America/Chicago (bar open). input.time requires const int; timezone string form is not const.
+entryTime   = input.time(1787769660000, "Entry time (unix ms, 2026-08-26 13:41 Chicago)", group=grpTrade)
+tradeDir    = input.string("LONG", "Direction", options=["LONG", "SHORT"], group=grpTrade)
+usePrices   = input.bool(true, "Use explicit prices (else ATR calc)", group=grpTrade)
+
+grpPx = "Explicit prices (phase58j/review/m0_stop_m1_target_sample.csv)"
+entryPx  = input.float(29293.25, "Entry price", group=grpPx)
+m0StopPx = input.float(29288.241071428572, "M0 stop", group=grpPx)
+m1StopPx = input.float(29286.571428571428, "M1 stop", group=grpPx)
+m0TgtPx  = input.float(29305.772321428572, "M0 target", group=grpPx)
+m1TgtPx  = input.float(29309.946428571428, "M1 target", group=grpPx)
+
+grpATR = "ATR fallback (M0=0.75 ATR stop, M1=1.0 ATR stop, 2.5R target)"
+atrAtEntry = input.float(6.678571428571429, "ATR at entry", group=grpATR)
+
+grpOut = "Outcomes (from audit)"
+m0Outcome = input.string("STOP", "M0 exit reason", options=["STOP", "TARGET", "TIME", "OTHER"], group=grpOut)
+m1Outcome = input.string("TARGET", "M1 exit reason", options=["STOP", "TARGET", "TIME", "OTHER"], group=grpOut)
+m0NetR    = input.float(-1.144741532976857, "M0 net R", group=grpOut)
+m1NetR    = input.float(2.4999752446269867, "M1 net R", group=grpOut)
+
+// --- derive levels ---
+m0StopAtr = 0.75
+m1StopAtr = 1.00
+targetR   = 2.5
+
+float ep  = entryPx
+float m0s = m0StopPx
+float m1s = m1StopPx
+float m0t = m0TgtPx
+float m1t = m1TgtPx
+
+if not usePrices
+    m0Risk = atrAtEntry * m0StopAtr
+    m1Risk = atrAtEntry * m1StopAtr
+    if tradeDir == "LONG"
+        m0s := ep - m0Risk
+        m1s := ep - m1Risk
+        m0t := ep + targetR * m0Risk
+        m1t := ep + targetR * m1Risk
+    else
+        m0s := ep + m0Risk
+        m1s := ep + m1Risk
+        m0t := ep - targetR * m0Risk
+        m1t := ep - targetR * m1Risk
+
+changed = m0Outcome != m1Outcome
+shouldDraw = not showChangedOnly or changed
+
+// --- find entry bar ---
+var int entryBar = na
+if time == entryTime
+    entryBar := bar_index
+
+bool onTrade = not na(entryBar) and bar_index >= entryBar and bar_index <= entryBar + holdMin
+
+// --- colors ---
+colEntry  = color.new(color.white, 0)
+colM0Stop = color.new(color.red, 0)
+colM1Stop = color.new(color.orange, 0)
+colM0Tgt  = color.new(color.green, 40)
+colM1Tgt  = color.new(color.teal, 40)
+colM1Win  = color.new(color.lime, 0)
+colM0Loss = color.new(color.maroon, 0)
+
+// --- plots (active window only) ---
+plot(shouldDraw and showM0Levels and onTrade ? m0s : na, "M0 Stop", colM0Stop, 2, plot.style_linebr)
+plot(shouldDraw and showM1Levels and onTrade ? m1s : na, "M1 Stop", colM1Stop, 2, plot.style_linebr)
+plot(shouldDraw and showTargets and onTrade ? m0t : na, "M0 Target", colM0Tgt, 1, plot.style_linebr)
+plot(shouldDraw and showTargets and onTrade ? m1t : na, "M1 Target", colM1Tgt, 1, plot.style_linebr)
+plot(shouldDraw and onTrade ? ep : na, "Entry", colEntry, 1, plot.style_linebr)
+
+// --- one-shot labels/lines on entry bar ---
+var label lblEntry = na
+var label lblM0 = na
+var label lblM1 = na
+var label lblDelta = na
+var line  lnM0Stop = na
+var line  lnM1Stop = na
+var line  lnM0Tgt = na
+var line  lnM1Tgt = na
+var box   holdBox = na
+
+if shouldDraw and time == entryTime
+    label.delete(lblEntry)
+    label.delete(lblM0)
+    label.delete(lblM1)
+    label.delete(lblDelta)
+    line.delete(lnM0Stop)
+    line.delete(lnM1Stop)
+    line.delete(lnM0Tgt)
+    line.delete(lnM1Tgt)
+    box.delete(holdBox)
+
+    lblEntry := label.new(bar_index, ep, tradeDir + " ENTRY\n" + tradeId, style=label.style_label_up, color=colEntry, textcolor=color.black, size=size.small)
+
+    endBar = bar_index + holdMin
+    if showM0Levels
+        lnM0Stop := line.new(bar_index, m0s, endBar, m0s, color=colM0Stop, width=2)
+    if showM1Levels
+        lnM1Stop := line.new(bar_index, m1s, endBar, m1s, color=colM1Stop, width=2, style=line.style_dashed)
+    if showTargets
+        lnM0Tgt := line.new(bar_index, m0t, endBar, m0t, color=colM0Tgt, width=1)
+        lnM1Tgt := line.new(bar_index, m1t, endBar, m1t, color=colM1Tgt, width=1, style=line.style_dashed)
+
+    holdBox := box.new(bar_index, math.max(ep, m1t, m0t, m1s, m0s), endBar, math.min(ep, m1t, m0t, m1s, m0s), bgcolor=color.new(color.blue, 92), border_color=color.new(color.blue, 70))
+
+    if showM0Outcome
+        lblM0 := label.new(endBar, m0s, "M0 " + m0Outcome + "\n" + str.tostring(m0NetR, "#.##") + "R", style=label.style_label_left, color=colM0Loss, textcolor=color.white, size=size.tiny)
+
+    if showM1Outcome
+        yOut = m1Outcome == "TARGET" ? m1t : m1Outcome == "STOP" ? m1s : ep
+        lblM1 := label.new(endBar, yOut, "M1 " + m1Outcome + "\n" + str.tostring(m1NetR, "#.##") + "R", style=label.style_label_left, color=m1Outcome == "TARGET" ? colM1Win : colM0Loss, textcolor=color.white, size=size.tiny)
+
+    if changed
+        trans = "M0 " + m0Outcome + " / M1 " + m1Outcome
+        lblDelta := label.new(bar_index, tradeDir == "LONG" ? high : low, trans, style=tradeDir == "LONG" ? label.style_label_down : label.style_label_up, color=color.new(color.yellow, 20), textcolor=color.black, size=size.normal)
+
+// --- debug table ---
+var table dbg = table.new(position.bottom_right, 2, 14, bgcolor=color.new(color.black, 15), border_width=1)
+if barstate.islast and showDebug
+    table.cell(dbg, 0, 0, "Phase58J", text_color=color.gray, text_size=size.small)
+    table.cell(dbg, 1, 0, "M1 Validation", text_color=color.white, text_size=size.small)
+    table.cell(dbg, 0, 1, "Trade ID", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 1, tradeId, text_color=color.white, text_size=size.tiny)
+    table.cell(dbg, 0, 2, "Direction", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 2, tradeDir, text_color=color.white, text_size=size.tiny)
+    table.cell(dbg, 0, 3, "Entry", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 3, str.tostring(ep, "#.####"), text_color=color.white, text_size=size.tiny)
+    table.cell(dbg, 0, 4, "M0 Stop", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 4, str.tostring(m0s, "#.####"), text_color=colM0Stop, text_size=size.tiny)
+    table.cell(dbg, 0, 5, "M1 Stop", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 5, str.tostring(m1s, "#.####"), text_color=colM1Stop, text_size=size.tiny)
+    table.cell(dbg, 0, 6, "M0 Target", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 6, str.tostring(m0t, "#.####"), text_color=colM0Tgt, text_size=size.tiny)
+    table.cell(dbg, 0, 7, "M1 Target", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 7, str.tostring(m1t, "#.####"), text_color=colM1Tgt, text_size=size.tiny)
+    table.cell(dbg, 0, 8, "M0 Risk pts", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 8, str.tostring(math.abs(ep - m0s), "#.####"), text_color=color.white, text_size=size.tiny)
+    table.cell(dbg, 0, 9, "M1 Risk pts", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 9, str.tostring(math.abs(ep - m1s), "#.####"), text_color=color.white, text_size=size.tiny)
+    table.cell(dbg, 0, 10, "M0 outcome", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 10, m0Outcome + " (" + str.tostring(m0NetR, "#.##") + "R)", text_color=color.white, text_size=size.tiny)
+    table.cell(dbg, 0, 11, "M1 outcome", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 11, m1Outcome + " (" + str.tostring(m1NetR, "#.##") + "R)", text_color=color.white, text_size=size.tiny)
+    table.cell(dbg, 0, 12, "Transition", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 12, changed ? "M0 " + m0Outcome + " → M1 " + m1Outcome : "SAME", text_color=changed ? color.yellow : color.gray, text_size=size.tiny)
+    table.cell(dbg, 0, 13, "ΔR", text_color=color.gray, text_size=size.tiny)
+    table.cell(dbg, 1, 13, str.tostring(m1NetR - m0NetR, "#.##") + "R", text_color=color.white, text_size=size.tiny)

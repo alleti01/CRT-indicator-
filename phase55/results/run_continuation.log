@@ -1,0 +1,42 @@
+/Users/anishalleti/CRT indicator/phase55/run_continuation.py:154: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_jan = set(ref_ep.loc[(pd.to_datetime(ref_ep["timestamp_ct"]) >= jan_start) & (pd.to_datetime(ref_ep["timestamp_ct"]) <= jan_end), "event_id"])
+/Users/anishalleti/CRT indicator/phase55/run_continuation.py:154: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_jan = set(ref_ep.loc[(pd.to_datetime(ref_ep["timestamp_ct"]) >= jan_start) & (pd.to_datetime(ref_ep["timestamp_ct"]) <= jan_end), "event_id"])
+/Users/anishalleti/CRT indicator/phase55/run_continuation.py:168: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_ids = set(ref_ep.loc[(pd.to_datetime(ref_ep["timestamp_ct"]) >= st_ts) & (pd.to_datetime(ref_ep["timestamp_ct"]) <= en_ts), "event_id"])
+/Users/anishalleti/CRT indicator/phase55/run_continuation.py:168: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_ids = set(ref_ep.loc[(pd.to_datetime(ref_ep["timestamp_ct"]) >= st_ts) & (pd.to_datetime(ref_ep["timestamp_ct"]) <= en_ts), "event_id"])
+/Users/anishalleti/CRT indicator/phase55/run_continuation.py:168: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_ids = set(ref_ep.loc[(pd.to_datetime(ref_ep["timestamp_ct"]) >= st_ts) & (pd.to_datetime(ref_ep["timestamp_ct"]) <= en_ts), "event_id"])
+/Users/anishalleti/CRT indicator/phase55/run_continuation.py:168: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_ids = set(ref_ep.loc[(pd.to_datetime(ref_ep["timestamp_ct"]) >= st_ts) & (pd.to_datetime(ref_ep["timestamp_ct"]) <= en_ts), "event_id"])
+/Users/anishalleti/CRT indicator/phase55/run_continuation.py:168: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_ids = set(ref_ep.loc[(pd.to_datetime(ref_ep["timestamp_ct"]) >= st_ts) & (pd.to_datetime(ref_ep["timestamp_ct"]) <= en_ts), "event_id"])
+/Users/anishalleti/CRT indicator/phase55/run_continuation.py:168: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_ids = set(ref_ep.loc[(pd.to_datetime(ref_ep["timestamp_ct"]) >= st_ts) & (pd.to_datetime(ref_ep["timestamp_ct"]) <= en_ts), "event_id"])
+/Users/anishalleti/CRT indicator/phase55/run_continuation.py:168: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_ids = set(ref_ep.loc[(pd.to_datetime(ref_ep["timestamp_ct"]) >= st_ts) & (pd.to_datetime(ref_ep["timestamp_ct"]) <= en_ts), "event_id"])
+/Users/anishalleti/CRT indicator/phase55/run_continuation.py:168: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_ids = set(ref_ep.loc[(pd.to_datetime(ref_ep["timestamp_ct"]) >= st_ts) & (pd.to_datetime(ref_ep["timestamp_ct"]) <= en_ts), "event_id"])
+/Users/anishalleti/CRT indicator/phase55/run_continuation.py:168: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_ids = set(ref_ep.loc[(pd.to_datetime(ref_ep["timestamp_ct"]) >= st_ts) & (pd.to_datetime(ref_ep["timestamp_ct"]) <= en_ts), "event_id"])
+/Users/anishalleti/CRT indicator/phase55/run_continuation.py:168: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_ids = set(ref_ep.loc[(pd.to_datetime(ref_ep["timestamp_ct"]) >= st_ts) & (pd.to_datetime(ref_ep["timestamp_ct"]) <= en_ts), "event_id"])
+/Users/anishalleti/CRT indicator/phase55/run_continuation.py:176: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  days = pd.to_datetime(ref_ep["timestamp_ct"]).dt.date.unique()
+HTF feature parity...
+Episode parity...
+Jan 2024 sequential replay...
+Random replay windows...
+Traceback (most recent call last):
+  File "/Users/anishalleti/CRT indicator/phase55/run_continuation.py", line 250, in <module>
+    main()
+  File "/Users/anishalleti/CRT indicator/phase55/run_continuation.py", line 176, in main
+    days = pd.to_datetime(ref_ep["timestamp_ct"]).dt.date.unique()
+  File "/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/pandas/core/generic.py", line 6321, in __getattr__
+    return object.__getattribute__(self, name)
+  File "/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/pandas/core/accessor.py", line 224, in __get__
+    accessor_obj = self._accessor(obj)
+  File "/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/pandas/core/indexes/accessors.py", line 643, in __new__
+    raise AttributeError("Can only use .dt accessor with datetimelike values")
+AttributeError: Can only use .dt accessor with datetimelike values

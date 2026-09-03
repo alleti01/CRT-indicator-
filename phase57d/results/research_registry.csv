@@ -1,0 +1,3 @@
+experiment_id,timestamp,wall_family,interaction,mapping,expiration_scope,entry_stage,status,raw_n,distinct_n,avg_r,pf,notes
+EXP57D-0001,2026-08-29T18:09:45.140316+00:00,ALL,DATA_GATE,NONE,,,BLOCKED,0,0,,,Data provenance gate FAIL — no options data
+EXP57D-0001,2026-08-29T18:09:54.512362+00:00,ALL,DATA_GATE,NONE,N/A,N/A,BLOCKED,0,0,,,Data provenance gate FAIL — no options data

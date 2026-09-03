@@ -1,0 +1,13 @@
+field,n,exact_match_pct,mae,max_error,status
+m15_body_atr,5000,1.0,0.0,0.0,PASS
+countertrend_15m,5000,1.0,0.0,0.0,PASS
+mtf_1m_5m_align,5000,1.0,0.0,0.0,PASS
+mtf_1m_15m_align,5000,1.0,0.0,0.0,PASS
+atr,5000,1.0,0.0,0.0,PASS
+atr_ratio,5000,1.0,0.0,0.0,PASS
+m5_range_pos_8,5000,1.0,0.0,0.0,PASS
+m5_range_pos_4,5000,1.0,0.0,0.0,PASS
+m15_range_pos_4,5000,1.0,0.0,0.0,PASS
+m15_range_pos_8,5000,1.0,0.0,0.0,PASS
+m5_mom,5000,1.0,0.0,0.0,PASS
+m15_mom_4,5000,1.0,0.0,0.0,PASS

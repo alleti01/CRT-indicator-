@@ -1,0 +1,65 @@
+{
+  "phase": "Phase 42 \u2014 Sparse Missed-Reversal Precision Discovery",
+  "phase41_parity": {
+    "total_major_reversals": 3892.0,
+    "phase33_captured": 676.0,
+    "phase40_captured_rev": 0.0,
+    "captured_any": 2143.0,
+    "completely_missed": 1749.0,
+    "missed_pct": 0.4493833504624872
+  },
+  "best_rule": {
+    "name": "SPARSE_LR_MISSED_REVERSAL",
+    "description": "Walk-forward logistic regression on missed-reversal positives vs matched negatives; train-only score threshold for sparse firing",
+    "stable_features": {
+      "Long": "failed_new_low,micro_higher_low,lower_wick_ratio,body_atr,range_atr",
+      "Short": "body_atr,upper_wick_ratio,failed_new_high,micro_lower_high,ret_6_atr"
+    },
+    "median_test_tpd": 0.06995917586272885
+  },
+  "oos_performance": {
+    "N": 221,
+    "WinRate": 0.3393665158371041,
+    "AvgR": -0.09128472396832012,
+    "TotalR": -20.173923996998745,
+    "PF": 0.857795767066998,
+    "MaxDD": 31.499906286515873,
+    "ReturnMaxDD": -0.6404439369914752
+  },
+  "trades_per_day": 0.1305375073833432,
+  "precision_recall": {
+    "signals": 221,
+    "missed_population": 1749,
+    "missed_captured_within_8bars": 105,
+    "recall": 0.060034305317324184,
+    "precision_proxy": 0.4751131221719457
+  },
+  "new_only": {
+    "N": 75,
+    "WinRate": 0.3333333333333333,
+    "AvgR": -0.12484676903473485,
+    "TotalR": -9.363507677605114,
+    "PF": 0.8044059154526024,
+    "MaxDD": 11.88056520208724,
+    "ReturnMaxDD": -0.7881365506045187
+  },
+  "gates": {
+    "N>=200": true,
+    "tpd<=0.75": true,
+    "tpd_in_band": true,
+    "AvgR>=0.15": false,
+    "PF>=1.30": false,
+    "new_only_AvgR>0": false,
+    "new_only_PF>=1.20": false,
+    "2024_pos": false,
+    "2025_pos": true,
+    "2026_pos": true,
+    "cost_1.5x_pos": false,
+    "cost_2.0x_pos": false,
+    "ex_top1_pos": false,
+    "mc_P_pos": false
+  },
+  "classification": "D",
+  "lookahead_audit": "PASS",
+  "ready_for_pine": false
+}

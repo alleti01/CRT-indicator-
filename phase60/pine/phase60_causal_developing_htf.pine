@@ -1,0 +1,106 @@
+//@version=6
+indicator("Phase60 Causal Developing HTF", overlay=true, max_labels_count=500)
+
+// =============================================================================
+// PHASE60 — Causal developing 5M / 15M from 1M chart (NO lookahead_on)
+// Decisions intended on barstate.isconfirmed closed 1M bars only.
+// Swings: last completed HTF bucket via confirmed 5M/15M security (lookahead_off).
+// Current bucket OHLC: incremental state on 1M chart.
+// =============================================================================
+
+WARMUP = 100
+swingPeriod = input.int(5, "Swing period", minval=2)
+
+// ── Developing 5M bucket (causal) ───────────────────────────────────────────
+var int   m5BucketMs = na
+var float m5Open = na
+var float m5High = na
+var float m5Low  = na
+var float m5Close = na
+
+bucket5Ms = int(time / 300000) * 300000
+newM5 = na(m5BucketMs) or bucket5Ms != m5BucketMs
+if newM5
+    m5BucketMs := bucket5Ms
+    m5Open := open
+    m5High := high
+    m5Low  := low
+    m5Close := close
+else
+    m5High := math.max(m5High, high)
+    m5Low  := math.min(m5Low, low)
+    m5Close := close
+
+// ── Developing 15M bucket (causal) ──────────────────────────────────────────
+var int   m15BucketMs = na
+var float m15Open = na
+var float m15High = na
+var float m15Low  = na
+var float m15Close = na
+
+bucket15Ms = int(time / 900000) * 900000
+newM15 = na(m15BucketMs) or bucket15Ms != m15BucketMs
+if newM15
+    m15BucketMs := bucket15Ms
+    m15Open := open
+    m15High := high
+    m15Low  := low
+    m15Close := close
+else
+    m15High := math.max(m15High, high)
+    m15Low  := math.min(m15Low, low)
+    m15Close := close
+
+// ── Completed HTF (lookahead_off — last confirmed bar only) ─────────────────
+[m5C_comp, m5O_comp, m5H_comp, m5L_comp] = request.security(
+     syminfo.tickerid, "5", [close[1], open[1], high[1], low[1]], lookahead=barmerge.lookahead_off)
+[m15C_comp, m15H_comp, m15L_comp] = request.security(
+     syminfo.tickerid, "15", [close[1], high[1], low[1]], lookahead=barmerge.lookahead_off)
+
+m5PivotH = request.security(syminfo.tickerid, "5", ta.pivothigh(high, swingPeriod, swingPeriod), lookahead=barmerge.lookahead_off)
+m5PivotL = request.security(syminfo.tickerid, "5", ta.pivotlow(low, swingPeriod, swingPeriod), lookahead=barmerge.lookahead_off)
+var float m5LastSH = na
+var float m5PrevSH = na
+var float m5LastSL = na
+var float m5PrevSL = na
+if not na(m5PivotH)
+    m5PrevSH := m5LastSH
+    m5LastSH := m5PivotH
+if not na(m5PivotL)
+    m5PrevSL := m5LastSL
+    m5LastSL := m5PivotL
+
+// ── Closed-bar gate ─────────────────────────────────────────────────────────
+confirmed = barstate.isconfirmed
+
+// ── Debug table (developing vs completed) ───────────────────────────────────
+showHTF = input.bool(true, "Show developing HTF table")
+var table htfTbl = table.new(position.top_right, 3, 10, border_width=1)
+if showHTF and barstate.islast
+    table.cell(htfTbl, 0, 0, "Phase60 HTF", bgcolor=color.navy, text_color=color.white)
+    table.cell(htfTbl, 1, 0, "Developing", bgcolor=color.navy, text_color=color.white)
+    table.cell(htfTbl, 2, 0, "Completed", bgcolor=color.navy, text_color=color.white)
+    table.cell(htfTbl, 0, 1, "5M O")
+    table.cell(htfTbl, 1, 1, str.tostring(m5Open, format.mintick))
+    table.cell(htfTbl, 2, 1, str.tostring(m5O_comp, format.mintick))
+    table.cell(htfTbl, 0, 2, "5M H")
+    table.cell(htfTbl, 1, 2, str.tostring(m5High, format.mintick))
+    table.cell(htfTbl, 2, 2, str.tostring(m5H_comp, format.mintick))
+    table.cell(htfTbl, 0, 3, "5M L")
+    table.cell(htfTbl, 1, 3, str.tostring(m5Low, format.mintick))
+    table.cell(htfTbl, 2, 3, str.tostring(m5L_comp, format.mintick))
+    table.cell(htfTbl, 0, 4, "5M C")
+    table.cell(htfTbl, 1, 4, str.tostring(m5Close, format.mintick))
+    table.cell(htfTbl, 2, 4, str.tostring(m5C_comp, format.mintick))
+    table.cell(htfTbl, 0, 5, "15M C")
+    table.cell(htfTbl, 1, 5, str.tostring(m15Close, format.mintick))
+    table.cell(htfTbl, 2, 5, str.tostring(m15C_comp, format.mintick))
+    table.cell(htfTbl, 0, 6, "lookahead_on")
+    table.cell(htfTbl, 1, 6, "NO", text_color=color.lime)
+    table.cell(htfTbl, 2, 6, "confirmed only")
+    table.cell(htfTbl, 0, 7, "isconfirmed")
+    table.cell(htfTbl, 1, 7, confirmed ? "YES" : "NO")
+
+// Mark bucket resets (visual sanity)
+plotshape(newM5 and confirmed, title="5M bucket start", style=shape.circle, location=location.belowbar, size=size.tiny, color=color.blue)
+plotshape(newM15 and confirmed, title="15M bucket start", style=shape.diamond, location=location.abovebar, size=size.tiny, color=color.orange)

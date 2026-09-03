@@ -1,0 +1,44 @@
+{
+  "phase": "Phase 41 \u2014 NQ 15M Major Reversal Opportunity Discovery",
+  "primary_opportunity_label": "2R_before_1R_90m",
+  "opportunity_counts": {
+    "total": 3892,
+    "bullish": 1961,
+    "bearish": 1931,
+    "pct_phase33": 0.1736896197327852,
+    "pct_phase40": 0.1736896197327852,
+    "pct_missed": 0.4493833504624872,
+    "bull_missed_pct": 0.43090260071392145,
+    "bear_missed_pct": 0.4681512169860176
+  },
+  "oos_performance": {
+    "N": 13047,
+    "WinRate": 0.38821184946731047,
+    "AvgR": -0.09141992566827797,
+    "TotalR": -1192.7557701940227,
+    "PF": 0.8370354202912128,
+    "MaxDD": 1207.236803953996,
+    "ReturnMaxDD": -0.988004810893319
+  },
+  "best_rule": {
+    "name": "EXTENSION_REJECTION_RECLAIM",
+    "description": "6-bar extension + rejection wick + reclaim/micro-structure + EMA20 stretch (walk-forward thresholds)",
+    "bull_conditions": [
+      "ret_6_atr <= train_q75",
+      "lower_wick >= train_q25",
+      "close_loc >= 0.52",
+      "reclaim_or_higher_low",
+      "dist_ema20 <= train_q70"
+    ],
+    "bear_conditions": [
+      "ret_6_atr >= train_q25",
+      "upper_wick >= train_q25",
+      "close_loc <= 0.48",
+      "lower_high_or_fail_reclaim",
+      "dist_ema20 >= train_q30"
+    ]
+  },
+  "classification": "D",
+  "lookahead_audit": "PASS",
+  "ready_for_pine": false
+}

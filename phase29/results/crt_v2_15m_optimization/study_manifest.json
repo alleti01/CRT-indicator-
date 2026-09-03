@@ -1,0 +1,85 @@
+{
+  "phase": "Phase 29",
+  "parity": {
+    "N": 210,
+    "net_AvgR": 0.09428553555357556,
+    "net_TotalR": 19.799962466250868,
+    "net_PF": 1.3060502778142697,
+    "MaxDD": 5.640754371288528
+  },
+  "baseline_net": {
+    "N": 210,
+    "win_rate": 0.5142857142857142,
+    "AvgR": 0.09428553555357642,
+    "TotalR": 19.79996246625105,
+    "PF": 1.3060502778142737,
+    "MaxDD": 5.640754371288512,
+    "Return_over_DD": 3.5101621455160372
+  },
+  "in_sample_best": {
+    "entry_model": "BOS_RETEST",
+    "stop_atr": 0.75,
+    "target_r": 3.0,
+    "hold_minutes": 45,
+    "management": "FIXED",
+    "score": 0.9198538781503529,
+    "N": 142,
+    "win_rate": 0.528169014084507,
+    "AvgR": 0.2801183699757629,
+    "TotalR": 39.77680853655833,
+    "PF": 1.6538595510735945,
+    "MaxDD": 12.16886444704322,
+    "Return_over_DD": 3.268736266202987
+  },
+  "walk_forward_net": {
+    "N": 110,
+    "win_rate": 0.5454545454545454,
+    "AvgR": 0.32514548890043465,
+    "TotalR": 35.766003779047814,
+    "PF": 1.8863907402083693,
+    "MaxDD": 5.0704637188276,
+    "Return_over_DD": 7.053793452114017
+  },
+  "shortlist": {
+    "entry": [
+      "BOS_RETEST",
+      "CURRENT"
+    ],
+    "stop": [
+      1.0,
+      0.75,
+      1.25
+    ],
+    "target": [
+      2.0,
+      3.0,
+      1.75
+    ],
+    "hold": [
+      45,
+      60
+    ],
+    "management": [
+      "FIXED",
+      "PARTIAL_1R"
+    ]
+  },
+  "success_criteria_passed": 9,
+  "success_criteria": [
+    "Net AvgR>=0.08",
+    "Net PF>=1.20",
+    "Net TotalR>0",
+    "MaxDD<=10",
+    "2/3 eras positive",
+    "ex-best positive",
+    "ex-top1% positive",
+    "1.5x cost positive",
+    "parameter stability"
+  ],
+  "final_classification": "A",
+  "ready_for_pine": true,
+  "frequency": {
+    "baseline_trades_per_month": 2.0632262750161394,
+    "wf_trades_per_month": 1.0807375726275017
+  }
+}

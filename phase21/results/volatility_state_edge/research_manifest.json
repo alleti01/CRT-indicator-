@@ -1,0 +1,96 @@
+{
+  "phase": "Strategy Research V3 \u2014 Volatility-State Transition Edge Discovery",
+  "data_range": {
+    "start": "2017-10-01 17:00:00-05:00",
+    "end": "2026-06-28 23:55:00-05:00",
+    "bars_5m": 615898
+  },
+  "eras": {
+    "era1": [
+      "2018-01-01",
+      "2020-11-30"
+    ],
+    "era2": [
+      "2021-01-01",
+      "2023-12-29"
+    ],
+    "era3": [
+      "2024-01-01",
+      "2026-06-26"
+    ]
+  },
+  "contaminated_windows": [
+    "2018-01-01 \u2192 2020-11-30 (CRT failed-OOS observed)",
+    "2021-01-01 \u2192 2023-12-29 (Phase 18 OOS observed)",
+    "2024-01-01 \u2192 2026-06-26 (CRT development observed)",
+    "2026-06-29 \u2192 2026-08-18 (parity observed)"
+  ],
+  "total_events": 153488,
+  "transition_events": 153488,
+  "shock_events": 76438,
+  "events_by_era": {
+    "era1": 54230,
+    "era2": 54530,
+    "era3": 44728
+  },
+  "unconditional_baselines": [
+    {
+      "horizon": 1,
+      "minutes_approx": 5,
+      "N": 591895,
+      "mean_signed_return_atr": 0.002112740861499288,
+      "mean_abs_return_atr": 0.5038027810324421,
+      "median_abs_return_atr": 0.36049522839476694,
+      "mean_future_rv": NaN,
+      "mean_cumulative_tr_atr": 1.0098806104364013
+    },
+    {
+      "horizon": 3,
+      "minutes_approx": 15,
+      "N": 591893,
+      "mean_signed_return_atr": 0.005605668811824535,
+      "mean_abs_return_atr": 0.8859735994050857,
+      "median_abs_return_atr": 0.6344170601623212,
+      "mean_future_rv": 0.0008331167296831194,
+      "mean_cumulative_tr_atr": 3.052519182044763
+    },
+    {
+      "horizon": 6,
+      "minutes_approx": 30,
+      "N": 591890,
+      "mean_signed_return_atr": 0.012732653900617926,
+      "mean_abs_return_atr": 1.280313043234136,
+      "median_abs_return_atr": 0.9129085471526739,
+      "mean_future_rv": 0.0008934584666325277,
+      "mean_cumulative_tr_atr": 6.162886672190548
+    },
+    {
+      "horizon": 12,
+      "minutes_approx": 60,
+      "N": 591884,
+      "mean_signed_return_atr": 0.028455366598038614,
+      "mean_abs_return_atr": 1.8746719027334156,
+      "median_abs_return_atr": 1.3189732961954168,
+      "mean_future_rv": 0.0009203342005875946,
+      "mean_cumulative_tr_atr": 12.524900945234211
+    },
+    {
+      "horizon": 24,
+      "minutes_approx": 120,
+      "N": 591872,
+      "mean_signed_return_atr": 0.05841510672562318,
+      "mean_abs_return_atr": 2.7905107724964084,
+      "median_abs_return_atr": 1.9177280910935002,
+      "mean_future_rv": 0.0009397050761492525,
+      "mean_cumulative_tr_atr": 25.76651975948101
+    }
+  ],
+  "fdr_survivors_directional": 1,
+  "fdr_survivors_magnitude": 249,
+  "classifications": {
+    "directional": "C",
+    "magnitude": "A",
+    "overall": "B"
+  },
+  "lookahead_audit": true
+}

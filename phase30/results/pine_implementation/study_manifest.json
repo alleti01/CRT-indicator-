@@ -1,0 +1,35 @@
+{
+  "phase": 30,
+  "signal_architecture": "CRT_V2_B_LEGACY_EXP6",
+  "timeframe_minutes": 15,
+  "entry_model": "BOS_RETEST",
+  "stop_atr": 0.75,
+  "target_r": 3.0,
+  "max_hold_minutes": 60,
+  "management": "FIXED",
+  "ambiguous_bar_policy": "If stop and target are both touched within the same bar and intrabar order is unknown, STOP is assumed first (conservative). Matches phase16.trade_engine.manage_bar and phase29.simulator.simulate_trade.",
+  "baseline_15m_signal": {
+    "N": 210,
+    "net_AvgR": 0.094,
+    "net_PF": 1.31
+  },
+  "phase29_walk_forward_execution": {
+    "N": 110,
+    "net_AvgR": 0.325,
+    "net_TotalR": 35.8,
+    "net_PF": 1.89,
+    "MaxDD": 5.1
+  },
+  "python_parity_filled_trades": 142,
+  "python_parity_net_avg_r": 0.2831,
+  "python_parity_net_total_r": 40.21,
+  "ready_for_tradingview_visual_validation": true,
+  "live_deployment_validated": false,
+  "outputs": {
+    "strategy_pine": "/Users/anishalleti/CRT indicator/phase30/results/pine_implementation/CRT_V2_15M_FINAL_STRATEGY.pine",
+    "indicator_pine": "/Users/anishalleti/CRT indicator/phase30/results/pine_implementation/CRT_V2_15M_FINAL_INDICATOR.pine",
+    "parity_reference_csv": "/Users/anishalleti/CRT indicator/phase30/results/pine_implementation/pine_parity_reference.csv",
+    "parity_windows_csv": "/Users/anishalleti/CRT indicator/phase30/results/pine_implementation/parity_windows.csv",
+    "report_md": "/Users/anishalleti/CRT indicator/phase30/results/pine_implementation/PINE_IMPLEMENTATION_REPORT.md"
+  }
+}

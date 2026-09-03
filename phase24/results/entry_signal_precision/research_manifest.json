@@ -1,0 +1,91 @@
+{
+  "phase": "Phase 24 \u2014 Entry Signal Precision Optimization",
+  "architecture": "Phase 14 Frozen CRT (FrozenConfig) \u2014 Control/BOS/Retest/Confirm",
+  "baseline": {
+    "N": 8969,
+    "win_rate": 0.4143159772549894,
+    "AvgR": -0.0018542342043844774,
+    "TotalR": -16.630626579124378,
+    "PF": 0.9964196024320908,
+    "MaxDD": 183.95261242011003,
+    "mean_mfe_r": NaN,
+    "mean_mae_r": NaN
+  },
+  "best_retention_region": {
+    "N": 897.0,
+    "win_rate": 0.43924191750278707,
+    "AvgR": 0.04106416918784577,
+    "TotalR": 36.83455976149766,
+    "PF": 1.0843836365986703,
+    "MaxDD": 34.060338228720056,
+    "mean_mfe_r": NaN,
+    "mean_mae_r": NaN,
+    "retention_pct": 10.0,
+    "signals_rejected_pct": 90.0,
+    "trades_per_month": 21.516690307328606
+  },
+  "decile_monotonic": false,
+  "final_classification": "C",
+  "top_features": [
+    {
+      "feature": "num__upper_wick_ratio",
+      "importance": 0.08241728011432975
+    },
+    {
+      "feature": "num__day_of_week",
+      "importance": 0.0633295771709203
+    },
+    {
+      "feature": "num__trend_aligned",
+      "importance": 0.06213778591274155
+    },
+    {
+      "feature": "num__body_range_ratio",
+      "importance": 0.05725097370276168
+    },
+    {
+      "feature": "num__session_bucket",
+      "importance": 0.05615314952571893
+    },
+    {
+      "feature": "num__direction_code",
+      "importance": 0.05030547295042918
+    },
+    {
+      "feature": "num__close_location",
+      "importance": 0.048448688992252346
+    },
+    {
+      "feature": "num__htf_regime",
+      "importance": 0.04617029282098662
+    },
+    {
+      "feature": "num__score",
+      "importance": 0.04595928669147719
+    },
+    {
+      "feature": "num__body_atr_pct",
+      "importance": 0.04587381157757133
+    },
+    {
+      "feature": "num__minutes_from_rth_open",
+      "importance": 0.040695994934856164
+    },
+    {
+      "feature": "num__range_atr",
+      "importance": 0.03751578253123174
+    },
+    {
+      "feature": "num__volatility_regime_code",
+      "importance": 0.03595164176466302
+    },
+    {
+      "feature": "num__lower_wick_ratio",
+      "importance": 0.03481501156557864
+    },
+    {
+      "feature": "num__atr_ratio_6_72",
+      "importance": 0.032319082810919095
+    }
+  ]
+}

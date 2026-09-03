@@ -1,0 +1,8 @@
+{
+  "version": "PHASE71_FORWARD_V1",
+  "signal_hash": "0da41f282174679f",
+  "trader_hash": "b6adfc04e8885a3d",
+  "pine_hash": "8b74254eeee9fc20",
+  "forward_start_utc": null,
+  "note": "Set FORWARD_START when TV manual parity passes"
+}

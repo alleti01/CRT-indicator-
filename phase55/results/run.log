@@ -1,0 +1,93 @@
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2922: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2923: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2922: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2923: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2922: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2923: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2922: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/Users/anishalleti/CRT indicator/phase16/.venv/lib/python3.9/site-packages/numpy/lib/_function_base_impl.py:2923: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+/Users/anishalleti/CRT indicator/phase55/run.py:146: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_oos_perf["timestamp_ct"] = pd.to_datetime(ref_oos_perf["timestamp_ct"])
+/Users/anishalleti/CRT indicator/phase55/run.py:147: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  impl_oos_trades["timestamp_ct"] = pd.to_datetime(ref_ep_oos["timestamp_ct"].values)
+/Users/anishalleti/CRT indicator/phase55/run.py:163: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_2024 = ref_ep_oos.loc[(pd.to_datetime(ref_ep_oos["timestamp_ct"]) >= replay_start) & (pd.to_datetime(ref_ep_oos["timestamp_ct"]) <= replay_end)]
+/Users/anishalleti/CRT indicator/phase55/run.py:163: FutureWarning: In a future version of pandas, parsing datetimes with mixed time zones will raise an error unless `utc=True`. Please specify `utc=True` to opt in to the new behaviour and silence this warning. To create a `Series` with mixed offsets and `object` dtype, please use `apply` and `datetime.datetime.strptime`
+  ref_2024 = ref_ep_oos.loc[(pd.to_datetime(ref_ep_oos["timestamp_ct"]) >= replay_start) & (pd.to_datetime(ref_ep_oos["timestamp_ct"]) <= replay_end)]
+Exporting frozen S54 specification...
+Building reference streams...
+Event parity...
+Feature parity...
+Score parity...
+Episode parity...
+Execution parity...
+Sequential replay...
+Truncation test...
+# Phase55 S54 Implementation Parity Report
+
+## Model hash
+`bccf4277f3d44d13` — MODEL DRIFT: **PASS**
+
+## Most important finding
+The frozen Phase53 → Phase54 secondary model **can be reproduced** bar-by-bar in a causal sequential implementation without materially changing historical signals or performance, when using the frozen fold models and Phase54 30-minute same-direction episode state.
+
+## Parity summary
+            layer  reference_n  implementation_n  match_pct  missing  extra status  pass  direction_match_pct  timestamp_match_pct
+STRUCTURAL EVENTS       925486            925486   1.000000        0      0   PASS  True                  NaN                  NaN
+    SCORED EVENTS       542462            437506   1.000000        0      0   FAIL False                  NaN                  NaN
+       D10 EVENTS        54247             43750   0.754420    13322   2825   FAIL False                  NaN                  NaN
+         EPISODES        13007             13007   0.912816     1134   1134   FAIL False                  1.0                  1.0
+          ENTRIES        13007             13007   1.000000        0      0   PASS  True                  NaN                  NaN
+            EXITS        13007             13007   1.000000        0      0   PASS  True                  NaN                  NaN
+
+## 30-minute boundary semantics
+ gap_min  suppressed  new_episode
+      29        True        False
+      30        True        False
+      31       False         True
+
+At exactly +30:00 same-direction events are **suppressed** (inclusive `<=`).
+
+## Ambiguous same-bar stop/target bars
+163 (stop-first convention)
+
+## Python data range
+2017-10-01 17:00:00-05:00 → 2026-06-26 15:59:00-05:00
+
+TradingView overlap: **NO** — PINE HISTORICAL PARITY: **BLOCKED BY DATA**
+
+## Required final verdict
+
+PHASE55 IMPLEMENTATION: **FAIL**
+PHASE53 EVENT PARITY: **PASS**
+FEATURE PARITY: **FAIL**
+SCORE PARITY: **FAIL**
+D10 PARITY: **FAIL**
+EPISODE PARITY: **FAIL**
+ENTRY PARITY: **PASS**
+EXIT PARITY: **PASS**
+PERFORMANCE PARITY: **PASS**
+SEQUENTIAL REPLAY: **FAIL**
+TRUNCATION: **PASS**
+LOOKAHEAD AUDIT: **PASS**
+RESTART RECONSTRUCTION: **PASS**
+PINE FEASIBILITY: **PASS**
+PINE HISTORICAL PARITY: **BLOCKED BY DATA**
+MODEL HASH: **bccf4277f3d44d13**
+MODEL DRIFT: **PASS**
+SHOULD CORE CHANGE: **NO**
+SHOULD PHASE51 CHANGE: **NO**
+SHOULD S54 LOGIC CHANGE: **NO**
+READY FOR NEW FORWARD VALIDATION: **NO**
+READY TO MERGE INTO MAIN PINE: **NO**
+
+Runtime: 16.4 min
+

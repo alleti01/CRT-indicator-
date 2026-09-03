@@ -1,0 +1,26 @@
+{
+  "LOW_EXTENSION": {
+    "N": 8932,
+    "AvgR_m0": 0.0674535185908978,
+    "target_pct": 0.30351545006717423,
+    "chase_median": 1.5
+  },
+  "MEDIUM_EXTENSION": {
+    "N": 9254,
+    "AvgR_m0": 0.02215650854400302,
+    "target_pct": 0.29025286362653985,
+    "chase_median": 2.409611644260158
+  },
+  "HIGH_EXTENSION": {
+    "N": 9138,
+    "AvgR_m0": -0.005708437254258001,
+    "target_pct": 0.28233749179251477,
+    "chase_median": 3.2
+  },
+  "EXTREME_EXTENSION": {
+    "N": 8850,
+    "AvgR_m0": -0.019735657364489467,
+    "target_pct": 0.2774011299435028,
+    "chase_median": 4.357379375591296
+  }
+}

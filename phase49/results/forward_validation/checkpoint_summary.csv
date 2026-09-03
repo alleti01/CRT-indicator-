@@ -1,0 +1,5 @@
+checkpoint,reached,N,AvgR,PF,TotalR,MaxDD,AvgR_percentile,status
+20,False,0,0.0,0.0,0.0,0.0,,INSUFFICIENT SAMPLE
+50,False,0,0.0,0.0,0.0,0.0,,INSUFFICIENT SAMPLE
+100,False,0,0.0,0.0,0.0,0.0,,INSUFFICIENT SAMPLE
+200,False,0,0.0,0.0,0.0,0.0,,INSUFFICIENT SAMPLE

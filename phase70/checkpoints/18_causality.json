@@ -1,0 +1,4 @@
+{
+  "pass": true,
+  "note": "all features use known_at <= signal_i"
+}

@@ -1,0 +1,85 @@
+{
+  "phase": "Phase 40 \u2014 NQ 15M Impulse-Filtered Final Pine Implementation",
+  "impulse_threshold": 0.65,
+  "unfiltered_signals": {
+    "L": 2075,
+    "S": 1836,
+    "RL": 976,
+    "RS": 925,
+    "total": 5812
+  },
+  "filtered_signals": {
+    "L": 1541,
+    "S": 1345,
+    "RL": 452,
+    "RS": 453,
+    "total": 3791
+  },
+  "signals_removed": 2021,
+  "retention_full_history": 0.6522711631108052,
+  "retention_oos_stitched": 0.6527745258721611,
+  "trades_per_day_filtered": 1.7223753261237578,
+  "full_history": {
+    "unfiltered": {
+      "N": 5812,
+      "WinRate": 0.4741913282863042,
+      "AvgR": 0.2285851995579937,
+      "TotalR": 1328.5371798310593,
+      "PF": 1.4779205868355416,
+      "MaxDD": 14.178086803282326,
+      "ReturnMaxDD": 93.7035580515344
+    },
+    "filtered": {
+      "N": 3791,
+      "WinRate": 0.5032972830387761,
+      "AvgR": 0.3412049296466108,
+      "TotalR": 1293.5078882903015,
+      "PF": 1.7529123260601682,
+      "MaxDD": 17.42566144228806,
+      "ReturnMaxDD": 74.23005964934313
+    }
+  },
+  "oos_stitched": {
+    "unfiltered_N": 4271,
+    "unfiltered": {
+      "N": 4271,
+      "WinRate": 0.4790447202060407,
+      "AvgR": 0.2421533351060305,
+      "TotalR": 1034.2368942378562,
+      "PF": 1.5195384152984828,
+      "MaxDD": 14.178086803281701,
+      "ReturnMaxDD": 72.94615335536447
+    },
+    "filtered_N": 2788,
+    "filtered": {
+      "N": 2788,
+      "WinRate": 0.5064562410329986,
+      "AvgR": 0.3499974318258542,
+      "TotalR": 975.7928399304815,
+      "PF": 1.7882353286265988,
+      "MaxDD": 17.42566144228806,
+      "ReturnMaxDD": 55.997463462847804
+    }
+  },
+  "phase39_reproduction": {
+    "full_history_filtered_N": 3791,
+    "full_history_retention": 0.6522711631108052,
+    "phase39_full_target_N": 3791,
+    "phase39_full_target_retention": 0.6522711631108052,
+    "full_N_within_2pct": true,
+    "full_retention_within_2pct": true,
+    "oos_filtered_N": 2788,
+    "oos_retention": 0.6527745258721611,
+    "phase39_oos_target_N": 2773,
+    "phase39_oos_target_retention": 0.6499648794193398,
+    "oos_N_within_2pct": true,
+    "oos_retention_within_2pct": true,
+    "reproduced": true
+  },
+  "continuation_parity_before_filter": true,
+  "reversal_parity_before_filter": true,
+  "lookahead_audit": "PASS",
+  "historical_recalc_immediate": true,
+  "rejected_debug_mode": true,
+  "live_deployment_validated": false
+}

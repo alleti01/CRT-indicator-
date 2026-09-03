@@ -1,0 +1,19 @@
+{
+  "late": {
+    "pass": false,
+    "verdict": "NO_LATE_FILTER_EDGE"
+  },
+  "time": {
+    "pass": true,
+    "verdict": "TIME_EXIT_EDGE",
+    "best": "T5"
+  },
+  "failure": {
+    "pass": false,
+    "verdict": "NO_FAILURE_EXIT_EDGE"
+  },
+  "reversal": {
+    "pass": false,
+    "verdict": "NO_REVERSAL_EDGE"
+  }
+}

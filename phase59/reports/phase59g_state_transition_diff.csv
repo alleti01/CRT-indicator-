@@ -1,0 +1,10 @@
+ts_chicago,ts_ny,variable,python,pine_phase59f,pine_phase59g,notes
+2026-08-26 13:31:00-05:00,14:31:00,internal_stop,29286.147,29286.147,29286.147,Phase59F fix — matches Python
+2026-08-26 13:32:00-05:00,14:32:00,p58InTrade,False,False,False,EXIT_STOP same bar
+2026-08-26 13:32:00-05:00,14:32:00,p58State,3 COOLDOWN,3 COOLDOWN,3 COOLDOWN,
+2026-08-26 13:34:00-05:00,14:34:00,p58State,3 COOLDOWN,1 ARMED_LONG,3 COOLDOWN,59G fixes cooldown-on-exit-bar bug
+2026-08-26 13:35:00-05:00,14:35:00,p58State,0 WATCH,1 ARMED_LONG,0 WATCH,59G blocks same-bar arm after cooldown
+2026-08-26 13:36:00-05:00,14:36:00,p58State,1 ARMED_LONG,1 ARMED_LONG,1 ARMED_LONG,
+2026-08-26 13:40:00-05:00,14:40:00,p58State,2 IN_LONG,2 IN_LONG,2 IN_LONG,TAKE_LONG
+2026-08-26 13:40:00-05:00,14:40:00,rawTake,True,True,True,
+2026-08-26 13:41:00-05:00,14:41:00,canonical_entry,True,True,True,LW-063138 @ 29293.25

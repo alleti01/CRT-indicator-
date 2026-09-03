@@ -1,0 +1,3 @@
+metric,actual,expected,pass
+trades,60118.0,60118.0,True
+total_r,11581.432110031268,11581.43,True

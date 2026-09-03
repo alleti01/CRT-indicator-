@@ -1,0 +1,103 @@
+//@version=5
+indicator("Phase58D Opportunity Trader", overlay=true, max_labels_count=500, max_boxes_count=50)
+
+// Phase58D - 1M primary timing + opportunity memory + 5M/15M soft intelligence
+// Canonical trader brain visualization (matches Python decision engine conceptually)
+
+grpMem = "Opportunity Memory"
+structGap = input.int(30, "Structural gap (1M bars)", minval=5, group=grpMem)
+showUpdates = input.bool(false, "Show small update markers", group=grpMem)
+
+grpHTF = "HTF Context"
+show15m = input.bool(true, "Show 15M state table", group=grpHTF)
+
+// 15M context (completed bars only)
+m15 = request.security(syminfo.tickerid, "15", close, barmerge.gaps_off, barmerge.lookahead_off)
+m15_hi = request.security(syminfo.tickerid, "15", high, barmerge.gaps_off, barmerge.lookahead_off)
+m15_lo = request.security(syminfo.tickerid, "15", low, barmerge.gaps_off, barmerge.lookahead_off)
+m15_chg = m15 - m15[1]
+ctx15_bull = m15_chg > 0 and m15 > m15[3]
+ctx15_bear = m15_chg < 0 and m15 < m15[3]
+ctx15_state = ctx15_bull ? "BULLISH" : ctx15_bear ? "BEARISH" : "NEUTRAL"
+
+// 5M local structure
+m5 = request.security(syminfo.tickerid, "5", close, barmerge.gaps_off, barmerge.lookahead_off)
+m5_hi = request.security(syminfo.tickerid, "5", high, barmerge.gaps_off, barmerge.lookahead_off)
+m5_lo = request.security(syminfo.tickerid, "5", low, barmerge.gaps_off, barmerge.lookahead_off)
+ctx5_bull = m5 > m5[1] and m5_lo > m5_lo[1]
+ctx5_bear = m5 < m5[1] and m5_hi < m5_hi[1]
+ctx5_state = ctx5_bull ? "BULLISH" : ctx5_bear ? "BEARISH" : "NEUTRAL"
+
+// 1M detection proxy (Phase58-style impulse + location)
+atr1 = ta.atr(14)
+body = math.abs(close - open)
+bullImp = close > open and body > atr1 * 0.3
+bearImp = close < open and body > atr1 * 0.3
+nearLow = low <= ta.lowest(low, 20) + atr1 * 0.5
+nearHigh = high >= ta.highest(high, 20) - atr1 * 0.5
+
+longCand = bullImp and nearLow
+shortCand = bearImp and nearHigh
+
+// Opportunity memory state
+var int oppCounter = 0
+var string activeOppId = na
+var string activeDir = na
+var int activeStartBar = na
+var int signalCount = 0
+var string lastDecision = "WATCH"
+
+if longCand or shortCand
+    dir = longCand ? "LONG" : "SHORT"
+    isNew = na(activeDir) or dir != activeDir or (bar_index - activeStartBar) > structGap
+    if isNew
+        oppCounter += 1
+        activeOppId := "OPP_" + str.tostring(bar_index) + "_" + dir
+        activeDir := dir
+        activeStartBar := bar_index
+        signalCount := 1
+        oppY = dir == "LONG" ? low : high
+        oppStyle = dir == "LONG" ? label.style_label_up : label.style_label_down
+        oppColor = dir == "LONG" ? color.new(color.green, 20) : color.new(color.red, 20)
+        label.new(bar_index, oppY, "OPP " + dir + " #" + str.tostring(oppCounter), style=oppStyle, color=oppColor, textcolor=color.white, size=size.small)
+    else
+        signalCount += 1
+        if showUpdates
+            label.new(bar_index, close, "+", style=label.style_label_center, color=color.gray, textcolor=color.white, size=size.tiny)
+
+    // Soft evidence (no hard 5M gate)
+    locScore = (dir == "LONG" and nearLow) or (dir == "SHORT" and nearHigh) ? 2 : 0
+    dirScore = dir == "LONG" ? (ctx15_bull ? 1 : 0) + (ctx5_bull ? 1 : 0) : (ctx15_bear ? 1 : 0) + (ctx5_bear ? 1 : 0)
+    reactScore = 1
+    total = locScore + dirScore + reactScore
+    takeThr = 4
+
+    if signalCount == 1
+        if total >= takeThr
+            lastDecision := "TAKE"
+            label.new(bar_index, close, "TAKE #" + str.tostring(oppCounter), style=label.style_label_center, color=color.lime, textcolor=color.black, size=size.small)
+        else if total >= takeThr - 1
+            lastDecision := "WAIT"
+            label.new(bar_index, close, "WAIT #" + str.tostring(oppCounter), style=label.style_label_center, color=color.orange, textcolor=color.black, size=size.small)
+        else
+            lastDecision := "PASS"
+            label.new(bar_index, close, "PASS #" + str.tostring(oppCounter), style=label.style_label_center, color=color.gray, textcolor=color.white, size=size.small)
+
+// Debug table
+var table dbg = table.new(position.top_right, 2, 10, bgcolor=color.new(color.black, 80))
+if barstate.islast and show15m
+    table.cell(dbg, 0, 0, "15M STATE", text_color=color.gray)
+    table.cell(dbg, 1, 0, ctx15_state, text_color=color.white)
+    table.cell(dbg, 0, 1, "5M STATE", text_color=color.gray)
+    table.cell(dbg, 1, 1, ctx5_state, text_color=color.white)
+    table.cell(dbg, 0, 2, "ACTIVE OPP", text_color=color.gray)
+    table.cell(dbg, 1, 2, na(activeOppId) ? "-" : activeOppId, text_color=color.white)
+    table.cell(dbg, 0, 3, "OPP DIR", text_color=color.gray)
+    table.cell(dbg, 1, 3, na(activeDir) ? "-" : activeDir, text_color=color.white)
+    table.cell(dbg, 0, 4, "SIGNALS", text_color=color.gray)
+    table.cell(dbg, 1, 4, str.tostring(signalCount), text_color=color.white)
+    table.cell(dbg, 0, 5, "DECISION", text_color=color.gray)
+    table.cell(dbg, 1, 5, lastDecision, text_color=color.yellow)
+
+plotshape(longCand and signalCount == 1, title="1M Long Detect", location=location.belowbar, color=color.green, style=shape.triangleup, size=size.tiny)
+plotshape(shortCand and signalCount == 1, title="1M Short Detect", location=location.abovebar, color=color.red, style=shape.triangledown, size=size.tiny)

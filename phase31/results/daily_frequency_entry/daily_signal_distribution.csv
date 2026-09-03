@@ -1,0 +1,2 @@
+total_rth_days,days_0,days_1,days_2,days_3plus,mean_signals_day,median_signals_day,p90_signals_day,mean_trades_week,longest_no_signal_stretch,pct_days_0,pct_days_1,pct_days_2,pct_days_gt2
+2188,617,653,737,181,1.2221206581352833,1.0,2.0,6.1106032906764165,515,0.2819926873857404,0.2984460694698355,0.33683729433272397,0.08272394881170018

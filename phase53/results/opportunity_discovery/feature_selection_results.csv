@@ -1,0 +1,6 @@
+fold,features,train_N
+1,"m15_body_atr,countertrend_15m,mtf_1m_5m_align,mtf_1m_15m_align,atr,atr_ratio,m5_range_pos_8,m5_range_pos_4",191855
+2,"m15_body_atr,countertrend_15m,mtf_1m_5m_align,mtf_1m_15m_align,atr,atr_ratio,m15_range_pos_4,m15_range_pos_8",297041
+3,"m15_body_atr,countertrend_15m,mtf_1m_5m_align,mtf_1m_15m_align,atr,atr_ratio,m15_range_pos_4,m15_range_pos_8",402685
+4,"m15_body_atr,countertrend_15m,mtf_1m_5m_align,mtf_1m_15m_align,atr,atr_ratio,m5_range_pos_8,m5_range_pos_4",515085
+5,"m15_body_atr,countertrend_15m,mtf_1m_5m_align,mtf_1m_15m_align,atr,atr_ratio,m5_range_pos_8,m5_range_pos_4",624894

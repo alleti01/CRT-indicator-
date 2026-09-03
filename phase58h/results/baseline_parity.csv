@@ -1,0 +1,5 @@
+metric,actual,expected,pass
+trades,61874.0,61874.0,True
+abstained,79.0,79.0,True
+total_r,10998.921912776883,10998.92,True
+avg_r,0.17776322708693285,0.17776319617286745,True

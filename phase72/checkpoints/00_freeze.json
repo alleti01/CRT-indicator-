@@ -1,0 +1,10 @@
+{
+  "pass": true,
+  "signal_hash": "0da41f282174679f",
+  "trader_hash": "b6adfc04e8885a3d",
+  "file_hashes": {
+    "phase71/python/canonical_trader.py": "e17f6ac2ba9b0d15",
+    "phase71/freeze/PHASE71_FORWARD_FREEZE.json": "8a6013879e142a94",
+    "TV_REVIEW/phase71_unified_trader.pine": "dd049d6970ed90f7"
+  }
+}

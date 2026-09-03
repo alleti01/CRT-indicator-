@@ -1,0 +1,55 @@
+{
+  "phase": 74,
+  "extends": "phase73/config/default.json",
+  "mode": {
+    "shadow_mode": true,
+    "paper_mode": true,
+    "trading_enabled": false
+  },
+  "market_data": {
+    "provider": "STREAM_LIVE_PROVIDER",
+    "symbol": "NQ",
+    "exchange": "GLBX",
+    "bar_timezone": "UTC",
+    "staleness_limit_seconds": 90,
+    "atr_period": 14,
+    "databento_dataset": "GLBX.MDP3",
+    "databento_schema": "ohlcv-1m",
+    "databento_symbol": "NQ.v.0"
+  },
+  "webhook": {
+    "host": "127.0.0.1",
+    "port": 8787,
+    "path": "/webhook",
+    "auth_env_var": "PHASE74_WEBHOOK_SECRET",
+    "rate_limit_per_minute": 60,
+    "staleness_limit_seconds": 120
+  },
+  "broker": {
+    "adapter": "LOCAL_SIM",
+    "paper_mode_required": true,
+    "protective_orders": "CLIENT_SIDE_PROTECTION",
+    "tradovate_env_prefix": "TRADOVATE_"
+  },
+  "contracts": {
+    "pine_symbol": "NQ",
+    "market_data_symbol": "NQ.v.0",
+    "broker_symbol": "NQ",
+    "multiplier": 2.0,
+    "tick_size": 0.25,
+    "tick_value": 0.5,
+    "default_quantity": 1
+  },
+  "safety": {
+    "daily_loss_limit": 500.0,
+    "max_open_orders": 2,
+    "kill_switch_env_var": "PHASE74_KILL_SWITCH"
+  },
+  "logging": {
+    "log_dir": "phase74/logs"
+  },
+  "persistence": {
+    "state_file": "phase74/logs/trader_state.json",
+    "idempotency_file": "phase74/logs/order_idempotency.jsonl"
+  }
+}

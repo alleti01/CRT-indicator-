@@ -1,0 +1,15 @@
+parameter,value,source,selected_on_train,oos_viewed,holdout_viewed
+leg_min_distance_atr,1.0,phase57/config.py,YES,NO,NO
+leg_swing,5,phase57/config.py,PREDECLARED,NO,NO
+leg_start_i,100,phase57/config.py,PREDECLARED,NO,NO
+pullback_min_depth_pct,0.15,phase57/config.py,YES,NO,NO
+pullback_max_depth_pct,1.0,phase57/config.py,PREDECLARED,NO,NO
+pullback_max_bars,60,phase57/config.py,PREDECLARED,NO,NO
+sequence_max_reaction_bars,5,phase57/config.py,PREDECLARED,NO,NO
+stop_atr,0.75,phase57/config.py,PREDECLARED,NO,NO
+target_r,2.5,phase57/config.py,PREDECLARED,NO,NO
+max_hold_min,60,phase57/config.py,PREDECLARED,NO,NO
+cost_mult,1.0,phase57/config.py,PREDECLARED,NO,NO
+warmup_bars,500,phase57/config.py,PREDECLARED,NO,NO
+holdout_start,2025-01-01,phase57/config.py,PREDECLARED,NO,NO
+holdout_end,2026-06-26,phase57/config.py,PREDECLARED,NO,NO

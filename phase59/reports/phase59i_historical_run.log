@@ -1,0 +1,8 @@
+=== ORIGINAL ===
+  load cached canon original (canon_full_original.parquet)
+=== CAUSAL_A ===
+  load cached canon causal_a (canon_full_causal_a.parquet)
+=== CAUSAL_B ===
+  load cached canon causal_b (canon_full_causal_b.parquet)
+Wrote /Users/anishalleti/CRT indicator/phase59/reports/PHASE59I_HISTORICAL_COMPARISON.md
+Done in 1.3s

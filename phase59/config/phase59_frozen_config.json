@@ -1,0 +1,76 @@
+{
+  "version": "phase59_v1",
+  "frozen_before_evaluation": true,
+  "mission": "D variant E -> P4 -> H1 -> M1_CANONICAL (1.0 ATR stop, 2.5R, 60m)",
+  "timezone": "America/Chicago",
+  "instrument": "NQ",
+  "primary_timeframe": "1M",
+  "htf_context": ["15M", "5M"],
+  "entry_convention": {
+    "signal_bar": "closed 1M bar T",
+    "entry_bar": "next 1M bar open T+1",
+    "entry_price_field": "m1_op[entry_i]"
+  },
+  "m1_management": {
+    "model": "M1_1.0",
+    "stop_atr": 1.0,
+    "target_r": 2.5,
+    "max_hold_min": 60,
+    "entry_bar_excluded": true,
+    "collision_convention": "STOP_FIRST"
+  },
+  "phase58d": {
+    "variant": "E",
+    "structural_gap_bars": 30,
+    "opportunity_expire_bars": 45,
+    "take_threshold": 4,
+    "max_wait_bars": 2,
+    "hard_filter_enabled": false
+  },
+  "phase58f": {
+    "policy": "P4"
+  },
+  "phase58h": {
+    "model": "H1",
+    "abstain_when": "high_subtype==HIGH_CONFLICTED AND htf_contra_code"
+  },
+  "atr": {
+    "definition": "SMA(14) of (high - low) on 1M",
+    "python_loader": "phase45/execution/data_1m.py and phase58j/research/lw_data.py",
+    "pine_equivalent": "ta.sma(high - low, 14)",
+    "not_ta_atr_rma": true,
+    "fallback": "scan back up to 5 bars for last positive ATR"
+  },
+  "htf_alignment": {
+    "convention": "last fully closed HTF bar at 1M timestamp",
+    "request_security": "lookahead_off",
+    "python": "phase53/research/data.py align_htf_to_1m"
+  },
+  "overlapping_trades": {
+    "allowed": true,
+    "max_observed_concurrency_lw": 3
+  },
+  "phase58k": {
+    "decision_impact": "NONE",
+    "display_only": true
+  },
+  "frozen_config_hashes": {
+    "phase58_v1": "facad8ebfae648be",
+    "phase58d": "3c25fbacad3fff92",
+    "phase58f": "956f66036a568820",
+    "phase58h": "4db76ffe5f9b701d",
+    "phase58i": "c104ebd37590db03",
+    "phase58j": "from phase58j_frozen.json merge"
+  },
+  "authoritative_pipeline": "phase58j/tools/last_week_replay.py",
+  "last_week_expected": {
+    "entries": 126,
+    "long": 62,
+    "short": 64,
+    "m1_target": 55,
+    "m1_stop": 71,
+    "m1_time": 0,
+    "m1_total_r_approx": 66.5
+  },
+  "regression_trades": ["LW-063138", "LW-063194", "LW-063195", "LW-063196"]
+}

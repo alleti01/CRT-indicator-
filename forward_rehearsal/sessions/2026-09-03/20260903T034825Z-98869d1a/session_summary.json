@@ -1,0 +1,64 @@
+{
+  "session_id": "20260903T034825Z-98869d1a",
+  "stage": "infra-test",
+  "tv_signals": 0,
+  "synthetic_signals": 1,
+  "long_signals": 1,
+  "short_signals": 0,
+  "processed_signals": 1,
+  "reconciliation": {
+    "total": 1,
+    "by_status": {
+      "MATCH": 1
+    },
+    "unique_signals": 1,
+    "duplicates": 0,
+    "missing": 0
+  },
+  "would_enter": 1,
+  "passes": 0,
+  "state_errors": 0,
+  "data_errors": 0,
+  "execution_errors": 0,
+  "latency": {
+    "pine_to_webhook_ms": {
+      "count": 1,
+      "median": 0.0,
+      "p90": 0.0,
+      "p95": 0.0,
+      "max": 0.0,
+      "abnormal_spikes_ms": []
+    },
+    "webhook_to_decision_ms": {
+      "count": 1,
+      "median": 0.0,
+      "p90": 0.0,
+      "p95": 0.0,
+      "max": 0.0,
+      "abnormal_spikes_ms": []
+    },
+    "signal_to_fill_ms": {
+      "count": 0,
+      "median": null,
+      "p90": null,
+      "p95": null,
+      "max": null
+    }
+  },
+  "restarts": 0,
+  "disconnects": 0,
+  "position_mismatches": 0,
+  "state_auditor": {
+    "shadow_state": "SHADOW_ACTIVE_LONG",
+    "engine_state": "FLAT",
+    "state_invariant_failures": 0,
+    "halted": false
+  },
+  "entry_price_audit": {
+    "count": 1,
+    "median_atr_move": 0.0,
+    "max_atr_move": 0.0
+  },
+  "real_orders_sent": true,
+  "generated_at_utc": "2026-09-03T03:48:25.730795+00:00"
+}

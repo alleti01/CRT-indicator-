@@ -1,0 +1,108 @@
+{
+  "phase": "Phase 31 \u2014 NQ 15M Daily-Frequency High-Quality Entry Discovery",
+  "architectures_tested": [
+    "RETEST_GATED",
+    "BOS_ONLY",
+    "SEQUENTIAL_BOS_CONFIRM",
+    "CRT_V2_B_LEGACY_EXP6",
+    "SWING22_BOS_CLOSE",
+    "SWING22_BOS_RETEST",
+    "SWEEP_RECLAIM",
+    "MOMENTUM_DISPLACEMENT",
+    "RANGE_BREAK_10",
+    "FAILED_BREAK_10",
+    "IMPULSE_PULLBACK"
+  ],
+  "parameter_combinations_shortlist": 21,
+  "best_architecture": "MOMENTUM_DISPLACEMENT",
+  "best_execution": {
+    "entry_model": "BOS_RETEST",
+    "stop_atr": 0.75,
+    "target_r": 3.0,
+    "hold_minutes": 60,
+    "management": "FIXED"
+  },
+  "stitched_walk_forward_net": {
+    "N": 2873,
+    "WinRate": 0.4622345979812043,
+    "AvgR": 0.2332942933896367,
+    "TotalR": 670.2545049084263,
+    "PF": 1.4702085888188157,
+    "MaxDD": 15.058110009993868,
+    "ReturnMaxDD": 44.511197252748666
+  },
+  "daily_distribution": {
+    "total_rth_days": 2188,
+    "days_0": 617,
+    "days_1": 653,
+    "days_2": 737,
+    "days_3plus": 181,
+    "mean_signals_day": 1.2221206581352833,
+    "median_signals_day": 1.0,
+    "p90_signals_day": 2.0,
+    "mean_trades_week": 6.1106032906764165,
+    "longest_no_signal_stretch": 515,
+    "pct_days_0": 0.2819926873857404,
+    "pct_days_1": 0.2984460694698355,
+    "pct_days_2": 0.33683729433272397,
+    "pct_days_gt2": 0.08272394881170018
+  },
+  "baselines": {
+    "phase30_crt_v2": {
+      "N": 69,
+      "WinRate": 0.5652173913043478,
+      "AvgR": 0.16076139230351555,
+      "TotalR": 11.092536068942573,
+      "PF": 1.510270715564029,
+      "MaxDD": 5.915713944310555,
+      "ReturnMaxDD": 1.875096763191336
+    },
+    "phase28_retest_gated": {
+      "N": 184,
+      "WinRate": 0.43478260869565216,
+      "AvgR": 0.03718249600585354,
+      "TotalR": 6.841579265077051,
+      "PF": 1.071933041507351,
+      "MaxDD": 25.04892484237172,
+      "ReturnMaxDD": 0.2731286595384773
+    },
+    "bos_baseline": {
+      "N": 633,
+      "WinRate": 0.4802527646129542,
+      "AvgR": 0.17184935145552538,
+      "TotalR": 108.78063947134757,
+      "PF": 1.364521896839804,
+      "MaxDD": 14.930326688137384,
+      "ReturnMaxDD": 7.285884746097165
+    }
+  },
+  "success_criteria_passed": 14,
+  "checks": {
+    "N>=300": true,
+    "freq>=0.75/day": true,
+    "freq<=2.0/day": true,
+    "Net AvgR>=0.10": true,
+    "Net PF>=1.20": true,
+    "Net TotalR>0": true,
+    "Return/MaxDD>=2": true,
+    ">=60% years positive": true,
+    "no year >50% pos R": true,
+    "first half positive": true,
+    "second half positive": true,
+    "ex-best positive": true,
+    "ex-top1% positive": true,
+    "1.5x cost positive": true
+  },
+  "final_classification": "A",
+  "ready_for_pine": true,
+  "monte_carlo": {
+    "P_terminal_R_gt_0": 1.0,
+    "p5_terminal_R": 544.8573993022299,
+    "median_terminal_R": 670.8893031234036,
+    "p95_terminal_R": 796.1993695005633,
+    "median_MaxDD": 20.459102738830467,
+    "p95_MaxDD": 30.542600050880935,
+    "median_losing_streak": 12.0,
+    "p95_losing_streak": 16.0
+  }
+}

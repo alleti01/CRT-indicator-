@@ -1,0 +1,9 @@
+family,context,N,AvgR,PF,notes
+G1,C3,9102,0.2736,1.405,neighbor: breakout variant weakly positive
+G1,C4,28949,-0.0147,0.981,neighbor: breakout at range location — negative
+G3,C3,4416,-0.3651,0.586,neighbor: same family different context — collapses
+G3,C4,1885,1.2114,4.206,WF-selected spec
+G3,C5,0,0.0,0.0,no signals
+A1,swing=3,221698,-0.4273,0.578,micro-BOS without P44 — negative all swings
+A1,swing=5,148232,-0.4253,0.580,micro-BOS without P44 — negative all swings
+A1,swing=7,111901,-0.4186,0.585,micro-BOS without P44 — negative all swings

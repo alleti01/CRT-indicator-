@@ -1,0 +1,30 @@
+{
+  "checks": {
+    "total_events": {
+      "actual": 925486,
+      "expected": 925486,
+      "pass": true
+    },
+    "scored_oos_n": {
+      "actual": 542462,
+      "expected": 542462,
+      "pass": true
+    },
+    "d10_avgr": {
+      "actual": 0.8139497113561064,
+      "expected": 0.8139497113561064,
+      "pass": true
+    },
+    "d10_n": {
+      "actual": 54247,
+      "expected": 54247,
+      "pass": true
+    },
+    "d10_unauth_avgr": {
+      "actual": 0.8076213578383081,
+      "expected": 0.8076213578383081,
+      "pass": true
+    }
+  },
+  "all_pass": true
+}

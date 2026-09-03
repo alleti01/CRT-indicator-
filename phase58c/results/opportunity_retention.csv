@@ -1,0 +1,10 @@
+metric,result
+1M trade retention,40.100017027988635
+1M winner retention,41.554011049161126
+1M loser removal,60.68988409725872
+Opportunity retention,35.98947716065551
+Winning opportunity retention,41.99193846913174
+Meaningful move retention (5M),92.96267174308889
+Redundant 1M signals removed %,60.652351206746665
+Median 5M ARM lead/lag (bars),13.0
+Median 5M TAKE lead/lag (bars),21.0

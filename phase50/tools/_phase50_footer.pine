@@ -1,0 +1,234 @@
+// ═══ PHASE50: 1M EXECUTION LAYER (B1 + M0) ═══
+// Python: phase45/execution/confirm.py confirm_b1(), simulate_1m()
+
+const int   P50_B1_WINDOW_MIN   = 10
+const int   P50_CHART_15M_MIN   = 15
+const int   P50_MAX_HOLD_CONT   = 60
+const int   P50_MAX_HOLD_REV    = 45
+const float P50_TARGET_R_CONT   = 3.0
+const float P50_TARGET_R_REV    = 2.5
+
+const int P50_ST_NO_SETUP = 0
+const int P50_ST_WAIT_B1 = 1
+const int P50_ST_TRADE = 2
+const int P50_ST_EXPIRED = 3
+
+string GRP50 = "Phase50 Display"
+bool p50ShowSetup = input.bool(true, "Show Phase44 setup markers", group = GRP50)
+bool p50ShowB1 = input.bool(true, "Show B1 confirmation markers", group = GRP50)
+bool p50ShowLevels = input.bool(true, "Show entry/stop/target lines", group = GRP50)
+bool p50ShowDash = input.bool(true, "Show status dashboard", group = GRP50)
+bool p50ShowDebug = input.bool(false, "Debug mode (parity export codes)", group = GRP50)
+bool p50ShowExpired = input.bool(false, "Show expired setups", group = GRP50)
+
+causalSwingHigh() =>
+    float sh = na
+    int lim = math.min(bar_index - 1, 500)
+    if lim >= 1
+        for p = 1 to lim
+            if high[p] > high[p + 1] and high[p] > high[p - 1]
+                sh := high[p]
+                break
+    sh
+
+causalSwingLow() =>
+    float sl = na
+    int lim = math.min(bar_index - 1, 500)
+    if lim >= 1
+        for p = 1 to lim
+            if low[p] < low[p + 1] and low[p] < low[p - 1]
+                sl := low[p]
+                break
+    sl
+
+setupCodeToStr(int code) =>
+    code == 1 ? "L" : code == 2 ? "S" : code == 3 ? "RL" : code == 4 ? "RS" : "?"
+
+tierCodeToStr(int code) =>
+    code == 1 ? "A+" : code == 2 ? "A" : code == 3 ? "B" : "—"
+
+// Pull confirmed Phase44 fills from 15M (causal — no lookahead)
+[p44Fill, p44Dir, p44Setup, p44Tier, p44Entry, p44Stop, p44Target, p44MarkerMs, p44Score] = request.security(
+     syminfo.tickerid, "15", phase44ExportBundle(),
+     gaps = barmerge.gaps_off, lookahead = barmerge.lookahead_off)
+
+var int   p50ExecState = P50_ST_NO_SETUP
+var int   p50SetupDir = 0
+var int   p50SetupCode = 0
+var int   p50TierCode = 0
+var float p50SetupEntry = na
+var float p50SetupStop = na
+var float p50SetupTarget = na
+var int   p50MarkerMs = na
+var int   p50ActionableMs = na
+var int   p50WindowEndMs = na
+var float p50LastP44Marker = na
+
+var int   p50PosDir = 0
+var float p50PosEntry = na
+var float p50PosStop = na
+var float p50PosTarget = na
+var int   p50PosHeld = 0
+var string p50PosSetup = ""
+var int   p50B1Delay = na
+
+var line p50LnE = na
+var line p50LnS = na
+var line p50LnT = na
+
+var bool p50LongConfirmed = false
+var bool p50ShortConfirmed = false
+var bool p50LongExit = false
+var bool p50ShortExit = false
+var bool p50SetupLongActive = false
+var bool p50SetupShortActive = false
+var bool p50B1Expired = false
+
+p50LongConfirmed := false
+p50ShortConfirmed := false
+p50LongExit := false
+p50ShortExit := false
+p50SetupLongActive := false
+p50SetupShortActive := false
+p50B1Expired := false
+
+if chart1m and barstate.isconfirmed
+    // New Phase44 accepted setup from 15M
+    bool newP44 = p44Fill > 0 and (na(p50LastP44Marker) or p44MarkerMs != p50LastP44Marker)
+    if newP44 and p50ExecState != P50_ST_TRADE
+        p50LastP44Marker := p44MarkerMs
+        p50MarkerMs := int(p44MarkerMs)
+        p50ActionableMs := p50MarkerMs + P50_CHART_15M_MIN * 60 * 1000
+        p50WindowEndMs := p50ActionableMs + P50_B1_WINDOW_MIN * 60 * 1000
+        p50SetupDir := int(p44Dir)
+        p50SetupCode := int(p44Setup)
+        p50TierCode := int(p44Tier)
+        p50SetupEntry := p44Entry
+        p50SetupStop := p44Stop
+        p50SetupTarget := p44Target
+        p50ExecState := P50_ST_WAIT_B1
+        p50SetupLongActive := p50SetupDir == 1
+        p50SetupShortActive := p50SetupDir == -1
+
+    // B1 window — Python confirm_b1 inclusive [actionable, actionable+10min]
+    if p50ExecState == P50_ST_WAIT_B1
+        if time > p50WindowEndMs
+            p50ExecState := P50_ST_EXPIRED
+            p50B1Expired := p50ShowExpired
+        else if time >= p50ActionableMs
+            float sh = causalSwingHigh()
+            float sl = causalSwingLow()
+            bool b1Long = p50SetupDir == 1 and not na(sh) and close > sh
+            bool b1Short = p50SetupDir == -1 and not na(sl) and close < sl
+            if b1Long or b1Short
+                p50PosDir := p50SetupDir
+                p50PosEntry := close
+                p50PosStop := p50SetupStop
+                p50PosTarget := p50SetupTarget
+                p50PosSetup := setupCodeToStr(p50SetupCode)
+                p50PosHeld := 0
+                p50B1Delay := int(math.round((time - p50ActionableMs) / 60000.0))
+                p50ExecState := P50_ST_TRADE
+                if p50PosDir == 1
+                    p50LongConfirmed := true
+                else
+                    p50ShortConfirmed := true
+                if p50ShowLevels
+                    line.delete(p50LnE)
+                    line.delete(p50LnS)
+                    line.delete(p50LnT)
+                    p50LnE := line.new(bar_index, p50PosEntry, bar_index + 1, p50PosEntry, color = color.blue, width = 1)
+                    p50LnS := line.new(bar_index, p50PosStop, bar_index + 1, p50PosStop, color = color.red, width = 1)
+                    p50LnT := line.new(bar_index, p50PosTarget, bar_index + 1, p50PosTarget, color = color.lime, width = 1)
+
+    // M0 management — Python simulate_1m: manage from bar AFTER entry (entry_i+1)
+    if p50ExecState == P50_ST_TRADE
+        int maxHold = (p50PosSetup == "L" or p50PosSetup == "S") ? P50_MAX_HOLD_CONT : P50_MAX_HOLD_REV
+        bool hitStop = p50PosDir == 1 ? low <= p50PosStop : high >= p50PosStop
+        bool hitTgt = p50PosDir == 1 ? high >= p50PosTarget : low <= p50PosTarget
+        if p50PosHeld >= 1
+            if hitStop
+                if p50PosDir == 1
+                    p50LongExit := true
+                else
+                    p50ShortExit := true
+                p50ExecState := P50_ST_NO_SETUP
+                p50PosDir := 0
+            else if hitTgt
+                if p50PosDir == 1
+                    p50LongExit := true
+                else
+                    p50ShortExit := true
+                p50ExecState := P50_ST_NO_SETUP
+                p50PosDir := 0
+            else if p50PosHeld >= maxHold
+                if p50PosDir == 1
+                    p50LongExit := true
+                else
+                    p50ShortExit := true
+                p50ExecState := P50_ST_NO_SETUP
+                p50PosDir := 0
+        p50PosHeld += 1
+        if p50ShowLevels and p50ExecState == P50_ST_TRADE and not na(p50LnE)
+            line.set_x2(p50LnE, bar_index)
+            line.set_x2(p50LnS, bar_index)
+            line.set_x2(p50LnT, bar_index)
+
+    if p50ExecState == P50_ST_EXPIRED
+        p50ExecState := P50_ST_NO_SETUP
+
+// ═══ VISUALS ═══
+plotshape(chart1m and p50ShowSetup and p50SetupLongActive, "P44 Long Setup", shape.diamond, location.belowbar, color.new(color.blue, 40), size = size.tiny, text = "P44")
+plotshape(chart1m and p50ShowSetup and p50SetupShortActive, "P44 Short Setup", shape.diamond, location.abovebar, color.new(color.orange, 40), size = size.tiny, text = "P44")
+plotshape(chart1m and p50ShowB1 and p50LongConfirmed, "LONG CONFIRMED", shape.triangleup, location.belowbar, color.new(color.lime, 0), size = size.small, text = "LONG")
+plotshape(chart1m and p50ShowB1 and p50ShortConfirmed, "SHORT CONFIRMED", shape.triangledown, location.abovebar, color.new(color.red, 0), size = size.small, text = "SHORT")
+plotshape(chart1m and p50ShowExpired and p50B1Expired, "B1 EXPIRED", shape.xcross, location.top, color.new(color.gray, 50), size = size.tiny, text = "EXP")
+
+if chart1m and barstate.isconfirmed and (p50LongConfirmed or p50ShortConfirmed)
+    string side = p50LongConfirmed ? "LONG" : "SHORT"
+    string lbl = side + "\nClass:" + tierCodeToStr(p50TierCode) + "\nSetup:" + setupCodeToStr(p50SetupCode) + "\nB1:CONF\nDelay:" + str.tostring(p50B1Delay) + "m\nE:" + str.tostring(p50PosEntry, "#.##") + "\nS:" + str.tostring(p50PosStop, "#.##") + "\nT:" + str.tostring(p50PosTarget, "#.##")
+    label.new(bar_index, p50LongConfirmed ? low : high, lbl, style = p50LongConfirmed ? label.style_label_up : label.style_label_down, color = color.new(color.black, 30), textcolor = color.white, size = size.small)
+
+// Parity export codes (plot for CSV export when debug enabled)
+plot(p50ShowDebug and p50LongConfirmed ? 1 : p50ShowDebug and p50ShortConfirmed ? -1 : na, "P50_EVENT_CODE", display = display.data_window)
+plot(p50ShowDebug ? p50PosEntry : na, "P50_ENTRY", display = display.data_window)
+plot(p50ShowDebug ? p50PosStop : na, "P50_STOP", display = display.data_window)
+plot(p50ShowDebug ? p50PosTarget : na, "P50_TARGET", display = display.data_window)
+
+// Dashboard
+var table p50Dash = table.new(position.top_right, 2, 10, bgcolor = color.new(color.black, 80))
+if p50ShowDash and barstate.islast and chart1m
+    table.cell(p50Dash, 0, 0, "MODEL", text_color = color.gray)
+    table.cell(p50Dash, 1, 0, "PHASE44+B1+M0", text_color = color.white)
+    table.cell(p50Dash, 0, 1, "15M CONTEXT", text_color = color.gray)
+    table.cell(p50Dash, 1, 1, p50ExecState == P50_ST_WAIT_B1 ? (p50SetupDir == 1 ? "LONG" : "SHORT") : "NONE", text_color = color.white)
+    table.cell(p50Dash, 0, 2, "CLASS", text_color = color.gray)
+    table.cell(p50Dash, 1, 2, tierCodeToStr(p50TierCode), text_color = color.white)
+    table.cell(p50Dash, 0, 3, "SETUP", text_color = color.gray)
+    table.cell(p50Dash, 1, 3, setupCodeToStr(p50SetupCode), text_color = color.white)
+    string execSt = p50ExecState == P50_ST_WAIT_B1 ? "WAITING" : p50ExecState == P50_ST_TRADE ? "ACTIVE" : p50ExecState == P50_ST_EXPIRED ? "EXPIRED" : "FLAT"
+    table.cell(p50Dash, 0, 4, "EXEC STATE", text_color = color.gray)
+    table.cell(p50Dash, 1, 4, execSt, text_color = color.white)
+    table.cell(p50Dash, 0, 5, "B1 WINDOW", text_color = color.gray)
+    string rem = p50ExecState == P50_ST_WAIT_B1 and time <= p50WindowEndMs ? str.tostring(int(math.max(0, (p50WindowEndMs - time) / 60000))) + "m" : "—"
+    table.cell(p50Dash, 1, 5, rem, text_color = color.white)
+    table.cell(p50Dash, 0, 6, "POSITION", text_color = color.gray)
+    table.cell(p50Dash, 1, 6, p50ExecState == P50_ST_TRADE ? (p50PosDir == 1 ? "LONG" : "SHORT") : "FLAT", text_color = color.white)
+    table.cell(p50Dash, 0, 7, "ENTRY", text_color = color.gray)
+    table.cell(p50Dash, 1, 7, na(p50PosEntry) ? "—" : str.tostring(p50PosEntry, "#.##"), text_color = color.white)
+    table.cell(p50Dash, 0, 8, "STOP", text_color = color.gray)
+    table.cell(p50Dash, 1, 8, na(p50PosStop) ? "—" : str.tostring(p50PosStop, "#.##"), text_color = color.white)
+    table.cell(p50Dash, 0, 9, "TARGET", text_color = color.gray)
+    table.cell(p50Dash, 1, 9, na(p50PosTarget) ? "—" : str.tostring(p50PosTarget, "#.##"), text_color = color.white)
+
+if not chart1m and barstate.islast
+    label.new(bar_index, high, "Use 1-minute chart", style = label.style_label_down, color = color.red, textcolor = color.white)
+
+// Alerts
+alertcondition(p50LongConfirmed, "LONG CONFIRMED", "MODEL=PHASE50|SIDE=LONG|B1=CONFIRMED")
+alertcondition(p50ShortConfirmed, "SHORT CONFIRMED", "MODEL=PHASE50|SIDE=SHORT|B1=CONFIRMED")
+alertcondition(p50LongExit, "LONG EXIT", "MODEL=PHASE50|SIDE=LONG|EXIT=1")
+alertcondition(p50ShortExit, "SHORT EXIT", "MODEL=PHASE50|SIDE=SHORT|EXIT=1")
+alertcondition(p50SetupLongActive, "PHASE44 LONG SETUP ACTIVE", "MODEL=PHASE50|PHASE44=LONG_ACTIVE")
+alertcondition(p50SetupShortActive, "PHASE44 SHORT SETUP ACTIVE", "MODEL=PHASE50|PHASE44=SHORT_ACTIVE")
+alertcondition(p50B1Expired, "B1 WINDOW EXPIRED", "MODEL=PHASE50|B1=EXPIRED")

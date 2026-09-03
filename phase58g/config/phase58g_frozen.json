@@ -1,0 +1,12 @@
+{
+  "version": "g1",
+  "frozen_before_evaluation": true,
+  "phase58_v1_hash": "facad8ebfae648be",
+  "phase58d_config_hash": "3c25fbacad3fff92",
+  "phase58e_config_hash": "c261cd7db3f6dd53",
+  "phase58f_config_hash": "956f66036a568820",
+  "s54_model_hash": "bccf4277f3d44d13",
+  "location_high_threshold": 2,
+  "train_end_frac": 0.6,
+  "valid_end_frac": 0.8
+}

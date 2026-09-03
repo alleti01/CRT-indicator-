@@ -1,0 +1,25 @@
+{
+  "pine_to_webhook_ms": {
+    "count": 1,
+    "median": 0.0,
+    "p90": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "abnormal_spikes_ms": []
+  },
+  "webhook_to_decision_ms": {
+    "count": 1,
+    "median": 0.0,
+    "p90": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "abnormal_spikes_ms": []
+  },
+  "signal_to_fill_ms": {
+    "count": 0,
+    "median": null,
+    "p90": null,
+    "p95": null,
+    "max": null
+  }
+}

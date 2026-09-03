@@ -1,0 +1,22 @@
+# Phase56 Checkpoint 25
+
+N: 25
+days: 4
+episodes_per_day: 928.75
+AvgR: 1.6912664204384595
+median_R: 2.3752688172043013
+PF: 8.538557769457167
+TotalR: 42.28166051096149
+MaxDD: 1.233333333333448
+win_rate: 0.8
+AvgR_CI_lo: nan
+AvgR_CI_hi: nan
+LONG_N: 17
+LONG_AvgR: 1.34925894363289
+SHORT_N: 8
+SHORT_AvgR: 2.4180323086502957
+CORE_unauth_N: 25
+CORE_unauth_AvgR: 1.6912664204384595
+CORE_overlap_pct: 0.0
+expectancy_retention_pct: 203.89113763399914
+cost2x_AvgR: 1.7321748381739424

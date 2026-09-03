@@ -1,0 +1,19 @@
+{
+  "status": "NO_PARTIAL_RUNNER_EDGE",
+  "selected": "80/20_1.5R_4R_h60",
+  "gate_checks": {
+    "frozen_entries": true,
+    "non_winner_parity": true,
+    "train_inc_avgR": false,
+    "val_inc_avgR": false,
+    "pf_acceptable": true,
+    "inc_totalR_positive": false,
+    "damage_acceptable": true,
+    "not_monster_dependent": true,
+    "costs_ok": false,
+    "neighbor_support": true
+  },
+  "RUNNER_CANDIDATE_VALIDATED": false,
+  "EXPOSED_HOLDOUT": "NOT_SUPPORTIVE",
+  "elapsed_s": 186.78400325775146
+}

@@ -1,0 +1,12 @@
+{
+  "signal_hash": "0da41f282174679f",
+  "trader_hash": "b6adfc04e8885a3d",
+  "m0_parity": true,
+  "t5_parity": true,
+  "causality": true,
+  "prefix": true,
+  "tests_ok": true,
+  "killed_winners_pct": 0.006717531929009786,
+  "t5_exits": 775,
+  "elapsed_s": 175.14422297477722
+}

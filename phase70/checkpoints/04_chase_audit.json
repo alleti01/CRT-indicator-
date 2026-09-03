@@ -1,0 +1,9 @@
+{
+  "pass_late_N": 17988,
+  "retained_pct": 0.5027367722673743,
+  "winner_retention": 1.0290682692443927,
+  "avgR_taken_m0": 0.044404000776427095,
+  "avgR_passed_m0": -0.012609754686743463,
+  "pass_chase_threshold": 0.052830188679245285,
+  "extended_performs_worse": true
+}

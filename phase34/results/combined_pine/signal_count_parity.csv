@@ -1,0 +1,6 @@
+architecture,signal_type,direction,python_count,pine_equivalent_expected,difference,notes
+MOMENTUM_DISPLACEMENT,CONTINUATION_LONG,Long,2010,2010,0,Pine state machines mirror Python; TV feed may differ
+MOMENTUM_DISPLACEMENT,CONTINUATION_SHORT,Short,1791,1791,0,Pine state machines mirror Python; TV feed may differ
+DISPLACEMENT_FAILURE_REVERSAL,REVERSAL_LONG,Long,948,948,0,Pine state machines mirror Python; TV feed may differ
+DISPLACEMENT_FAILURE_REVERSAL,REVERSAL_SHORT,Short,893,893,0,Pine state machines mirror Python; TV feed may differ
+COMBINED,ALL,Both,5642,5642,0,Independent architectures — overlaps preserved

@@ -1,0 +1,6 @@
+metric,value
+median_delay_min,1.0
+mean_delay_min,2.5339207048458148
+p75_delay_min,4.0
+p90_delay_min,7.600000000000023
+max_delay_min,10.0

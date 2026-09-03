@@ -1,0 +1,1 @@
+signal_id,tv_timestamp,webhook_timestamp,market_bar_timestamp,direction,signal_price,atr,engine_action,reason,latency_ms,status

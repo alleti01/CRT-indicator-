@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "strategy": {
+    "name": "Phase72A",
+    "pine_hash": "d75ff747a491c176eda588efc945822b8bd4a6aeaaeaf1d2bdea2b7a8e32cc1f",
+    "symbol": "NQ",
+    "timeframe": "1m"
+  },
+  "execution": {
+    "paper_mode": true,
+    "trading_enabled": false,
+    "max_positions": 1,
+    "max_contracts": 1,
+    "auto_reverse_enabled": false,
+    "same_bar_collision": "STOP_FIRST"
+  },
+  "management": {
+    "stop_atr": 1.0,
+    "target_r": 2.5,
+    "max_hold_minutes": 60,
+    "enable_time_progress_exit": false,
+    "time_progress_minutes": 15,
+    "time_progress_mfe_r": 1.0
+  },
+  "entry_quality": {
+    "max_signal_age_seconds": 120,
+    "max_signal_age_bars": 2,
+    "pass_late_enabled": false,
+    "pass_chase_enabled": false,
+    "max_chase_atr": 1.5
+  },
+  "market_data": {
+    "provider": "REPLAY_DATA_PROVIDER",
+    "staleness_limit_seconds": 90,
+    "atr_period": 14
+  },
+  "webhook": {
+    "host": "127.0.0.1",
+    "port": 8787,
+    "staleness_limit_seconds": 120
+  },
+  "safety": {
+    "kill_switch": false,
+    "emergency_flatten": false,
+    "max_consecutive_errors": 5,
+    "daily_loss_limit": null,
+    "halt_on_position_mismatch": true
+  },
+  "logging": {
+    "log_dir": "phase73/logs",
+    "export_csv": true
+  },
+  "persistence": {
+    "state_file": "phase73/logs/trader_state.json"
+  }
+}

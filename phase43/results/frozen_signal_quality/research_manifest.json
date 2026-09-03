@@ -1,0 +1,98 @@
+{
+  "phase": "Phase 43 \u2014 NQ 15M Frozen Signal Quality / Confidence Ranking",
+  "frozen_signals": 3791,
+  "baseline_full": {
+    "N": 3791,
+    "WinRate": 0.5032972830387761,
+    "AvgR": 0.3412049296466108,
+    "TotalR": 1293.5078882903015,
+    "PF": 1.7529123260601682,
+    "MaxDD": 17.42566144228806,
+    "ReturnMaxDD": 74.23005964934313
+  },
+  "baseline_oos": {
+    "N": 2788,
+    "WinRate": 0.5064562410329986,
+    "AvgR": 0.3499974318258542,
+    "TotalR": 975.7928399304815,
+    "PF": 1.7882353286265988,
+    "MaxDD": 17.42566144228806,
+    "ReturnMaxDD": 55.997463462847804
+  },
+  "oos_scored": {
+    "N": 2788,
+    "WinRate": 0.5064562410329986,
+    "AvgR": 0.3499974318258542,
+    "TotalR": 975.7928399304815,
+    "PF": 1.7882353286265988,
+    "MaxDD": 17.42566144228806,
+    "ReturnMaxDD": 55.997463462847804
+  },
+  "best_filter": {
+    "reject_rate": 0.3999999999999999,
+    "signals_removed": 1115,
+    "retained_AvgR": 0.5848936616575857,
+    "retained_PF": 2.5115594968604755,
+    "rejected_AvgR": -0.0024522475539547,
+    "rejected_PF": 0.995370246344373,
+    "bad_signal_rejection_precision": 0.579372197309417,
+    "good_signal_retention_rate": 0.6678470254957507
+  },
+  "filtered_oos": {
+    "N": 1673,
+    "WinRate": 0.5636580992229527,
+    "AvgR": 0.5848936616575857,
+    "TotalR": 978.5270959531409,
+    "PF": 2.5115594968604755,
+    "MaxDD": 8.52212509359424,
+    "ReturnMaxDD": 114.8219587493104
+  },
+  "monotonicity": {
+    "classification": "STRONG_MONOTONIC",
+    "spearman": 0.8787878787878788,
+    "adjacent_improvements": 8,
+    "decile_AvgR": [
+      0.13249543097361113,
+      -0.0621219049016516,
+      -0.013962472158931124,
+      0.019756360998088033,
+      0.059344915516448375,
+      0.3221996827233738,
+      0.3476385699789405,
+      0.4496326701719813,
+      0.8348429453478622,
+      1.408956005154788
+    ]
+  },
+  "gates": {
+    "N>=500": true,
+    "AvgR_improvement>=0.05": true,
+    "PF_improvement>=0.10": true,
+    "filtered_PF>=1.50": true,
+    "MaxDD_not_worse": true,
+    "cost_1.5x_pos": true,
+    "cost_2.0x_pos": true,
+    "2024_pos": true,
+    "2025_pos": true,
+    "2026_pos": true,
+    "ex_top1_pos": true,
+    "rejected_worse_than_retained": true,
+    "monotonicity_partial+": true,
+    "bootstrap_diff_ci_excludes_0": true
+  },
+  "entry_filter_validated": "YES",
+  "confidence_score_validated": "YES",
+  "classification": "A",
+  "lookahead_audit": "PASS",
+  "phase40_parity": {
+    "parity_pass": 1.0,
+    "L": 1541.0,
+    "S": 1345.0,
+    "RL": 452.0,
+    "RS": 453.0,
+    "total": 3791.0,
+    "AvgR": 0.3412049296466108,
+    "PF": 1.7529123260601682,
+    "N": 3791.0
+  }
+}

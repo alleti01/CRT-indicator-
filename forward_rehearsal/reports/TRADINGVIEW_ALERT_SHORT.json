@@ -1,0 +1,1 @@
+{"schema_version":"1.0","strategy":"Phase72A","pine_hash":"d75ff747a491c176eda588efc945822b8bd4a6aeaaeaf1d2bdea2b7a8e32cc1f","signal_id":"{{timenow}}","event":"SIGNAL_SHORT","symbol":"NQ","timeframe":"1m","signal_time_utc":"{{timenow}}","signal_bar_time_utc":"{{time}}","signal_price":"{{close}}","atr":"1.0","evidence":5,"context":"BEARISH","state":"IN_SHORT"}

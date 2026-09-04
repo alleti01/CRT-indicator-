@@ -1,6 +1,6 @@
 {
   "manifest_id": "FORWARD_REHEARSAL_FREEZE",
-  "generated_at_utc": "2026-09-03T03:48:55.629675+00:00",
+  "generated_at_utc": "2026-09-04T04:45:37.359825+00:00",
   "rule": "No silent code changes during an active forward session",
   "pine": {
     "path": "TV_REVIEW/phase72a_autonomous_trader.pine",
@@ -16,7 +16,7 @@
   "phase74_adapters": {
     "phase74/runtime/live_stack.py": "d32a4bdd9dda45d6025a4c95796da4383e7d4e31fd17b2a9fc0eab59de285405",
     "phase74/market_data/live_provider.py": "f1ca28f48f58370baa5ed8f59f0f0e876edf9d6766bab3a6e50954962d06b2a4",
-    "phase74/webhook/secure_receiver.py": "c2c023710dec74374c2e2365bb2b759646ae35e59aea156af664ade22d09b823",
+    "phase74/webhook/secure_receiver.py": "384f6303aacaabd286164109c3ca18e54eb35e9e69f605f8cffe2da6d0d305e3",
     "phase74/execution/paper_broker.py": "e02e64dc1eacb69630613e26b4cfd565bd9fe57cf74d94ff599a9b448c8f98a8",
     "phase74/config/loader.py": "4dbf3e1534ff69da97da123493ba1b87973f5cbb02e478641578962c67c0c24c",
     "phase74/config/default.json": "e0fda7c6662445eadc5d965d67abdd3daa58ff052d419dfe666cf21f49392f2d",

@@ -40,9 +40,7 @@ def _build_market_data(cfg, *, use_databento: bool, on_bar=None):
             on_bar=on_bar,
         )
     df = _synthetic_bars(500)
-    stream = StreamLiveDataProvider(df, staleness_limit_seconds=int(md_cfg.get("staleness_limit_seconds", 90)))
-    stream.connect()
-    return stream
+    return StreamLiveDataProvider(df, staleness_limit_seconds=int(md_cfg.get("staleness_limit_seconds", 90)))
 
 
 def main() -> int:
@@ -87,8 +85,7 @@ def main() -> int:
             sess.on_closed_bar()
 
     md = _build_market_data(cfg, use_databento=args.use_databento, on_bar=on_bar if args.use_databento else None)
-    if not args.use_databento:
-        md.connect()
+    md.connect()
 
     stack = LiveStack(cfg, md)
     session = ForwardSession(cfg, stack, stage=args.stage, allow_synthetic=allow_synthetic)

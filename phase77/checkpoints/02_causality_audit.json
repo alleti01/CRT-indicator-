@@ -1,0 +1,113 @@
+{
+  "cutoffs": {
+    "0.25": {
+      "columns": {
+        "dev_poc": {
+          "pass": true
+        },
+        "dev_vah": {
+          "pass": true
+        },
+        "dev_val": {
+          "pass": true
+        },
+        "auction_state": {
+          "match_rate": 1.0,
+          "pass": "True"
+        },
+        "location_type": {
+          "match_rate": 1.0,
+          "pass": "True"
+        },
+        "structure_state": {
+          "match_rate": 1.0,
+          "pass": "True"
+        },
+        "price_response": {
+          "match_rate": 1.0,
+          "pass": "True"
+        },
+        "confirmation_state": {
+          "match_rate": 1.0,
+          "pass": "True"
+        }
+      },
+      "passed": 8,
+      "total": 8,
+      "status": "PASS"
+    },
+    "0.5": {
+      "columns": {
+        "dev_poc": {
+          "pass": true
+        },
+        "dev_vah": {
+          "pass": true
+        },
+        "dev_val": {
+          "pass": true
+        },
+        "auction_state": {
+          "match_rate": 1.0,
+          "pass": "True"
+        },
+        "location_type": {
+          "match_rate": 1.0,
+          "pass": "True"
+        },
+        "structure_state": {
+          "match_rate": 1.0,
+          "pass": "True"
+        },
+        "price_response": {
+          "match_rate": 1.0,
+          "pass": "True"
+        },
+        "confirmation_state": {
+          "match_rate": 1.0,
+          "pass": "True"
+        }
+      },
+      "passed": 8,
+      "total": 8,
+      "status": "PASS"
+    },
+    "0.75": {
+      "columns": {
+        "dev_poc": {
+          "pass": true
+        },
+        "dev_vah": {
+          "pass": true
+        },
+        "dev_val": {
+          "pass": true
+        },
+        "auction_state": {
+          "match_rate": 1.0,
+          "pass": "True"
+        },
+        "location_type": {
+          "match_rate": 1.0,
+          "pass": "True"
+        },
+        "structure_state": {
+          "match_rate": 1.0,
+          "pass": "True"
+        },
+        "price_response": {
+          "match_rate": 1.0,
+          "pass": "True"
+        },
+        "confirmation_state": {
+          "match_rate": 1.0,
+          "pass": "True"
+        }
+      },
+      "passed": 8,
+      "total": 8,
+      "status": "PASS"
+    }
+  },
+  "status": "CAUSALITY_PASS"
+}

@@ -1,1 +1,2 @@
 signal_id,tv_timestamp,webhook_timestamp,market_bar_timestamp,direction,signal_price,atr,engine_action,reason,latency_ms,status
+syn-paper-long,2026-08-30T17:00:00+00:00,2026-09-04T04:59:40.948319+00:00,2026-08-30T17:00:00+00:00,LONG,20002.5,10.0,TAKE_LONG,WEBHOOK_VALID,0.0,MATCH

@@ -1,0 +1,114 @@
+{
+  "events": [
+    {
+      "event_name": "ISM Manufacturing",
+      "release_date": "2024-01-03",
+      "scheduled_release_time_et": "10:00",
+      "event_tier": 1,
+      "source": "ISM public release calendar",
+      "known_scheduled_time": true,
+      "rescheduled_flag": false,
+      "event_group": ""
+    },
+    {
+      "event_name": "ISM Services",
+      "release_date": "2024-01-04",
+      "scheduled_release_time_et": "10:00",
+      "event_tier": 1,
+      "source": "ISM public release calendar",
+      "known_scheduled_time": true,
+      "rescheduled_flag": false,
+      "event_group": ""
+    },
+    {
+      "event_name": "Nonfarm Payrolls",
+      "release_date": "2024-01-05",
+      "scheduled_release_time_et": "08:30",
+      "event_tier": 1,
+      "source": "BLS Employment Situation schedule",
+      "known_scheduled_time": true,
+      "rescheduled_flag": false,
+      "event_group": ""
+    },
+    {
+      "event_name": "Unemployment Rate",
+      "release_date": "2024-01-05",
+      "scheduled_release_time_et": "08:30",
+      "event_tier": 1,
+      "source": "BLS Employment Situation schedule",
+      "known_scheduled_time": true,
+      "rescheduled_flag": false,
+      "event_group": ""
+    },
+    {
+      "event_name": "CPI",
+      "release_date": "2024-01-11",
+      "scheduled_release_time_et": "08:30",
+      "event_tier": 1,
+      "source": "BLS CPI release schedule",
+      "known_scheduled_time": true,
+      "rescheduled_flag": false,
+      "event_group": ""
+    },
+    {
+      "event_name": "Core CPI",
+      "release_date": "2024-01-11",
+      "scheduled_release_time_et": "08:30",
+      "event_tier": 1,
+      "source": "BLS CPI release schedule",
+      "known_scheduled_time": true,
+      "rescheduled_flag": false,
+      "event_group": ""
+    },
+    {
+      "event_name": "GDP",
+      "release_date": "2024-01-25",
+      "scheduled_release_time_et": "08:30",
+      "event_tier": 1,
+      "source": "BEA GDP release schedule",
+      "known_scheduled_time": true,
+      "rescheduled_flag": false,
+      "event_group": ""
+    },
+    {
+      "event_name": "Core PCE",
+      "release_date": "2024-01-26",
+      "scheduled_release_time_et": "08:30",
+      "event_tier": 1,
+      "source": "BEA Personal Income/Outlays schedule",
+      "known_scheduled_time": true,
+      "rescheduled_flag": false,
+      "event_group": ""
+    },
+    {
+      "event_name": "PCE",
+      "release_date": "2024-01-26",
+      "scheduled_release_time_et": "08:30",
+      "event_tier": 1,
+      "source": "BEA Personal Income/Outlays schedule",
+      "known_scheduled_time": true,
+      "rescheduled_flag": false,
+      "event_group": ""
+    },
+    {
+      "event_name": "FOMC rate decision",
+      "release_date": "2024-01-31",
+      "scheduled_release_time_et": "14:00",
+      "event_tier": 1,
+      "source": "Federal Reserve FOMC calendar",
+      "known_scheduled_time": true,
+      "rescheduled_flag": false,
+      "event_group": "FOMC_DECISION"
+    },
+    {
+      "event_name": "Federal Reserve Chair press conference",
+      "release_date": "2024-01-31",
+      "scheduled_release_time_et": "14:30",
+      "event_tier": 1,
+      "source": "Federal Reserve FOMC calendar",
+      "known_scheduled_time": true,
+      "rescheduled_flag": false,
+      "event_group": "FOMC_PRESS_CONF"
+    }
+  ]
+}

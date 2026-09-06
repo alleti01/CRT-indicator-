@@ -1,0 +1,3 @@
+ID,setup,definition,parameters,N,train,validation,pilot,decision,reason
+P77-001,FULL_O1-O6,Complete confluence framework Jan2024,frozen,4,2,1,1,PHASE77_N_TOO_SMALL,N_TOO_SMALL
+P77-001,FULL_O1-O6,Complete confluence framework Jan2024,frozen,4,2,1,1,PHASE77_N_TOO_SMALL,N_TOO_SMALL

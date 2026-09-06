@@ -1,0 +1,16 @@
+Loaded 3,140,775 bars; computing swings...
+Scanning 6,956 window instances...
+  500/6956 windows, entries so far: 490
+  1000/6956 windows, entries so far: 961
+  1500/6956 windows, entries so far: 1361
+  2000/6956 windows, entries so far: 1777
+  2500/6956 windows, entries so far: 2279
+  3000/6956 windows, entries so far: 2736
+  3500/6956 windows, entries so far: 3240
+  4000/6956 windows, entries so far: 3728
+  4500/6956 windows, entries so far: 4220
+  5000/6956 windows, entries so far: 4712
+  5500/6956 windows, entries so far: 5172
+  6000/6956 windows, entries so far: 5649
+  6500/6956 windows, entries so far: 6136
+Phase78 complete in 457.7s — PHASE78_NO_DIRECTIONAL_INFORMATION, entries=6601

@@ -1,0 +1,64 @@
+{
+  "manifest": {
+    "phase78_root": "/Users/anishalleti/CRT indicator/phase78",
+    "files": {
+      "python/config.py": "10c4084da503d7b2f88780b3faf73eb5ddc0023a3e3d3ce7fc1bd471bd621216",
+      "python/liquidity.py": "56cac055dcfc04c07daba6fc5cd907368b2a0c2e31a98864321f1e9ecd6e5efe",
+      "python/sequence.py": "eb726948dd7e2a6984f233f246b937a208c3d5267206d2a4ed8d25e0d4e6c2cb",
+      "python/swings.py": "456427ee863fd688dba25fd6e9b584812ef29fb2552db91901e10fed98408b07",
+      "python/session_cache.py": "94399db7fc08594cb2b15d82db16f53e9dc6a2b3c20d1d68f48465406609d448",
+      "python/windows.py": "d483bdc178e318b529e77b049d02a8fd09d437f9844e407c8a4a8b9453a993ca",
+      "python/paths.py": "7868aae8cf6b1a7671ec7c7313a94dd2a51c417fdf05b883a3b633e983a8cfa1"
+    }
+  },
+  "entry_metrics": {
+    "n_entries": 6601,
+    "long_n": 1345,
+    "short_n": 5256,
+    "gross_avg_r": -0.07492307692307693,
+    "real_plus1": 0.4743076923076923,
+    "invalid_risk_n": 101
+  },
+  "window_metrics": {
+    "windows": 6826,
+    "windows_with_sweep": 6826
+  },
+  "checks": {
+    "n_entries": {
+      "expected": 6601,
+      "got": 6601,
+      "pass": true
+    },
+    "long_n": {
+      "expected": 1345,
+      "got": 1345,
+      "pass": true
+    },
+    "short_n": {
+      "expected": 5256,
+      "got": 5256,
+      "pass": true
+    },
+    "gross_avg_r": {
+      "expected": -0.075,
+      "got": -0.07492307692307693,
+      "pass": true
+    },
+    "real_plus1": {
+      "expected": 0.474,
+      "got": 0.4743076923076923,
+      "pass": true
+    },
+    "windows": {
+      "expected": 6826,
+      "got": 6826,
+      "pass": true
+    },
+    "windows_with_sweep": {
+      "expected": 6826,
+      "got": 6826,
+      "pass": true
+    }
+  },
+  "pass": true
+}

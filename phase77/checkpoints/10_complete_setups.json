@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "n_signals": 4,
+  "signals_per_session": 0.18181818181818182,
+  "by_setup": {
+    "O5": 1,
+    "O6": 3
+  }
+}

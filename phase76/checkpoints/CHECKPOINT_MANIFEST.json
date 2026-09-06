@@ -1,0 +1,27 @@
+{
+  "phase": 76,
+  "updated": "2026-09-06",
+  "checkpoints": {
+    "00_data_audit": "PASS",
+    "01_profile_engine": "PASS",
+    "02_causality_audit": "CAUSALITY_PASS",
+    "03_market_states": "PASS",
+    "04_family_a": "CONTINUE",
+    "05_family_b": "CONTINUE",
+    "06_family_c": "PENDING",
+    "07_family_d": "PENDING",
+    "08_family_e": "PENDING",
+    "09_family_f": "PENDING",
+    "10_sr_controls": "PENDING",
+    "11_path_audit": "PARTIAL",
+    "12_management": "PENDING",
+    "13_matched_controls": "PENDING",
+    "14_randomized_controls": "FAIL",
+    "15_wf_stability": "PENDING",
+    "16_final_verdict": "CONTINUE"
+  },
+  "verdict": "PHASE76_NO_AUCTION_INFORMATION_PENDING_SR",
+  "random_gate_survivors": [],
+  "10_sr_controls": "PASS",
+  "13_matched_controls": "PASS"
+}

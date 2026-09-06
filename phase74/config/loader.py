@@ -38,6 +38,10 @@ class Phase74Config:
         return bool(self.raw.get("mode", {}).get("trading_enabled", False))
 
     @property
+    def external_order_routing(self) -> bool:
+        return bool(self.raw.get("mode", {}).get("external_order_routing", False))
+
+    @property
     def pine_hash(self) -> str:
         return str(self.raw.get("strategy", {}).get("pine_hash", ""))
 

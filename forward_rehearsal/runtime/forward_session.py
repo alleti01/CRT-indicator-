@@ -182,6 +182,7 @@ class ForwardSession:
             latency=lat,
             reconciliation_status=row.status,
         )
+        self._log_regime_observation(signal, bar)
 
         if engine_action.startswith("WOULD_ENTER") and self.shadow:
             decision_px = bar.close if bar else signal.signal_price
@@ -201,6 +202,41 @@ class ForwardSession:
             self._processed_signal_ids.add(signal.signal_id)
 
         return result
+
+    def _log_regime_observation(self, signal, bar) -> None:
+        """Log-only regime tag for Phase75 research — never blocks entry."""
+        if bar is None:
+            return
+        try:
+            from phase75.regime.classifier import compute_regime_frame, regime_at_time
+            import pandas as pd
+
+            recent = self.stack.market_data.recent_bars(120)
+            if len(recent) < 35:
+                return
+            rows = [
+                {
+                    "open": b.open,
+                    "high": b.high,
+                    "low": b.low,
+                    "close": b.close,
+                    "volume": b.volume,
+                }
+                for b in recent
+            ]
+            idx = pd.DatetimeIndex([b.timestamp for b in recent], tz="UTC")
+            df = pd.DataFrame(rows, index=idx)
+            reg = compute_regime_frame(df)
+            snap = regime_at_time(reg, bar.timestamp)
+            self.logger.log_decision(
+                signal_id=signal.signal_id,
+                research_only=True,
+                regime_observed=snap.regime,
+                regime_detail=snap.detail,
+                would_pass_regime_hypothesis=snap.regime == "CHOP",
+            )
+        except Exception as exc:
+            self.logger.log_error(event="REGIME_OBSERVE_FAILED", detail=type(exc).__name__)
 
     def _process_shadow(self, signal: PineSignal, result: dict, bar, tracker: LatencyTracker) -> None:
         action = str(result.get("action", ""))

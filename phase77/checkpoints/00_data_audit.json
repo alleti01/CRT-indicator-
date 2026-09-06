@@ -1,0 +1,19 @@
+{
+  "status": "PASS",
+  "pilot_range": "2024-01-01 17:00:00-06:00 \u2192 2024-01-31 17:59:59.611283347-06:00",
+  "n_trades": 7537890,
+  "n_trades_classified": 7537867,
+  "aggressor_method": "Databento side B=buy aggressor, A=sell aggressor",
+  "n_1m_bars": 30178,
+  "m1_range": "2024-01-01 17:00:00-06:00 \u2192 2024-01-31 17:59:00-06:00",
+  "trade_timestamp_resolution": "microsecond (event timestamp)",
+  "quote_bbo": false,
+  "depth_mbp": false,
+  "level_0": true,
+  "level_1": true,
+  "level_2": false,
+  "level_3": false,
+  "profile_type": "TRUE_TRADE_VAP_PROFILE",
+  "absorption_type": "TRADE_RESPONSE_ABSORPTION_PROXY",
+  "vap_from_trades": true
+}

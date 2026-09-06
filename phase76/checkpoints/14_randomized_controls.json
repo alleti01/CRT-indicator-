@@ -1,0 +1,13 @@
+{
+  "checkpoint_14": "FAIL",
+  "survivors": [],
+  "rejected": [
+    "A",
+    "B",
+    "D",
+    "E",
+    "F"
+  ],
+  "inverse": [],
+  "all_failed": true
+}

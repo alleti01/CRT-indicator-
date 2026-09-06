@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "hashes": {
+    "phase77/python/config.py": "9896582a0bd49df8f8c3dcb75999c6c21a80dd82a7efa52f120076b4f79fa6df",
+    "phase77/python/framework_layers.py": "72a97fb599696cfa7ec65bbc4a4649cfa2a6808105cc4a96189c6ed2fd2f6569",
+    "phase77/python/setups.py": "2c996cec650f80ab11649da6b2d3626b181f571cde42821a8908e373c4258ca5",
+    "phase77/python/gates.py": "8b43202030c781fd402a79d92118dbebddcaad379665a9f16416a8564761c156",
+    "phase77/python/trade_vap_profile.py": "2b040e5b0f826ff782f6d7d3830110b1cc8130ed363a0833425b40d701f43cee"
+  },
+  "verified_against": "/Users/anishalleti/CRT indicator/phase77_macro/checkpoints/00_freeze_manifest.json"
+}

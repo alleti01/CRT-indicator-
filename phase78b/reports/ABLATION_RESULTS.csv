@@ -1,0 +1,6 @@
+ablation,n,long_n,short_n,plus_1,plus_2,plus_2_5,mfe_15m,mae_15m,gross_avg_r,note
+FULL,6601.0,1345.0,5256.0,0.4743076923076923,0.29938461538461536,0.24907692307692308,19.465876382366307,19.284956824723526,-0.07492307692307693,
+A1_NO_SWEEP,0.0,,,,,,,,,ENTRY_TIMING_NOT_COMPARABLE
+A2_NO_DISPLACEMENT,,,,,,,,,,Phase78 funnel: 6814/6826 retain displacement vs FULL
+A3_NO_MSS,,,,,,,,,,Phase78 funnel: 6017/6814 retain MSS — largest drop after displacement
+A4_NO_FVG_RETRACE,,,,,,,,,,Phase78 funnel: 3892/6017 retain FVG

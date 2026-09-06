@@ -6,6 +6,7 @@ import argparse
 import copy
 import json
 import logging
+import os
 import sys
 import time
 from pathlib import Path
@@ -24,11 +25,32 @@ from phase73.webhook.schemas import make_test_signal
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
 
+def _build_ninjatrader_provider(cfg, on_bar):
+    from phase74.market_data.ninjatrader_live import NinjaTraderLiveDataProvider
+
+    md_cfg = cfg.section("market_data")
+    env_key = str(md_cfg.get("ninjatrader_auth_env_var", "NINJATRADER_BRIDGE_TOKEN"))
+    token = os.environ.get(env_key, "")
+    if not token:
+        raise RuntimeError(f"{env_key} not set — required for NinjaTrader bridge")
+    return NinjaTraderLiveDataProvider(
+        host=str(md_cfg.get("ninjatrader_host", "127.0.0.1")),
+        port=int(md_cfg.get("ninjatrader_port", 8765)),
+        auth_token=token,
+        bootstrap_bars=int(md_cfg.get("ninjatrader_bootstrap_bars", 15)),
+        expected_contract_prefix=str(md_cfg.get("ninjatrader_expected_contract_prefix", "NQ")),
+        staleness_limit_seconds=int(md_cfg.get("staleness_limit_seconds", 90)),
+        atr_period=int(md_cfg.get("atr_period", 14)),
+        on_bar=on_bar,
+    )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Phase74 live paper dress rehearsal")
     ap.add_argument("--mode", choices=["shadow", "paper", "parity-check"], default="shadow")
-    ap.add_argument("--bars", type=int, default=120)
+    ap.add_argument("--bars", type=int, default=120, help="Simulated bars (sim) or max wait minutes (ninjatrader)")
     ap.add_argument("--webhook", action="store_true", help="Start secure webhook server")
+    ap.add_argument("--provider", choices=["sim", "ninjatrader"], default="sim", help="Market data provider")
     args = ap.parse_args()
 
     ok, errs = verify_phase73_freeze()
@@ -45,6 +67,7 @@ def main() -> int:
         raw.setdefault("mode", {})["shadow_mode"] = False
         raw.setdefault("mode", {})["trading_enabled"] = True
         raw.setdefault("contracts", {})["contract_month"] = "202609"
+    raw.setdefault("mode", {})["external_order_routing"] = False
     from phase74.config.loader import Phase74Config
 
     cfg = Phase74Config(raw=raw)
@@ -57,9 +80,25 @@ def main() -> int:
             print(json.dumps(errors[:10], indent=2))
         return 0 if passed else 1
 
-    md = StreamLiveDataProvider(df, staleness_limit_seconds=cfg.raw.get("market_data", {}).get("staleness_limit_seconds", 90))
-    md.connect()
+    stack_holder: dict[str, LiveStack | None] = {"stack": None}
+
+    def on_nt_bar(_bar):
+        st = stack_holder["stack"]
+        if st is not None:
+            st.on_bar()
+
+    if args.provider == "ninjatrader":
+        md = _build_ninjatrader_provider(cfg, on_nt_bar)
+        md.connect()
+    else:
+        md = StreamLiveDataProvider(
+            df,
+            staleness_limit_seconds=cfg.raw.get("market_data", {}).get("staleness_limit_seconds", 90),
+        )
+        md.connect()
+
     stack = LiveStack(cfg, md)
+    stack_holder["stack"] = stack
 
     if args.webhook:
         secret = cfg.webhook_secret or "dev-only-change-me"
@@ -73,20 +112,61 @@ def main() -> int:
         recv.start(str(wh.get("host", "127.0.0.1")), int(wh.get("port", 8787)), str(wh.get("path", "/webhook")))
         stack.webhook_status = "LISTENING"
 
-    print(f"Phase74 mode={args.mode} shadow={cfg.shadow_mode} paper={cfg.paper_mode} trading={cfg.trading_enabled}")
+    print(f"Phase74 mode={args.mode} provider={args.provider} shadow={cfg.shadow_mode} trading={cfg.trading_enabled}")
+    print(f"external_order_routing={cfg.external_order_routing}")
     print(f"Broker adapter: LOCAL_SIM (no external paper venue connected)")
 
-    for _ in range(args.bars):
-        if not stack.tick():
-            break
-        if _ == args.bars // 2 and args.mode == "shadow":
-            bar = md.latest_bar()
-            sig = make_test_signal("SIGNAL_LONG", signal_bar_time_utc=bar.timestamp if bar else None, signal_time_utc=bar.timestamp if bar else None, signal_price=bar.close if bar else 20000)
-            stack.on_webhook_signal(sig, __import__("phase73.webhook.schemas", fromlist=["WebhookReason"]).WebhookReason.WEBHOOK_VALID, __import__("phase74.latency.tracker", fromlist=["LatencyTracker"]).LatencyTracker())
+    if args.provider == "ninjatrader":
+        deadline = time.time() + max(60, args.bars * 60)
+        last_count = 0
+        while time.time() < deadline:
+            health = md.health()
+            count = len(md.recent_bars(500))
+            if count > last_count:
+                last_count = count
+                print(
+                    f"bars={count} health={health.state.value} contract={md.contract_identity} atr_ready={md.atr_ready}"
+                )
+            if health.state.value == "DATA_HEALTHY" and last_count >= int(
+                cfg.section("market_data").get("ninjatrader_bootstrap_bars", 15)
+            ):
+                bar = md.latest_bar()
+                if bar and args.mode == "shadow":
+                    sig = make_test_signal(
+                        "SIGNAL_LONG",
+                        signal_bar_time_utc=bar.timestamp,
+                        signal_time_utc=bar.timestamp,
+                        signal_price=bar.close,
+                    )
+                    stack.on_webhook_signal(
+                        sig,
+                        __import__("phase73.webhook.schemas", fromlist=["WebhookReason"]).WebhookReason.WEBHOOK_VALID,
+                        __import__("phase74.latency.tracker", fromlist=["LatencyTracker"]).LatencyTracker(),
+                    )
+                break
+            time.sleep(1.0)
+    else:
+        for i in range(args.bars):
+            if not stack.tick():
+                break
+            if i == args.bars // 2 and args.mode == "shadow":
+                bar = md.latest_bar()
+                sig = make_test_signal(
+                    "SIGNAL_LONG",
+                    signal_bar_time_utc=bar.timestamp if bar else None,
+                    signal_time_utc=bar.timestamp if bar else None,
+                    signal_price=bar.close if bar else 20000,
+                )
+                stack.on_webhook_signal(
+                    sig,
+                    __import__("phase73.webhook.schemas", fromlist=["WebhookReason"]).WebhookReason.WEBHOOK_VALID,
+                    __import__("phase74.latency.tracker", fromlist=["LatencyTracker"]).LatencyTracker(),
+                )
 
     status = build_status(stack)
     print(json.dumps(status, indent=2, default=str))
     print("VERDICT:", "PHASE74_SHADOW_READY" if cfg.shadow_mode else "PHASE74_LIVE_PAPER_PASS")
+    md.disconnect()
     return 0
 
 

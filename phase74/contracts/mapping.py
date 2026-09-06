@@ -46,3 +46,12 @@ def validate_contract_for_order(spec: ContractSpec) -> str | None:
     if spec.contract_month in ("", "UNRESOLVED"):
         return "CONTRACT_MAPPING_UNRESOLVED"
     return None
+
+
+def validate_ninjatrader_contract(contract: str, expected_prefix: str) -> str | None:
+    """Validate NinjaTrader feed contract identity against configured prefix."""
+    if not contract:
+        return "CONTRACT_IDENTITY_MISSING"
+    if not contract.upper().startswith(expected_prefix.upper()):
+        return f"CONTRACT_MISMATCH:{contract}"
+    return None

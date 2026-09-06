@@ -1,0 +1,79 @@
+{
+  "trades_by_bar_regime": [
+    {
+      "bucket": "CHOP",
+      "n": 101,
+      "mean_net_R": 0.5812368698397963,
+      "win_rate": 0.48514851485148514
+    },
+    {
+      "bucket": "UNCERTAIN",
+      "n": 25,
+      "mean_net_R": 0.7054540946139224,
+      "win_rate": 0.52
+    }
+  ],
+  "trades_by_market_state": [
+    {
+      "bucket": "UNCERTAIN",
+      "n": 93,
+      "mean_net_R": 0.5039932717693166,
+      "win_rate": 0.46236559139784944
+    },
+    {
+      "bucket": "REVERSAL_TRANSITION",
+      "n": 21,
+      "mean_net_R": 1.2003870144550952,
+      "win_rate": 0.6666666666666666
+    },
+    {
+      "bucket": "PULLBACK",
+      "n": 10,
+      "mean_net_R": 0.2982831937676951,
+      "win_rate": 0.4
+    },
+    {
+      "bucket": "CONTINUATION",
+      "n": 2,
+      "mean_net_R": 0.639471351693547,
+      "win_rate": 0.5
+    }
+  ],
+  "trades_by_15m_state": [
+    {
+      "bucket": "BEARISH",
+      "n": 45,
+      "mean_net_R": 0.5762092997648646,
+      "win_rate": 0.4888888888888889
+    },
+    {
+      "bucket": "BULLISH",
+      "n": 44,
+      "mean_net_R": 0.9598654261124095,
+      "win_rate": 0.5909090909090909
+    },
+    {
+      "bucket": "NEUTRAL",
+      "n": 21,
+      "mean_net_R": 0.05929880844654528,
+      "win_rate": 0.3333333333333333
+    },
+    {
+      "bucket": "TRANSITION",
+      "n": 16,
+      "mean_net_R": 0.43328150021406875,
+      "win_rate": 0.4375
+    }
+  ],
+  "take_events_by_bar_regime": {
+    "CHOP": 110,
+    "UNCERTAIN": 21
+  },
+  "take_events_by_15m_neutral": 21,
+  "take_events_total": 131,
+  "pass_wait_total": 53,
+  "trade_count": 126,
+  "overall_mean_net_R": 0.6058831445965673,
+  "chop_trade_mean_R": 0.5812368698397963,
+  "trend_trade_mean_R": null
+}

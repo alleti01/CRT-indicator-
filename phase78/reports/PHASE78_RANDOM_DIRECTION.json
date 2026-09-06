@@ -1,0 +1,13 @@
+{
+  "real_fp": 0.4743076923076923,
+  "random_mean_fp": 0.4942569230769231,
+  "random_p95_fp": 0.58,
+  "flipped_fp": 0.5129230769230769,
+  "real_percentile_among_random": 0.31446153846153846,
+  "pass_random": false,
+  "pass_flip": false,
+  "pass": false,
+  "n_valid": 6500,
+  "n_invalid_structural_risk": 101,
+  "note": "Random/flipped use symmetric 1R stop at same distance as structural stop."
+}

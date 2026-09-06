@@ -1,6 +1,6 @@
 {
   "manifest_id": "FORWARD_REHEARSAL_FREEZE",
-  "generated_at_utc": "2026-09-04T04:45:37.359825+00:00",
+  "generated_at_utc": "2026-09-04T04:59:40.932408+00:00",
   "rule": "No silent code changes during an active forward session",
   "pine": {
     "path": "TV_REVIEW/phase72a_autonomous_trader.pine",
@@ -23,7 +23,7 @@
     "phase74/config/PHASE73_ENGINE_FREEZE.json": "1c763e882e3b36fee558317a07de754f60c65bc76e442e71d6b34ea5dc1c3018"
   },
   "forward_rehearsal": {
-    "forward_rehearsal/runtime/forward_session.py": "83d10b3346437f22a27a70c04d6c13a77e9bbcfaa914d1751ddb32e49fe33434",
+    "forward_rehearsal/runtime/forward_session.py": "dae927c52754b4acda4de564c272dbff374ad22060447ff4b8197d4939d0f4bd",
     "forward_rehearsal/market_data/databento_live.py": "7c9488410fe67d9c7650946945341d37794327f1ce079cc0e877da61b671b954",
     "forward_rehearsal/freeze.py": "65deca1c011ae5c3a131d9bdffa2c3e34ca956a7910cca779a28acdd422a4ab8"
   },

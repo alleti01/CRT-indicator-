@@ -4,7 +4,8 @@
   "mode": {
     "shadow_mode": true,
     "paper_mode": true,
-    "trading_enabled": false
+    "trading_enabled": false,
+    "external_order_routing": false
   },
   "market_data": {
     "provider": "STREAM_LIVE_PROVIDER",
@@ -15,7 +16,12 @@
     "atr_period": 14,
     "databento_dataset": "GLBX.MDP3",
     "databento_schema": "ohlcv-1m",
-    "databento_symbol": "NQ.v.0"
+    "databento_symbol": "NQ.v.0",
+    "ninjatrader_host": "127.0.0.1",
+    "ninjatrader_port": 8765,
+    "ninjatrader_auth_env_var": "NINJATRADER_BRIDGE_TOKEN",
+    "ninjatrader_bootstrap_bars": 15,
+    "ninjatrader_expected_contract_prefix": "NQ"
   },
   "webhook": {
     "host": "127.0.0.1",

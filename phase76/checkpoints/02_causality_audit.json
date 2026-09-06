@@ -1,0 +1,54 @@
+{
+  "verdict": "CAUSALITY_PASS",
+  "prefix_tests": [
+    {
+      "ok": true,
+      "compared": 785193,
+      "mismatches": [],
+      "cutoff_frac": 0.25,
+      "cutoff_ts": "2020-01-02 01:16:00-06:00"
+    },
+    {
+      "ok": true,
+      "compared": 1570387,
+      "mismatches": [],
+      "cutoff_frac": 0.5,
+      "cutoff_ts": "2022-03-27 22:10:00-05:00"
+    },
+    {
+      "ok": true,
+      "compared": 2355581,
+      "mismatches": [],
+      "cutoff_frac": 0.75,
+      "cutoff_ts": "2024-06-13 10:14:00-05:00"
+    },
+    {
+      "ok": true,
+      "compared": 2826697,
+      "mismatches": [],
+      "cutoff_frac": 0.9,
+      "cutoff_ts": "2025-10-13 14:48:00-05:00"
+    }
+  ],
+  "audit_columns": [
+    "prior_vah",
+    "prior_val",
+    "prior_poc",
+    "prior_vwap",
+    "dev_vah",
+    "dev_val",
+    "dev_poc",
+    "dev_vwap",
+    "dev_high",
+    "dev_low",
+    "or_high",
+    "or_low",
+    "overnight_high",
+    "overnight_low",
+    "roll_high_5",
+    "roll_low_30",
+    "in_hvn",
+    "in_lvn"
+  ],
+  "profile_type": "BAR_APPROX_PROFILE"
+}

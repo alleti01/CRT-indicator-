@@ -96,8 +96,8 @@ namespace NinjaTrader.NinjaScript.Indicators
                     _client = new TcpClient();
                     _client.Connect(BridgeHost, BridgePort);
                     _stream = _client.GetStream();
-                    _writer = new StreamWriter(_stream, Encoding.UTF8) { AutoFlush = true };
-                    _reader = new StreamReader(_stream, Encoding.UTF8, false);
+                    _writer = new StreamWriter(_stream, new UTF8Encoding(false)) { AutoFlush = true };
+                    _reader = new StreamReader(_stream, new UTF8Encoding(false), false);
 
                     string contract = Instrument != null ? Instrument.FullName : "UNKNOWN";
                     string hello = string.Format(

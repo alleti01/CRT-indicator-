@@ -10,7 +10,7 @@ from phase73.market_data.bar import Bar
 
 
 def parse_line(line: str) -> dict[str, Any]:
-    line = line.strip()
+    line = line.strip().lstrip("\ufeff")
     if not line:
         raise ValueError("empty line")
     obj = json.loads(line)

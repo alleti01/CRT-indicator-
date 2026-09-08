@@ -66,4 +66,4 @@ def hello_from_message(msg: dict[str, Any]) -> HelloMessage:
 
 
 def encode_ack(*, ok: bool, detail: str = "", seq: int = 0) -> str:
-    return json.dumps({"type": "ack", "ok": ok, "detail": detail, "seq": seq}) + "\n"
+    return json.dumps({"type": "ack", "ok": ok, "detail": detail, "seq": seq}, separators=(",", ":")) + "\n"

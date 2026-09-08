@@ -119,7 +119,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                     _writer.Write(hello);
 
                     string ackLine = _reader.ReadLine();
-                    if (ackLine != null && ackLine.Contains("\"ok\":true"))
+                    if (IsAckOk(ackLine))
                     {
                         _authenticated = true;
                         Print("CRTBarBridge authenticated contract=" + contract);
@@ -230,6 +230,13 @@ namespace NinjaTrader.NinjaScript.Indicators
                 Path.Combine(docs, "NinjaTrader 8", "bin", "Custom", "crt_bridge_token.txt"),
                 Path.Combine(oneDriveDocs, "NinjaTrader 8", "bin", "Custom", "crt_bridge_token.txt"),
             };
+        }
+
+        private static bool IsAckOk(string ackLine)
+        {
+            if (string.IsNullOrEmpty(ackLine))
+                return false;
+            return ackLine.Contains("\"ok\":true") || ackLine.Contains("\"ok\": true");
         }
 
         private static string EscapeJson(string value)

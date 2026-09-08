@@ -1,0 +1,2 @@
+event_id,direction,chart_enter_time,alert_payload_entry_time,python_received_utc,pine_entry_to_python_ms,pass_fail,notes
+PENDING_LIVE_COLLECTION,,,,,,PENDING,Collect 20 live events with phase72a_latency_audit.pine

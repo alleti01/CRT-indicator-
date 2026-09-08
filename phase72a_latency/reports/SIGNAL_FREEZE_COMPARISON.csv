@@ -1,0 +1,7 @@
+event_type,frozen_count,audit_layer_a_count,delta,direction_changed,timestamp_changed,notes
+SIGNAL_LONG,36174,36174,0,NO,NO,Layer A untouched in audit copy
+SIGNAL_SHORT,36174,36174,0,NO,NO,Uses same frozen entry freeze
+ENTER_LONG,35902,35902,0,NO,NO,T+1 entry unchanged
+ENTER_SHORT,35902,35902,0,NO,NO,T+1 entry unchanged
+ALERT_ENTER,0,N/A,N/A,N/A,N/A,Frozen script has no production alert()
+ALERT_SIGNAL,48_webhook_samples,N/A,N/A,N/A,N/A,forward_rehearsal webhooks used SIGNAL_* events

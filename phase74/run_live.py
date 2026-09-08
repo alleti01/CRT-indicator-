@@ -130,6 +130,10 @@ def main() -> int:
             if health.state.value == "DATA_HEALTHY" and last_count >= int(
                 cfg.section("market_data").get("ninjatrader_bootstrap_bars", 15)
             ):
+                if args.webhook:
+                    # Keep listening for TradingView webhooks until deadline.
+                    time.sleep(1.0)
+                    continue
                 bar = md.latest_bar()
                 if bar and args.mode == "shadow":
                     sig = make_test_signal(

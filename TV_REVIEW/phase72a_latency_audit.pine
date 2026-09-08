@@ -1601,10 +1601,10 @@ plot(exportParity and barstate.isconfirmed ? stopPx : na, "P72B_stopPrice", disp
 plot(exportParity and barstate.isconfirmed ? tgtPx : na, "P72B_targetPrice", display=display.data_window)
 plot(exportParity and barstate.isconfirmed ? time : na, "P72B_unixMs", display=display.data_window)
 
-alertcondition(exportParity and barstate.isconfirmed and signalLongFlag == 1.0, "P72B SIGNAL_LONG", "P72B SIGNAL_LONG")
-alertcondition(exportParity and barstate.isconfirmed and signalShortFlag == 1.0, "P72B SIGNAL_SHORT", "P72B SIGNAL_SHORT")
-alertcondition(exportParity and barstate.isconfirmed and enterLongFlag == 1.0, "P72B ENTER_LONG", "P72B ENTER_LONG")
-alertcondition(exportParity and barstate.isconfirmed and enterShortFlag == 1.0, "P72B ENTER_SHORT", "P72B ENTER_SHORT")
+alertcondition(barstate.isconfirmed and signalLongFlag == 1.0, "P72B SIGNAL_LONG", "P72B SIGNAL_LONG")
+alertcondition(barstate.isconfirmed and signalShortFlag == 1.0, "P72B SIGNAL_SHORT", "P72B SIGNAL_SHORT")
+alertcondition(barstate.isconfirmed and enterLongFlag == 1.0, "P72B ENTER_LONG", "P72B ENTER_LONG")
+alertcondition(barstate.isconfirmed and enterShortFlag == 1.0, "P72B ENTER_SHORT", "P72B ENTER_SHORT")
 
 // =============================================================================
 // Phase72B-M — Manual on-chart parity (Layer B ONLY — reads Layer A state)

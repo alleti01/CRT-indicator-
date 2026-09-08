@@ -45,11 +45,15 @@ namespace NinjaTrader.NinjaScript.Indicators
                 Name = "CRTBarBridge";
                 Calculate = Calculate.OnBarClose;
                 IsOverlay = true;
+                DisplayInDataBox = false;
+                DrawOnPricePanel = false;
+                IsSuspendedWhileInactive = true;
+                BarsRequiredToPlot = 1;
                 BridgeHost = "127.0.0.1";
                 BridgePort = 8765;
                 AuthToken = ReadTokenFromFile();
             }
-            else if (State == State.DataLoaded)
+            else if (State == State.Realtime)
             {
                 ConnectBridge();
             }
@@ -61,6 +65,10 @@ namespace NinjaTrader.NinjaScript.Indicators
 
         protected override void OnBarUpdate()
         {
+            // Skip historical replay — bridge only forwards live closed 1m bars.
+            if (State == State.Historical)
+                return;
+
             if (CurrentBar < 1)
                 return;
 
@@ -224,6 +232,7 @@ namespace NinjaTrader.NinjaScript.Indicators
             };
         }
 
+        private static string EscapeJson(string value)
         {
             if (string.IsNullOrEmpty(value))
                 return "";

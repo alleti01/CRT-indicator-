@@ -47,7 +47,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                 IsOverlay = true;
                 BridgeHost = "127.0.0.1";
                 BridgePort = 8765;
-                AuthToken = "";
+                AuthToken = ReadTokenFromFile();
             }
             else if (State == State.DataLoaded)
             {
@@ -104,7 +104,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                         CultureInfo.InvariantCulture,
                         "{{\"type\":\"hello\",\"seq\":{0},\"auth\":\"{1}\",\"contract\":\"{2}\",\"instrument\":\"{3}\",\"chart_timezone\":\"UTC\"}}\n",
                         _seq,
-                        EscapeJson(AuthToken ?? ""),
+                        EscapeJson(ResolveAuthToken()),
                         EscapeJson(contract),
                         EscapeJson(Instrument != null ? Instrument.MasterInstrument.Name : "UNKNOWN")
                     );
@@ -178,7 +178,52 @@ namespace NinjaTrader.NinjaScript.Indicators
             _client = null;
         }
 
-        private static string EscapeJson(string value)
+        private string ResolveAuthToken()
+        {
+            string fromFile = ReadTokenFromFile();
+            if (!string.IsNullOrEmpty(fromFile))
+                return fromFile;
+
+            if (!string.IsNullOrWhiteSpace(AuthToken))
+                return AuthToken.Trim();
+
+            return "";
+        }
+
+        private static string ReadTokenFromFile()
+        {
+            foreach (string path in TokenFilePaths())
+            {
+                try
+                {
+                    if (!File.Exists(path))
+                        continue;
+                    string token = File.ReadAllText(path).Trim();
+                    if (!string.IsNullOrEmpty(token))
+                        return token;
+                }
+                catch
+                {
+                }
+            }
+            return "";
+        }
+
+        private static string[] TokenFilePaths()
+        {
+            string docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string oneDriveDocs = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "OneDrive",
+                "Documents"
+            );
+            return new[]
+            {
+                Path.Combine(docs, "NinjaTrader 8", "bin", "Custom", "crt_bridge_token.txt"),
+                Path.Combine(oneDriveDocs, "NinjaTrader 8", "bin", "Custom", "crt_bridge_token.txt"),
+            };
+        }
+
         {
             if (string.IsNullOrEmpty(value))
                 return "";

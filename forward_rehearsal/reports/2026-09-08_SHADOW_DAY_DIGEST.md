@@ -1,0 +1,55 @@
+# Phase74 Shadow Rehearsal — 2026-09-08
+
+Compiled: 2026-09-08 20:49:01 EDT
+
+## Summary
+
+- **Webhooks accepted:** 26
+- **LONG signals:** 12
+- **SHORT signals:** 14
+- **Shadow action:** WOULD_ENTER on all accepted signals
+- **Watch bars logged:** 1267
+- **Bars DATA_HEALTHY:** 1127
+- **Bars DATA_MISSING:** 115
+
+## Signal log (ET)
+
+| # | Received (ET) | Event | Price | Bar (ET) | signal_id | Latency ms |
+|---|---------------|-------|-------|----------|-----------|------------|
+| 1 | 2026-09-07 21:22:00 EDT | SIGNAL_LONG | 29652.75 | 2026-09-07 21:21:00 EDT | `2026-09-08T01:22:00Z` |  |
+| 2 | 2026-09-07 21:49:01 EDT | SIGNAL_LONG | 29676.75 | 2026-09-07 21:48:00 EDT | `f62907bb-f5ad-4dba-8c41-f...` |  |
+| 3 | 2026-09-07 22:10:59 EDT | SIGNAL_LONG | 29690.5 | 2026-09-07 22:10:00 EDT | `2f88b5ae-7b23-43e3-85d2-f...` |  |
+| 4 | 2026-09-07 22:28:01 EDT | SIGNAL_LONG | 29715.75 | 2026-09-07 22:27:00 EDT | `c9f67329-a4c9-4341-98bb-a...` |  |
+| 5 | 2026-09-08 00:07:00 EDT | SIGNAL_LONG | 29742.25 | 2026-09-08 00:06:00 EDT | `2026-09-08T04:07:00Z` |  |
+| 6 | 2026-09-08 01:28:00 EDT | SIGNAL_SHORT | 29692.25 | 2026-09-08 01:27:00 EDT | `2026-09-08T05:28:00Z` |  |
+| 7 | 2026-09-08 02:55:08 EDT | SIGNAL_SHORT | 29586.75 | 2026-09-08 02:54:00 EDT | `2026-09-08T06:55:02Z` |  |
+| 8 | 2026-09-08 03:04:02 EDT | SIGNAL_LONG | 29610.25 | 2026-09-08 03:03:00 EDT | `2026-09-08T07:04:02Z` |  |
+| 9 | 2026-09-08 04:31:01 EDT | SIGNAL_SHORT | 29499.25 | 2026-09-08 04:30:00 EDT | `2026-09-08T08:31:00Z` |  |
+| 10 | 2026-09-08 04:52:00 EDT | SIGNAL_SHORT | 29492.5 | 2026-09-08 04:51:00 EDT | `2026-09-08T08:52:00Z` |  |
+| 11 | 2026-09-08 05:25:04 EDT | SIGNAL_LONG | 29544.75 | 2026-09-08 05:24:00 EDT | `2026-09-08T09:25:00Z` |  |
+| 12 | 2026-09-08 06:46:05 EDT | SIGNAL_SHORT | 29589.0 | 2026-09-08 06:45:00 EDT | `2026-09-08T10:46:01Z` |  |
+| 13 | 2026-09-08 07:16:59 EDT | SIGNAL_LONG | 29566.0 | 2026-09-08 07:16:00 EDT | `2026-09-08T11:17:00Z` |  |
+| 14 | 2026-09-08 07:40:01 EDT | SIGNAL_SHORT | 29559.5 | 2026-09-08 07:39:00 EDT | `2026-09-08T11:40:00Z` |  |
+| 15 | 2026-09-08 08:28:59 EDT | SIGNAL_LONG | 29582.25 | 2026-09-08 08:28:00 EDT | `2026-09-08T12:29:00Z` |  |
+| 16 | 2026-09-08 09:51:00 EDT | SIGNAL_SHORT | 29503.0 | 2026-09-08 09:50:00 EDT | `2026-09-08T13:51:00Z` |  |
+| 17 | 2026-09-08 10:31:00 EDT | SIGNAL_SHORT | 29498.5 | 2026-09-08 10:30:00 EDT | `2026-09-08T14:31:00Z` |  |
+| 18 | 2026-09-08 12:08:58 EDT | SIGNAL_SHORT | 29600.0 | 2026-09-08 12:08:00 EDT | `2026-09-08T16:09:00Z` |  |
+| 19 | 2026-09-08 12:29:01 EDT | SIGNAL_SHORT | 29577.0 | 2026-09-08 12:28:00 EDT | `2026-09-08T16:29:01Z` |  |
+| 20 | 2026-09-08 12:48:00 EDT | SIGNAL_LONG | 29588.5 | 2026-09-08 12:47:00 EDT | `2026-09-08T16:48:00Z` |  |
+| 21 | 2026-09-08 14:32:00 EDT | SIGNAL_SHORT | 29593.75 | 2026-09-08 14:31:00 EDT | `2026-09-08T18:32:00Z` |  |
+| 22 | 2026-09-08 14:58:58 EDT | SIGNAL_LONG | 29584.5 | 2026-09-08 14:58:00 EDT | `2026-09-08T18:59:00Z` |  |
+| 23 | 2026-09-08 15:18:58 EDT | SIGNAL_SHORT | 29563.5 | 2026-09-08 15:18:00 EDT | `2026-09-08T19:19:00Z` |  |
+| 24 | 2026-09-08 16:16:58 EDT | SIGNAL_SHORT | 29521.0 | 2026-09-08 16:16:00 EDT | `2026-09-08T20:17:00Z` |  |
+| 25 | 2026-09-08 18:39:12 EDT | SIGNAL_LONG | 29524.25 | 2026-09-08 18:38:00 EDT | `2026-09-08T22:39:12Z` |  |
+| 26 | 2026-09-08 19:26:01 EDT | SIGNAL_SHORT | 29518.0 | 2026-09-08 19:25:00 EDT | `2026-09-08T23:26:00Z` |  |
+
+## Files
+
+- Signal CSV: `forward_rehearsal/reports/2026-09-08_shadow_signals.csv`
+- Source logs: `phase74/logs/signals.csv`, `decisions.csv`, `errors.jsonl`
+
+## Notes
+
+- All trades are **shadow mode** (WOULD_ENTER — no live orders).
+- Contract: NQ via NinjaTrader bridge; pine_hash frozen Phase72A.
+- Negative latency = webhook timestamp vs bar-close alignment artifact.

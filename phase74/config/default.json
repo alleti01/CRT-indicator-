@@ -21,7 +21,13 @@
     "ninjatrader_port": 8765,
     "ninjatrader_auth_env_var": "NINJATRADER_BRIDGE_TOKEN",
     "ninjatrader_bootstrap_bars": 15,
-    "ninjatrader_expected_contract_prefix": "NQ"
+    "ninjatrader_expected_contract_prefix": "NQ",
+    "ninjatrader_preserve_bars_on_disconnect": true,
+    "log_bars_csv": true
+  },
+  "simulation": {
+    "entry_slippage_ticks": 1.0,
+    "exit_slippage_ticks": 1.0
   },
   "webhook": {
     "host": "127.0.0.1",

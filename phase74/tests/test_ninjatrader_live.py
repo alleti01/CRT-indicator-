@@ -253,7 +253,7 @@ class TestNinjaTraderLiveProvider(unittest.TestCase):
         self.assertEqual(self.provider.health().state, DataHealth.DATA_MISSING)
         self.assertEqual(self.provider.health().detail, "DATA_DISCONNECTED")
 
-    def test_restart_requires_reauth(self):
+    def test_reconnect_preserves_bars_by_default(self):
         df = _synthetic_bars(40)
         self.client.connect()
         for bar in _bars_from_df(df, count=16):
@@ -261,7 +261,7 @@ class TestNinjaTraderLiveProvider(unittest.TestCase):
         self.client.close()
         time.sleep(0.05)
         self.provider._handle_disconnect()
-        self.assertFalse(self.provider.atr_ready)
+        self.assertTrue(self.provider.atr_ready)
         client2 = MockNTClient("127.0.0.1", self.port, self.token)
         client2.connect()
         for bar in _bars_from_df(df, start=16, count=20):
@@ -269,6 +269,26 @@ class TestNinjaTraderLiveProvider(unittest.TestCase):
             time.sleep(0.005)
         self.assertTrue(self.provider.atr_ready)
         client2.close()
+
+    def test_disconnect_clears_bars_when_preserve_disabled(self):
+        port = _free_port()
+        provider = NinjaTraderLiveDataProvider(
+            host="127.0.0.1",
+            port=port,
+            auth_token=self.token,
+            bootstrap_bars=15,
+            preserve_bars_on_disconnect=False,
+        )
+        provider.connect()
+        time.sleep(0.05)
+        client = MockNTClient("127.0.0.1", port, self.token)
+        client.connect()
+        for bar in _bars_from_df(_synthetic_bars(20), count=16):
+            client.send_bar(bar)
+        client.close()
+        provider._handle_disconnect()
+        self.assertFalse(provider.atr_ready)
+        provider.disconnect()
 
     def test_contract_mismatch_fail_closed(self):
         self.provider.disconnect()

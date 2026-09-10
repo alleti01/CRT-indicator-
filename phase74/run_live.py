@@ -161,15 +161,25 @@ def main() -> int:
             if session
             else (lambda s, r, t: stack.on_webhook_signal(s, r, t))
         )
+        from phase74.webhook.ledger_logger import LedgerAlertLogger
+
+        ledger_logger = LedgerAlertLogger(cfg.log_dir)
         recv = SecureWebhookReceiver(
             cfg.to_phase73_config(),
             secret,
             on_signal=on_signal,
             rate_limit=int(cfg.section("webhook").get("rate_limit_per_minute", 60)),
+            on_ledger=ledger_logger.log,
         )
         wh = cfg.section("webhook")
-        recv.start(str(wh.get("host", "127.0.0.1")), int(wh.get("port", 8787)), str(wh.get("path", "/webhook")))
+        host = str(wh.get("host", "127.0.0.1"))
+        port = int(wh.get("port", 8787))
+        path = str(wh.get("path", "/webhook"))
+        recv.start(host, port, path)
         stack.webhook_status = "LISTENING"
+        print(f"Ledger logger: http://{host}:{port}/webhook/ledger?token=<secret>")
+        print(f"  -> {cfg.log_dir / 'ledger_alerts.jsonl'}")
+        print(f"  -> {cfg.log_dir / 'ledger_alerts.csv'}")
         if session:
             session._webhook = recv
 
@@ -205,7 +215,9 @@ def main() -> int:
                         __import__("phase73.webhook.schemas", fromlist=["WebhookReason"]).WebhookReason.WEBHOOK_VALID,
                         __import__("phase74.latency.tracker", fromlist=["LatencyTracker"]).LatencyTracker(),
                     )
-                break
+                # --bars 0 means stay up (webhook + NT). Timed runs exit once healthy.
+                if args.bars != 0:
+                    break
             time.sleep(1.0)
     else:
         for i in range(args.bars):

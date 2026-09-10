@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import csv
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -372,11 +373,25 @@ class ForwardSession:
         self.reconciler.write_csv(recon_path)
         entry_path = REPORTS_DIR / "SHADOW_ENTRY_PRICE_AUDIT.csv"
         self.entry_audit.write_csv(entry_path)
+        trades_path = REPORTS_DIR / "SHADOW_CLOSED_TRADES.csv"
+        self._write_closed_trades(trades_path)
 
         summary = self._build_summary(lat)
         self.logger.write_summary(summary)
         (self.session_dir / "latency_audit.json").write_text(__import__("json").dumps(lat, indent=2) + "\n")
         return summary
+
+    def _write_closed_trades(self, path: Path) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not self.shadow or not self.shadow.closed_trades:
+            path.write_text("signal_id,direction,entry_price,exit_price,exit_reason,action,mfe_r,mae_r\n", encoding="utf-8")
+            return
+        fields = ["signal_id", "direction", "entry_price", "exit_price", "exit_reason", "action", "mfe_r", "mae_r"]
+        with path.open("w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fields)
+            w.writeheader()
+            for row in self.shadow.closed_trades:
+                w.writerow({k: row.get(k, "") for k in fields})
 
     def _build_summary(self, lat: dict[str, Any]) -> dict[str, Any]:
         recon = self.reconciler.summary()

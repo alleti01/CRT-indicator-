@@ -35,4 +35,4 @@ if ($existing) {
 Write-Host "Starting NinjaTrader shadow bot (port 8765 bridge, 8787 webhook)..." -ForegroundColor Cyan
 $webhookUrl = "http://127.0.0.1:8787/webhook?token=$($env:PHASE74_WEBHOOK_SECRET)"
 Write-Host "Webhook URL: $webhookUrl"
-& $python phase74\run_live.py --provider ninjatrader --mode shadow --webhook --bars 120
+& $python phase74\run_live.py --provider ninjatrader --mode shadow --webhook --bars 480

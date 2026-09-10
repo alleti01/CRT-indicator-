@@ -1,14 +1,14 @@
 """Phase74 live production stack — wraps frozen Phase73 TraderEngine."""
 from __future__ import annotations
 
-import copy
 import logging
 import uuid
+from dataclasses import replace
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
 
-from phase73.execution.sim_router import SimOrderRouter
+from phase74.execution.slippage_router import SlippageSimRouter
 from phase73.logging.decision_logger import DecisionLogger
 from phase73.logging.event_store import EventStore
 from phase73.persistence.state import StatePersistence
@@ -41,17 +41,25 @@ class LiveStack:
         self.market_data = market_data
         self.webhook_status = "NOT_STARTED"
         self._latency_samples: list[float] = []
+        self._active_trade_id: str | None = None
+        self._active_entry_atr: float = 0.0
 
         p73 = cfg.to_phase73_config()
         log_dir = cfg.log_dir
         log_dir.mkdir(parents=True, exist_ok=True)
 
         self.contract = load_contract_spec(cfg.raw)
+        sim = cfg.section("simulation")
+        inner = SlippageSimRouter(
+            entry_slippage_ticks=float(sim.get("entry_slippage_ticks", 1.0)),
+            exit_slippage_ticks=float(sim.get("exit_slippage_ticks", 1.0)),
+            tick_size=self.contract.tick_size,
+        )
         self.broker = PaperBrokerAdapter(
             paper_mode=cfg.paper_mode,
             contract=self.contract,
             protective_orders=str(cfg.section("broker").get("protective_orders", "CLIENT_SIDE_PROTECTION")),
-            inner=SimOrderRouter(),
+            inner=inner,
         )
         self.broker.connect()
         self.idempotency = OrderIdempotencyStore(Path(str(cfg.raw.get("persistence", {}).get("idempotency_file", log_dir / "order_idempotency.jsonl"))))
@@ -68,6 +76,16 @@ class LiveStack:
             persistence=StatePersistence(state_path),
         )
         self._patch_engine_broker_submit()
+
+    def _with_live_atr(self, signal: PineSignal) -> PineSignal:
+        """Prefer NT-computed ATR over Pine webhook placeholder (often 1.0)."""
+        try:
+            live_atr = float(self.market_data.atr())
+        except (TypeError, ValueError, AttributeError):
+            live_atr = 0.0
+        if live_atr > 0 and signal.atr <= 1.5:
+            return replace(signal, atr=live_atr)
+        return signal
 
     def _patch_engine_broker_submit(self) -> None:
         """Route engine orders through PaperBrokerAdapter without modifying Phase73 engine source."""
@@ -91,6 +109,7 @@ class LiveStack:
             action_name = "MARKET_BUY" if signal.direction == "LONG" else "MARKET_SELL"
             if self.idempotency.seen(signal.signal_id, action_name):
                 return {"ok": False, "reason": "ORDER_IDEMPOTENT_DUPLICATE"}
+            signal = self._with_live_atr(signal)
             result = original_execute(signal, state_before, take_action)
             if result.get("ok") and result.get("fill_price") is not None:
                 from phase73.execution.orders import Order, OrderSide
@@ -101,9 +120,12 @@ class LiveStack:
                 self.idempotency.record(signal.signal_id, action_name, order_id=order.order_id)
                 risk = self.engine.cfg.stop_atr * signal.atr
                 slip = self.broker.record_slippage(signal.signal_price, result["fill_price"], risk)
+                trade_id = str(uuid.uuid4())
+                self._active_trade_id = trade_id
+                self._active_entry_atr = signal.atr
                 self.journal.open_trade(
                     TradeJournalEntry(
-                        trade_id=str(uuid.uuid4()),
+                        trade_id=trade_id,
                         pine_signal_id=signal.signal_id,
                         direction=signal.direction,
                         signal_timestamp=signal.signal_time_utc.isoformat(),
@@ -122,9 +144,31 @@ class LiveStack:
             return result
 
         def execute_exit(state_before, exit_dec, bar):
+            trade_id = self._active_trade_id
+            entry_atr = self._active_entry_atr
+            mgmt = self.engine.mgmt
             result = original_exit(state_before, exit_dec, bar)
-            if self.engine.mgmt is None and result.get("ok"):
+            if result.get("ok"):
                 self.broker.broker_position.side = "FLAT"
+                if trade_id and mgmt:
+                    exit_px = float(exit_dec.exit_price or bar.close)
+                    risk = self.engine.cfg.stop_atr * entry_atr
+                    move = (exit_px - mgmt.entry_price) if mgmt.side == "LONG" else (mgmt.entry_price - exit_px)
+                    gross_r = move / risk if risk > 0 else 0.0
+                    hold_min = (bar.timestamp - mgmt.entry_time).total_seconds() / 60.0
+                    self.journal.close_trade(
+                        trade_id,
+                        exit_timestamp=bar.timestamp.isoformat(),
+                        exit_price=exit_px,
+                        exit_reason=exit_dec.reason,
+                        gross_R=gross_r,
+                        net_R=gross_r,
+                        hold_time_minutes=hold_min,
+                        MFE=mgmt.mfe_r,
+                        MAE=mgmt.mae_r,
+                    )
+                    self._active_trade_id = None
+                    self._active_entry_atr = 0.0
             return result
 
         self.engine._execute_entry = execute_entry  # type: ignore[method-assign]

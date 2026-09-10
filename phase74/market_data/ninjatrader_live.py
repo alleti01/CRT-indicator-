@@ -30,6 +30,7 @@ class NinjaTraderLiveDataProvider(StreamLiveDataProvider):
         auth_token: str = "",
         bootstrap_bars: int = 15,
         expected_contract_prefix: str = "NQ",
+        preserve_bars_on_disconnect: bool = True,
         on_bar: Callable[[Bar], None] | None = None,
         **kwargs,
     ) -> None:
@@ -39,11 +40,13 @@ class NinjaTraderLiveDataProvider(StreamLiveDataProvider):
         self._auth_token = auth_token or os.environ.get("NINJATRADER_BRIDGE_TOKEN", "")
         self._bootstrap_bars = bootstrap_bars
         self._expected_contract_prefix = expected_contract_prefix
+        self._preserve_bars_on_disconnect = preserve_bars_on_disconnect
         self._on_bar = on_bar
         self._server: NinjaTraderBridgeServer | None = None
         self._contract = ""
         self._was_connected = False
         self._last_bridge_stats: BridgeStats | None = None
+        self._disconnect_count = 0
 
     @property
     def contract_identity(self) -> str | None:
@@ -92,10 +95,16 @@ class NinjaTraderLiveDataProvider(StreamLiveDataProvider):
         log.info("ninjatrader authenticated contract=%s", contract)
 
     def _handle_disconnect(self) -> None:
-        log.warning("ninjatrader bridge disconnected — fail-closed")
+        self._disconnect_count += 1
+        log.warning(
+            "ninjatrader bridge disconnected — fail-closed (preserve_bars=%s bars=%s)",
+            self._preserve_bars_on_disconnect,
+            len(self._cache.recent(500)),
+        )
         self._connection = ConnectionState.DATA_DISCONNECTED
-        self._cache.clear()
-        self._sim_now = None
+        if not self._preserve_bars_on_disconnect:
+            self._cache.clear()
+            self._sim_now = None
         self._contract = ""
 
     def _handle_bar(self, bar: Bar, stats: BridgeStats) -> None:

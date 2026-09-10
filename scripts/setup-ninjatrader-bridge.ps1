@@ -37,12 +37,10 @@ function New-RandomToken {
 }
 
 function Sync-BridgeTokenFile {
-    param([string]$Token)
-    foreach ($custom in (Find-NinjaTraderCustomDirs)) {
-        $tokenPath = Join-Path $custom $TokenFileName
-        Set-Content -Path $tokenPath -Value $Token -Encoding ASCII -NoNewline
-        Write-Host "Token file: $tokenPath" -ForegroundColor Green
-    }
+    param([string]$Token, [string]$CustomDir)
+    $tokenPath = Join-Path $CustomDir $TokenFileName
+    Set-Content -Path $tokenPath -Value $Token -Encoding ASCII -NoNewline
+    Write-Host "Token file: $tokenPath" -ForegroundColor Green
 }
 
 Write-Host "`n=== CRT NinjaTrader Bridge Setup ===" -ForegroundColor Cyan
@@ -53,10 +51,17 @@ if (-not $ntIndDirs -or $ntIndDirs.Count -eq 0) {
     exit 1
 }
 
-foreach ($ntInd in $ntIndDirs) {
-    Copy-Item -Force $SourceCs (Join-Path $ntInd "CRTBarBridge.cs")
-    Write-Host "Installed: $(Join-Path $ntInd 'CRTBarBridge.cs')" -ForegroundColor Green
+# Install to ONE Indicators folder only — duplicate copies cause CS0111/CS0121 on compile.
+$ntInd = $ntIndDirs[0]
+foreach ($extra in $ntIndDirs | Select-Object -Skip 1) {
+    $dup = Join-Path $extra "CRTBarBridge.cs"
+    if (Test-Path $dup) {
+        Remove-Item -Force $dup
+        Write-Host "Removed duplicate: $dup" -ForegroundColor Yellow
+    }
 }
+Copy-Item -Force $SourceCs (Join-Path $ntInd "CRTBarBridge.cs")
+Write-Host "Installed: $(Join-Path $ntInd 'CRTBarBridge.cs')" -ForegroundColor Green
 
 $envFile = Join-Path $RepoRoot "phase74\.env"
 $bridgeToken = $null
@@ -81,7 +86,8 @@ PHASE74_WEBHOOK_SECRET=$webhookSecret
 PHASE74_KILL_SWITCH=0
 "@ | Set-Content -Path $envFile -Encoding UTF8
 
-Sync-BridgeTokenFile -Token $bridgeToken
+$customDir = Split-Path (Split-Path $ntInd -Parent) -Parent
+Sync-BridgeTokenFile -Token $bridgeToken -CustomDir $customDir
 
 Write-Host "Wrote secrets: phase74\.env" -ForegroundColor Green
 Write-Host "Auth token synced to crt_bridge_token.txt (CRTBarBridge reads this when AuthToken is blank)." -ForegroundColor Green

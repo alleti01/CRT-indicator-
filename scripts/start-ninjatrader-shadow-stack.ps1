@@ -23,7 +23,7 @@ if ($existing) {
 
 Set-Location $RepoRoot
 Write-Host "`nStarting shadow bot in background..." -ForegroundColor Cyan
-Start-Process -FilePath $python -ArgumentList "phase74\run_live.py", "--provider", "ninjatrader", "--mode", "shadow", "--webhook", "--bars", "120" -WorkingDirectory $RepoRoot -WindowStyle Hidden
+Start-Process -FilePath $python -ArgumentList "phase74\run_live.py", "--provider", "ninjatrader", "--mode", "shadow", "--webhook", "--bars", "480" -WorkingDirectory $RepoRoot -WindowStyle Hidden
 
 $deadline = (Get-Date).AddSeconds(15)
 $ready = $false

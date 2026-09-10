@@ -1,0 +1,6 @@
+time,open,high,low,close,GLD_armed_long,GLD_armed_short,GLD_evidence_threshold_long,GLD_evidence_threshold_short,GLD_decide_e_long,GLD_decide_e_short,GLD_p4_keep_long,GLD_p4_keep_short,GLD_h1_keep_long,GLD_h1_keep_short,GLD_gate_open,GLD_not_in_cooldown,GLD_take_long,GLD_take_short,GLD_bar_time_utc_ms,GLD_pivot_high_center_lag,GLD_pivot_low_center_lag,GLD_swing_period
+1704067200000,100,100.5,99.5,100,0,0,0,0,0,0,1,1,1,1,1,1,0,0,1704067200000,,,5
+1704067260000,100,100.5,99.5,100,1,0,0,0,0,0,1,1,1,1,1,1,0,0,1704067260000,,,5
+1704067320000,100,100.5,99.5,100,1,0,1,0,1,0,1,1,1,1,1,1,1,0,1704067320000,,,5
+1704067380000,100,100.5,99.5,100,0,0,0,0,0,0,1,1,1,1,1,1,0,0,1704067380000,5,,5
+1704067440000,100,100.5,99.5,100,0,1,0,1,0,1,1,1,1,1,1,1,0,1,1704067440000,,5,5

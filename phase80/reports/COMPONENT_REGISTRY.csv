@@ -1,0 +1,31 @@
+component_id,source_phase,component_name,role,causal_status,directional_status,prior_result,eligible_phase80,reason,implementation_source,required_data,notes
+P60_DEV_HTF_5M,60,Developing 5M HTF context,CONTEXT,CAUSAL_PASS,INFRASTRUCTURE,P60 causality PASS,True,Canonical developing HTF,phase60/python/context_maps.py,1m OHLC,Not in parquet; use 5m_state proxy
+P60_DEV_HTF_15M,60,Developing 15M HTF context,CONTEXT,CAUSAL_PASS,INFRASTRUCTURE,P60 causality PASS,True,Canonical developing HTF,phase60/python/context_maps.py,1m OHLC,Use 15m_state proxy in parquet
+P58D_LOCATION_SCORE,58D,Location score threshold,LOCATION,CAUSAL_PASS,NON_DIRECTIONAL,P64 location marginal,True,Entry-time score in P60 stream,canon parquet location_score,P60 parquet,Normalized score at signal
+P58D_REACTION_SCORE,58D,Reaction score threshold,REACTION,CAUSAL_PASS,NON_DIRECTIONAL,P63 R3 best but net negative,True,Entry-time score,canon parquet reaction_score,P60 parquet,
+P58D_TOTAL_EVIDENCE,58D,Total evidence count,CONTEXT,CAUSAL_PASS,DIRECTIONAL_COMPONENT,P58D canonical,True,Part of signal stack,canon parquet total_evidence,P60 parquet,Directional signal field — filter only
+P58E_GOOD_LOCATION,58E,Good location flag,LOCATION,CAUSAL_PASS,NON_DIRECTIONAL,P64 marginal,True,Binary location gate,canon parquet good_location,P60 parquet,
+P58E_MARKET_STATE_REV,58E,REVERSAL_TRANSITION state,CONTEXT,CAUSAL_PASS,NON_DIRECTIONAL,P75 observational 1.20R cluster,True,Timing/context not direction,canon parquet market_state,P60 parquet,
+P58E_ALIGNED_ACTIVE,58E,Aligned with active move,CONTEXT,CAUSAL_PASS,NON_DIRECTIONAL,Infrastructure,True,Activity alignment,canon parquet aligned_with_active,P60 parquet,
+P58F_CONF_HIGH,58F,Direction confidence HIGH+,CONTEXT,CAUSAL_PASS,DIRECTIONAL_COMPONENT,P58F audit layer,True,Filter on existing signal confidence,canon parquet direction_confidence_band,P60 parquet,Not new direction
+P58F_HTF_SUPPORT,58F,HTF support code,CONTEXT,CAUSAL_PASS,NON_DIRECTIONAL,Infrastructure,True,Soft HTF agreement,canon parquet htf_support_code,P60 parquet,
+P58F_HTF_CONTRA,58F,HTF contradiction absent,CONFLICT,CAUSAL_PASS,VETO,Infrastructure,True,Veto component,canon parquet htf_contra_code,P60 parquet,NOT htf_contra
+P58F_FALSE_REV_LOW,58F,Low false reversal risk,CONFLICT,CAUSAL_PASS,VETO,Infrastructure,True,Veto false reversal,canon parquet false_reversal_risk,P60 parquet,
+P58F_REVERSAL_STRONG,58F,Strong reversal support,REACTION,CAUSAL_PASS,NON_DIRECTIONAL,Infrastructure,True,Reaction quality,canon parquet reversal_support,P60 parquet,
+P58F_PULLBACK_OK,58F,No pullback conflict,CONFLICT,CAUSAL_PASS,VETO,Infrastructure,True,Veto pullback conflict,canon parquet pullback_conflict,P60 parquet,
+P58F_HTF_LTF_AGREE,58F,HTF/LTF not disagreeing,CONFLICT,CAUSAL_PASS,VETO,Infrastructure,True,Veto disagreement,canon parquet htf_ltf_disagree,P60 parquet,
+P58F_CT_LOW,58F,Low countertrend ratio,CONFLICT,CAUSAL_PASS,VETO,Infrastructure,True,Countertrend veto,canon parquet countertrend_ratio,P60 parquet,train p50 threshold
+P75_M15_NOT_NEUTRAL,75,15m not NEUTRAL,CONTEXT,CAUSAL_PASS,NON_DIRECTIONAL,P75 chop observational,True,Context filter only,canon parquet 15m_state,P60 parquet,
+P75_M5_TRENDING,75,5m BULLISH or BEARISH,CONTEXT,CAUSAL_PASS,NON_DIRECTIONAL,Observational,True,Activity/context,canon parquet 5m_state,P60 parquet,
+P78_SB_WINDOW,78,Silver Bullet time window,TIMING,CAUSAL_PASS,NON_DIRECTIONAL,P78 NO_DIRECTIONAL_INFORMATION,True,"Timing only, not SB direction",phase80 feature from entry_ts,entry_ts,ET windows from P78 config
+P78_RTH,78,Regular trading hours,TIMING,CAUSAL_PASS,NON_DIRECTIONAL,Infrastructure,True,Session timing,phase80 feature from entry_ts,entry_ts,Chicago RTH approx
+P76_HVN_ZONE,76,HVN zone proximity,LOCATION,CAUSAL_PASS,NON_DIRECTIONAL,P76 MODERATE_LOCATION_INFORMATION,False,Not in P60 parquet — requires bar replay,phase76/python/auction_engine.py,1m OHLC replay,Deferred: heavy replay
+P77_FULL_CONFLUENCE,77,Orochi 8-layer confluence,CONTEXT,CAUSAL_PASS,REJECTED,P77 N_TOO_SMALL,False,Insufficient sample,phase77/python/framework_layers.py,Tick/1m pilot,
+P78_SB_DIRECTION,78,Silver Bullet directional sequence,DIRECTION,CAUSAL_PASS,REJECTED,P78 NO_DIRECTIONAL_INFORMATION,False,Direction rejected,phase78/python/sequence.py,1m OHLC,
+P78B_LIQ_MAP,78B,SB liquidity sweep map,LOCATION,CAUSAL_PASS,REJECTED,P78B over-inclusive sweeps,False,100% sweep rate,phase78b/python/liquidity.py,1m OHLC,
+P67_MULTISTAGE,67,Multistage entry families,DIRECTION,CAUSAL_PASS,REJECTED,P67 SYMMETRIC_NO_EDGE,False,All families rejected,phase67/,1m OHLC,
+P68_MICRO,68,Microstructure direction,DIRECTION,CAUSAL_PASS,REJECTED,P68 all REJECT,False,Pilot failed,phase68/,Tick pilot,
+P79_ATM_BE,79,ATM +1R breakeven mgmt,TIMING,N/A,REJECTED,P79 ATM_REJECT,False,Management not selection,phase79/,N/A,Management excluded
+P57_FVG,57,FVG directional branch,DIRECTION,LEAK_RISK,REJECTED,Historical leak,False,Do not resurrect,phase57/,1m,
+P59_HTF_LEAK,59,Early HTF completed-bar,CONTEXT,LEAK_FAIL,INVALID,Future leakage,False,Explicit exclude,pre-P60 HTF,HTF,
+POST_ENTRY_OUTCOMES,60,MFE/MAE/net_R at exit,MEMORY,LEAK_FAIL,INVALID,Post-entry,False,Outcome leakage,canon parquet net_R_m1,N/A,Use only for M0 eval

@@ -1,0 +1,2 @@
+time,open,high,low,close,GLD_armed_long,GLD_armed_short,GLD_evidence_threshold_long,GLD_evidence_threshold_short,GLD_decide_e_long,GLD_decide_e_short,GLD_p4_keep_long,GLD_p4_keep_short,GLD_h1_keep_long,GLD_h1_keep_short,GLD_gate_open,GLD_not_in_cooldown,GLD_take_long,GLD_take_short,GLD_bar_time_utc_ms,GLD_htf_warmup_ready,GLD_arm_total_long,GLD_arm_total_short,GLD_arm_total_long_prov,GLD_arm_total_short_prov,GLD_pass_reason_code
+1704067200000,100,100.5,99.5,100,1,0,,,0,0,1,1,1,1,1,1,0,0,1704067200000,0,,,0,0,1

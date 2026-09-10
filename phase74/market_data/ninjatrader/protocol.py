@@ -10,7 +10,7 @@ from phase73.market_data.bar import Bar
 
 
 def parse_line(line: str) -> dict[str, Any]:
-    line = line.strip().lstrip("\ufeff")
+    line = line.strip()
     if not line:
         raise ValueError("empty line")
     obj = json.loads(line)
@@ -66,4 +66,4 @@ def hello_from_message(msg: dict[str, Any]) -> HelloMessage:
 
 
 def encode_ack(*, ok: bool, detail: str = "", seq: int = 0) -> str:
-    return json.dumps({"type": "ack", "ok": ok, "detail": detail, "seq": seq}, separators=(",", ":")) + "\n"
+    return json.dumps({"type": "ack", "ok": ok, "detail": detail, "seq": seq}) + "\n"

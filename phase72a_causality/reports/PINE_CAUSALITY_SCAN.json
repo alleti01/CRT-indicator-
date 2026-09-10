@@ -1,0 +1,334 @@
+{
+  "pine_path": "/Users/anishalleti/CRT indicator/TV_REVIEW/phase72a_autonomous_trader.pine",
+  "sha256": "d75ff747a491c176eda588efc945822b8bd4a6aeaaeaf1d2bdea2b7a8e32cc1f",
+  "freeze_ok": true,
+  "line_count": 1837,
+  "hits": {
+    "pivothigh": [
+      {
+        "line": 191,
+        "text": "m5PivotH = request.security(syminfo.tickerid, \"5\", ta.pivothigh(high, swingPeriod, swingPeriod), lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 218,
+        "text": "pivotHigh = ta.pivothigh(high, swingPeriod, swingPeriod)"
+      }
+    ],
+    "pivotlow": [
+      {
+        "line": 192,
+        "text": "m5PivotL = request.security(syminfo.tickerid, \"5\", ta.pivotlow(low, swingPeriod, swingPeriod), lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 219,
+        "text": "pivotLow  = ta.pivotlow(low, swingPeriod, swingPeriod)"
+      }
+    ],
+    "valuewhen": [
+      {
+        "line": 232,
+        "text": "shCur  = ta.valuewhen(not na(pivotHigh), pivotHigh, 0)"
+      },
+      {
+        "line": 233,
+        "text": "shPrev = ta.valuewhen(not na(pivotHigh), pivotHigh, 1)"
+      },
+      {
+        "line": 234,
+        "text": "slCur  = ta.valuewhen(not na(pivotLow), pivotLow, 0)"
+      },
+      {
+        "line": 235,
+        "text": "slPrev = ta.valuewhen(not na(pivotLow), pivotLow, 1)"
+      }
+    ],
+    "barssince": [],
+    "request_security": [
+      {
+        "line": 178,
+        "text": "[m5C_comp, m5O_comp, m5H_comp, m5L_comp] = request.security("
+      },
+      {
+        "line": 180,
+        "text": "[m15C_comp, m15H_comp, m15L_comp] = request.security("
+      },
+      {
+        "line": 182,
+        "text": "m5BarTime = request.security(syminfo.tickerid, \"5\", time[1], lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 183,
+        "text": "m15BarTime = request.security(syminfo.tickerid, \"15\", time[1], lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 191,
+        "text": "m5PivotH = request.security(syminfo.tickerid, \"5\", ta.pivothigh(high, swingPeriod, swingPeriod), lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 192,
+        "text": "m5PivotL = request.security(syminfo.tickerid, \"5\", ta.pivotlow(low, swingPeriod, swingPeriod), lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 205,
+        "text": "m15H4 = request.security(syminfo.tickerid, \"15\", high[4], lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 206,
+        "text": "m15L4 = request.security(syminfo.tickerid, \"15\", low[4], lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 207,
+        "text": "m15C12 = request.security(syminfo.tickerid, \"15\", close[12], lookahead=barmerge.lookahead_off)"
+      }
+    ],
+    "lookahead_on": [],
+    "lookahead_off": [
+      {
+        "line": 179,
+        "text": "syminfo.tickerid, \"5\", [close[1], open[1], high[1], low[1]], lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 181,
+        "text": "syminfo.tickerid, \"15\", [close[1], high[1], low[1]], lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 182,
+        "text": "m5BarTime = request.security(syminfo.tickerid, \"5\", time[1], lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 183,
+        "text": "m15BarTime = request.security(syminfo.tickerid, \"15\", time[1], lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 191,
+        "text": "m5PivotH = request.security(syminfo.tickerid, \"5\", ta.pivothigh(high, swingPeriod, swingPeriod), lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 192,
+        "text": "m5PivotL = request.security(syminfo.tickerid, \"5\", ta.pivotlow(low, swingPeriod, swingPeriod), lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 205,
+        "text": "m15H4 = request.security(syminfo.tickerid, \"15\", high[4], lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 206,
+        "text": "m15L4 = request.security(syminfo.tickerid, \"15\", low[4], lookahead=barmerge.lookahead_off)"
+      },
+      {
+        "line": 207,
+        "text": "m15C12 = request.security(syminfo.tickerid, \"15\", close[12], lookahead=barmerge.lookahead_off)"
+      }
+    ],
+    "series_negative_offset": [],
+    "bar_index_minus": [
+      {
+        "line": 1539,
+        "text": "signalBar := bar_index - 1"
+      },
+      {
+        "line": 1542,
+        "text": "signalBar := bar_index - 1"
+      }
+    ],
+    "bar_index_plus": [
+      {
+        "line": 1251,
+        "text": "p58EntryBar := bar_index + 1"
+      },
+      {
+        "line": 1256,
+        "text": "p58Deadline := bar_index + 1 + maxHoldBars"
+      }
+    ],
+    "barstate_confirmed": [
+      {
+        "line": 986,
+        "text": "if barstate.isconfirmed and not TZ_WARN and bar_index >= WARMUP"
+      },
+      {
+        "line": 1276,
+        "text": "if debugParityMarkers and barstate.isconfirmed"
+      },
+      {
+        "line": 1376,
+        "text": "plotchar(debugTrace and inTraceWin and barstate.isconfirmed, \"TRC\", \"\u2022\", location=location.bottom, color=color.new(color.blue, 70), size=size.tiny)"
+      },
+      {
+        "line": 1411,
+        "text": "if lwDiagWin and barstate.isconfirmed"
+      },
+      {
+        "line": 1465,
+        "text": "if inE59Win and barstate.isconfirmed"
+      },
+      {
+        "line": 1526,
+        "text": "if inH59Win and barstate.isconfirmed"
+      },
+      {
+        "line": 1536,
+        "text": "if barstate.isconfirmed and DEBUG_MANUAL_SIGNAL"
+      },
+      {
+        "line": 1545,
+        "text": "if showPyExpected and barstate.isconfirmed"
+      },
+      {
+        "line": 1589,
+        "text": "plot(exportParity and barstate.isconfirmed ? signalLongFlag : na, \"P72B_signalLong\", display=display.data_window)"
+      },
+      {
+        "line": 1590,
+        "text": "plot(exportParity and barstate.isconfirmed ? signalShortFlag : na, \"P72B_signalShort\", display=display.data_window)"
+      },
+      {
+        "line": 1591,
+        "text": "plot(exportParity and barstate.isconfirmed ? enterLongFlag : na, \"P72B_enterLong\", display=display.data_window)"
+      },
+      {
+        "line": 1592,
+        "text": "plot(exportParity and barstate.isconfirmed ? enterShortFlag : na, \"P72B_enterShort\", display=display.data_window)"
+      },
+      {
+        "line": 1593,
+        "text": "plot(exportParity and barstate.isconfirmed ? exitStopFlag : na, \"P72B_exitStop\", display=display.data_window)"
+      },
+      {
+        "line": 1594,
+        "text": "plot(exportParity and barstate.isconfirmed ? exitTargetFlag : na, \"P72B_exitTarget\", display=display.data_window)"
+      },
+      {
+        "line": 1595,
+        "text": "plot(exportParity and barstate.isconfirmed ? exitTimeFlag : na, \"P72B_exitTime\", display=display.data_window)"
+      },
+      {
+        "line": 1596,
+        "text": "plot(exportParity and barstate.isconfirmed ? float(p58State) : na, \"P72B_state\", display=display.data_window)"
+      },
+      {
+        "line": 1597,
+        "text": "plot(exportParity and barstate.isconfirmed ? posStateCode : na, \"P72B_direction\", display=display.data_window)"
+      },
+      {
+        "line": 1598,
+        "text": "plot(exportParity and barstate.isconfirmed ? atrUse : na, \"P72B_ATR\", display=display.data_window)"
+      },
+      {
+        "line": 1599,
+        "text": "plot(exportParity and barstate.isconfirmed ? entryPx : na, \"P72B_entryPrice\", display=display.data_window)"
+      },
+      {
+        "line": 1600,
+        "text": "plot(exportParity and barstate.isconfirmed ? stopPx : na, \"P72B_stopPrice\", display=display.data_window)"
+      },
+      {
+        "line": 1601,
+        "text": "plot(exportParity and barstate.isconfirmed ? tgtPx : na, \"P72B_targetPrice\", display=display.data_window)"
+      },
+      {
+        "line": 1602,
+        "text": "plot(exportParity and barstate.isconfirmed ? time : na, \"P72B_unixMs\", display=display.data_window)"
+      },
+      {
+        "line": 1604,
+        "text": "alertcondition(exportParity and barstate.isconfirmed and signalLongFlag == 1.0, \"P72B SIGNAL_LONG\", \"P72B SIGNAL_LONG\")"
+      },
+      {
+        "line": 1605,
+        "text": "alertcondition(exportParity and barstate.isconfirmed and signalShortFlag == 1.0, \"P72B SIGNAL_SHORT\", \"P72B SIGNAL_SHORT\")"
+      },
+      {
+        "line": 1606,
+        "text": "alertcondition(exportParity and barstate.isconfirmed and enterLongFlag == 1.0, \"P72B ENTER_LONG\", \"P72B ENTER_LONG\")"
+      },
+      {
+        "line": 1607,
+        "text": "alertcondition(exportParity and barstate.isconfirmed and enterShortFlag == 1.0, \"P72B ENTER_SHORT\", \"P72B ENTER_SHORT\")"
+      },
+      {
+        "line": 1683,
+        "text": "bool p72bHitInspect2129 = enableHistoricalForensicInspect and barstate.isconfirmed and f_p72bOnInspectBar(_p72bInspectTs2129)"
+      },
+      {
+        "line": 1684,
+        "text": "bool p72bHitInspect2113 = enableHistoricalForensicInspect and barstate.isconfirmed and f_p72bOnInspectBar(_p72bInspectTs2113)"
+      },
+      {
+        "line": 1694,
+        "text": "if manualParityMode and barstate.isconfirmed"
+      },
+      {
+        "line": 1835,
+        "text": "if barstate.isconfirmed"
+      }
+    ]
+  },
+  "request_security_audit": [
+    {
+      "line": 178,
+      "lookahead_off": true,
+      "lookahead_on": false,
+      "text": "[m5C_comp, m5O_comp, m5H_comp, m5L_comp] = request.security( syminfo.tickerid, \"5\", [close[1], open[1], high[1], low[1]], lookahead=barmerge.lookahead_off) [m15C_comp, m15H_comp, m15L_comp] = request.security("
+    },
+    {
+      "line": 180,
+      "lookahead_off": true,
+      "lookahead_on": false,
+      "text": "[m15C_comp, m15H_comp, m15L_comp] = request.security( syminfo.tickerid, \"15\", [close[1], high[1], low[1]], lookahead=barmerge.lookahead_off) m5BarTime = request.security(syminfo.tickerid, \"5\", time[1], lookahead=barmerge.lookahead_off)"
+    },
+    {
+      "line": 182,
+      "lookahead_off": true,
+      "lookahead_on": false,
+      "text": "m5BarTime = request.security(syminfo.tickerid, \"5\", time[1], lookahead=barmerge.lookahead_off) m15BarTime = request.security(syminfo.tickerid, \"15\", time[1], lookahead=barmerge.lookahead_off) "
+    },
+    {
+      "line": 183,
+      "lookahead_off": true,
+      "lookahead_on": false,
+      "text": "m15BarTime = request.security(syminfo.tickerid, \"15\", time[1], lookahead=barmerge.lookahead_off)  m5AtrRaw = ta.sma(m5H - m5L, 14)"
+    },
+    {
+      "line": 191,
+      "lookahead_off": true,
+      "lookahead_on": false,
+      "text": "m5PivotH = request.security(syminfo.tickerid, \"5\", ta.pivothigh(high, swingPeriod, swingPeriod), lookahead=barmerge.lookahead_off) m5PivotL = request.security(syminfo.tickerid, \"5\", ta.pivotlow(low, swingPeriod, swingPeriod), lookahead=barm"
+    },
+    {
+      "line": 192,
+      "lookahead_off": true,
+      "lookahead_on": false,
+      "text": "m5PivotL = request.security(syminfo.tickerid, \"5\", ta.pivotlow(low, swingPeriod, swingPeriod), lookahead=barmerge.lookahead_off) var float m5LastSH = na var float m5PrevSH = na"
+    },
+    {
+      "line": 205,
+      "lookahead_off": true,
+      "lookahead_on": false,
+      "text": "m15H4 = request.security(syminfo.tickerid, \"15\", high[4], lookahead=barmerge.lookahead_off) m15L4 = request.security(syminfo.tickerid, \"15\", low[4], lookahead=barmerge.lookahead_off) m15C12 = request.security(syminfo.tickerid, \"15\", close[1"
+    },
+    {
+      "line": 206,
+      "lookahead_off": true,
+      "lookahead_on": false,
+      "text": "m15L4 = request.security(syminfo.tickerid, \"15\", low[4], lookahead=barmerge.lookahead_off) m15C12 = request.security(syminfo.tickerid, \"15\", close[12], lookahead=barmerge.lookahead_off) "
+    },
+    {
+      "line": 207,
+      "lookahead_off": true,
+      "lookahead_on": false,
+      "text": "m15C12 = request.security(syminfo.tickerid, \"15\", close[12], lookahead=barmerge.lookahead_off)  // HTF debug (known_at = current 1M bar close)"
+    }
+  ],
+  "summary": {
+    "pivothigh_count": 2,
+    "pivotlow_count": 2,
+    "valuewhen_count": 4,
+    "barssince_count": 0,
+    "request_security_count": 9,
+    "lookahead_on_count": 0,
+    "lookahead_off_count": 9,
+    "series_negative_offset_count": 0,
+    "security_missing_lookahead": 0
+  }
+}

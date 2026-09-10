@@ -62,11 +62,6 @@ class NinjaTraderLiveDataProvider(StreamLiveDataProvider):
         if not self._auth_token:
             raise RuntimeError("NINJATRADER_BRIDGE_TOKEN not set — required for NinjaTrader bridge")
         was_disconnected = self._connection == ConnectionState.DATA_DISCONNECTED
-        trust_localhost = os.environ.get("NINJATRADER_BRIDGE_TRUST_LOCALHOST", "").lower() in (
-            "1",
-            "true",
-            "yes",
-        )
         self._server = NinjaTraderBridgeServer(
             self._host,
             self._port,
@@ -74,7 +69,6 @@ class NinjaTraderLiveDataProvider(StreamLiveDataProvider):
             on_bar=self._handle_bar,
             on_authenticated=self._handle_authenticated,
             on_disconnect=self._handle_disconnect,
-            trust_localhost=trust_localhost,
         )
         self._server.start()
         if was_disconnected and not self._was_connected:

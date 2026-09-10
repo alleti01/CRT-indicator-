@@ -1,0 +1,11 @@
+{
+  "verdict": "PHASE79_ATM_REJECT",
+  "pass_fails": [
+    "AvgR did not improve",
+    "TotalR did not improve",
+    "PF materially deteriorated (>5%)",
+    "MaxDD materially worse (>10%)",
+    "LONG AvgR did not improve",
+    "SHORT AvgR did not improve"
+  ]
+}

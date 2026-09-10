@@ -16,12 +16,9 @@
     "11_path_audit": "PARTIAL",
     "12_management": "PENDING",
     "13_matched_controls": "PENDING",
-    "14_randomized_controls": "FAIL",
+    "14_randomized_controls": "PENDING",
     "15_wf_stability": "PENDING",
     "16_final_verdict": "CONTINUE"
   },
-  "verdict": "PHASE76_NO_AUCTION_INFORMATION_PENDING_SR",
-  "random_gate_survivors": [],
-  "10_sr_controls": "PASS",
-  "13_matched_controls": "PASS"
+  "verdict": "CONTINUE"
 }

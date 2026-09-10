@@ -1,0 +1,1 @@
+model_id,retention_pct,N_short,N_val,short_AvgR,short_PF,short_TotalR,short_MaxDD,short_WinRate,delta_short_AvgR,delta_short_PF,delta_short_TotalR,port_AvgR,port_PF,port_TotalR,port_MaxDD,delta_port_AvgR,delta_port_TotalR,kept_AvgR,rejected_AvgR,kept_N,rejected_N,val_AvgR,val_N,val_pass,year_positive_frac

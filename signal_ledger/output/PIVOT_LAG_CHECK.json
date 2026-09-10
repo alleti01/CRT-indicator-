@@ -1,0 +1,10 @@
+{
+  "confirmed": true,
+  "swing_period": 5.0,
+  "high_lag_samples": [
+    5.0
+  ],
+  "low_lag_samples": [
+    5.0
+  ]
+}

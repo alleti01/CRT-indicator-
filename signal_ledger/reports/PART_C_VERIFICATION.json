@@ -1,0 +1,101 @@
+{
+  "item_1_cold_start_reach": {
+    "verdict": "FULL_HISTORICAL_RECALC_THEN_WARM_AT_LIVE_EDGE",
+    "signal_bars_checked": 2918,
+    "signal_bars_in_cold_start": 0,
+    "m1_bars_in_dataset": 3140775,
+    "warmup_min_bars": 185,
+    "samples": [
+      {
+        "window": "aug28_session",
+        "bar_index": 3136392,
+        "bars_since_script_init": 3136392,
+        "gld_htf_warmup_ready": true,
+        "gld_in_cold_start_window": false,
+        "gld_pass_reason_code": 0
+      },
+      {
+        "window": "aug28_session",
+        "bar_index": 3136393,
+        "bars_since_script_init": 3136393,
+        "gld_htf_warmup_ready": true,
+        "gld_in_cold_start_window": false,
+        "gld_pass_reason_code": 0
+      },
+      {
+        "window": "aug28_session",
+        "bar_index": 3136412,
+        "bars_since_script_init": 3136412,
+        "gld_htf_warmup_ready": true,
+        "gld_in_cold_start_window": false,
+        "gld_pass_reason_code": 0
+      },
+      {
+        "window": "aug28_session",
+        "bar_index": 3136413,
+        "bars_since_script_init": 3136413,
+        "gld_htf_warmup_ready": true,
+        "gld_in_cold_start_window": false,
+        "gld_pass_reason_code": 0
+      },
+      {
+        "window": "aug28_session",
+        "bar_index": 3136511,
+        "bars_since_script_init": 3136511,
+        "gld_htf_warmup_ready": true,
+        "gld_in_cold_start_window": false,
+        "gld_pass_reason_code": 0
+      },
+      {
+        "window": "aug28_session",
+        "bar_index": 3136512,
+        "bars_since_script_init": 3136512,
+        "gld_htf_warmup_ready": true,
+        "gld_in_cold_start_window": false,
+        "gld_pass_reason_code": 0
+      },
+      {
+        "window": "aug28_session",
+        "bar_index": 3136539,
+        "bars_since_script_init": 3136539,
+        "gld_htf_warmup_ready": true,
+        "gld_in_cold_start_window": false,
+        "gld_pass_reason_code": 0
+      },
+      {
+        "window": "aug28_session",
+        "bar_index": 3136540,
+        "bars_since_script_init": 3136540,
+        "gld_htf_warmup_ready": true,
+        "gld_in_cold_start_window": false,
+        "gld_pass_reason_code": 0
+      }
+    ]
+  },
+  "item_2_signal_path_regression": {
+    "layer_a_gld_reads": [],
+    "static_signal_path_unchanged": true,
+    "mirror_windows": [
+      {
+        "window_id": "aug28_session",
+        "bars": 555,
+        "counts": {
+          "signal_long": 6,
+          "signal_short": 9,
+          "enter_long": 6,
+          "enter_short": 9
+        }
+      },
+      {
+        "window_id": "jul_aug_2026",
+        "bars": 58784,
+        "counts": {
+          "signal_long": 734,
+          "signal_short": 710,
+          "enter_long": 734,
+          "enter_short": 710
+        }
+      }
+    ]
+  }
+}

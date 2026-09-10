@@ -1,0 +1,11 @@
+component_id,source_phase,component_name,role,prior_result,exclude_reason,notes
+P76_HVN_ZONE,76,HVN zone proximity,LOCATION,P76 MODERATE_LOCATION_INFORMATION,Not in P60 parquet — requires bar replay,Deferred: heavy replay
+P77_FULL_CONFLUENCE,77,Orochi 8-layer confluence,CONTEXT,P77 N_TOO_SMALL,Insufficient sample,
+P78_SB_DIRECTION,78,Silver Bullet directional sequence,DIRECTION,P78 NO_DIRECTIONAL_INFORMATION,Direction rejected,
+P78B_LIQ_MAP,78B,SB liquidity sweep map,LOCATION,P78B over-inclusive sweeps,100% sweep rate,
+P67_MULTISTAGE,67,Multistage entry families,DIRECTION,P67 SYMMETRIC_NO_EDGE,All families rejected,
+P68_MICRO,68,Microstructure direction,DIRECTION,P68 all REJECT,Pilot failed,
+P79_ATM_BE,79,ATM +1R breakeven mgmt,TIMING,P79 ATM_REJECT,Management not selection,Management excluded
+P57_FVG,57,FVG directional branch,DIRECTION,Historical leak,Do not resurrect,
+P59_HTF_LEAK,59,Early HTF completed-bar,CONTEXT,Future leakage,Explicit exclude,
+POST_ENTRY_OUTCOMES,60,MFE/MAE/net_R at exit,MEMORY,Post-entry,Outcome leakage,Use only for M0 eval

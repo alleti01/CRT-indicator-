@@ -1,0 +1,167 @@
+{
+  "freeze_ok": true,
+  "windows": [
+    {
+      "id": "aug28_session",
+      "start": "2026-08-28 08:30",
+      "end": "2026-08-28 16:00",
+      "bars": 555,
+      "prefix_invariance": {
+        "pass": true,
+        "checked": 200,
+        "mismatches": 0,
+        "first": null
+      },
+      "signal_count": 15,
+      "signal_entry_causal_ok": 15,
+      "signal_entry_violations": 0,
+      "sample_signals": [
+        {
+          "bar_index": 3136392,
+          "timestamp": "2026-08-28 06:46:00-05:00",
+          "direction": "SHORT",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        },
+        {
+          "bar_index": 3136412,
+          "timestamp": "2026-08-28 07:06:00-05:00",
+          "direction": "LONG",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        },
+        {
+          "bar_index": 3136511,
+          "timestamp": "2026-08-28 08:45:00-05:00",
+          "direction": "LONG",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        },
+        {
+          "bar_index": 3136539,
+          "timestamp": "2026-08-28 09:13:00-05:00",
+          "direction": "SHORT",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        },
+        {
+          "bar_index": 3136547,
+          "timestamp": "2026-08-28 09:21:00-05:00",
+          "direction": "LONG",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        },
+        {
+          "bar_index": 3136610,
+          "timestamp": "2026-08-28 10:24:00-05:00",
+          "direction": "LONG",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        },
+        {
+          "bar_index": 3136687,
+          "timestamp": "2026-08-28 11:41:00-05:00",
+          "direction": "SHORT",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        },
+        {
+          "bar_index": 3136726,
+          "timestamp": "2026-08-28 12:20:00-05:00",
+          "direction": "SHORT",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        }
+      ]
+    },
+    {
+      "id": "aug30_chi_evening",
+      "start": "2026-08-30 17:00",
+      "end": "2026-08-30 22:30",
+      "bars": 436,
+      "prefix_invariance": {
+        "pass": true,
+        "checked": 200,
+        "mismatches": 0,
+        "first": null
+      },
+      "signal_count": 11,
+      "signal_entry_causal_ok": 11,
+      "signal_entry_violations": 0,
+      "sample_signals": [
+        {
+          "bar_index": 3136842,
+          "timestamp": "2026-08-28 14:16:00-05:00",
+          "direction": "SHORT",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        },
+        {
+          "bar_index": 3136875,
+          "timestamp": "2026-08-28 14:49:00-05:00",
+          "direction": "SHORT",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        },
+        {
+          "bar_index": 3136882,
+          "timestamp": "2026-08-28 14:56:00-05:00",
+          "direction": "LONG",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        },
+        {
+          "bar_index": 3136894,
+          "timestamp": "2026-08-28 15:08:00-05:00",
+          "direction": "SHORT",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        },
+        {
+          "bar_index": 3136912,
+          "timestamp": "2026-08-28 15:26:00-05:00",
+          "direction": "LONG",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        },
+        {
+          "bar_index": 3136971,
+          "timestamp": "2026-08-30 17:25:00-05:00",
+          "direction": "SHORT",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        },
+        {
+          "bar_index": 3137114,
+          "timestamp": "2026-08-30 19:48:00-05:00",
+          "direction": "SHORT",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        },
+        {
+          "bar_index": 3137154,
+          "timestamp": "2026-08-30 20:28:00-05:00",
+          "direction": "LONG",
+          "enter_on_signal_bar": false,
+          "enter_on_next_bar": true,
+          "causal_ok": true
+        }
+      ]
+    }
+  ]
+}

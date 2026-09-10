@@ -43,12 +43,10 @@ class NinjaTraderBridgeServer:
         on_bar: Callable[[Bar, BridgeStats], None] | None = None,
         on_authenticated: Callable[[str], None] | None = None,
         on_disconnect: Callable[[], None] | None = None,
-        trust_localhost: bool = False,
     ) -> None:
         self.host = host
         self.port = port
         self.auth_token = auth_token
-        self.trust_localhost = trust_localhost
         self._on_bar = on_bar
         self._on_authenticated = on_authenticated
         self._on_disconnect = on_disconnect
@@ -58,7 +56,6 @@ class NinjaTraderBridgeServer:
         self._accept_thread: threading.Thread | None = None
         self._stop = threading.Event()
         self._authenticated = False
-        self._client_addr: tuple[str, int] | None = None
         self.stats = BridgeStats()
         self._last_bar_ts: datetime | None = None
         self._lock = threading.Lock()
@@ -114,7 +111,6 @@ class NinjaTraderBridgeServer:
                 except OSError:
                     pass
             self._client = client
-            self._client_addr = addr
             self._client.settimeout(1.0)
             self._authenticated = False
             with self._lock:
@@ -151,7 +147,6 @@ class NinjaTraderBridgeServer:
                 pass
             if self._client is client:
                 self._client = None
-            self._client_addr = None
             self._authenticated = False
             if self._on_disconnect:
                 self._on_disconnect()
@@ -170,30 +165,15 @@ class NinjaTraderBridgeServer:
         mtype = msg.get("type")
         if mtype == "hello":
             hello = hello_from_message(msg)
-            if hello.auth != self.auth_token:
-                local_trusted = (
-                    self.trust_localhost
-                    and self._client_addr is not None
-                    and self._client_addr[0] in ("127.0.0.1", "::1")
-                )
-                if not local_trusted:
-                    with self._lock:
-                        self.stats.auth_failures += 1
-                    log.warning(
-                        "ninjatrader bridge auth failed (sent_len=%s, expected_len=%s)",
-                        len(hello.auth or ""),
-                        len(self.auth_token or ""),
-                    )
-                    client.sendall(encode_ack(ok=False, detail="AUTH_FAILED", seq=hello.seq).encode("utf-8"))
-                    client.close()
-                    self._client = None
-                    self._client_addr = None
-                    self._authenticated = False
-                    return
-                log.warning(
-                    "ninjatrader bridge auth mismatch accepted (trust_localhost, sent_len=%s)",
-                    len(hello.auth or ""),
-                )
+            if not self.auth_token or hello.auth != self.auth_token:
+                with self._lock:
+                    self.stats.auth_failures += 1
+                client.sendall(encode_ack(ok=False, detail="AUTH_FAILED", seq=hello.seq).encode("utf-8"))
+                client.close()
+                self._client = None
+                self._authenticated = False
+                log.warning("ninjatrader bridge auth failed")
+                return
             self._authenticated = True
             with self._lock:
                 self.stats.connected_at = datetime.now(timezone.utc)

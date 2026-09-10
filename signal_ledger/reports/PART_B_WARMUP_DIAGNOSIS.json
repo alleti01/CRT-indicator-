@@ -1,0 +1,62 @@
+{
+  "part": "B_warmup_diagnosis",
+  "method": "prefix_vs_full at signal bars (Python mirror \u2014 NOT TV Pine export)",
+  "take_threshold": 4,
+  "windows": [
+    {
+      "id": "aug28_session",
+      "full_start_i": 3136391,
+      "prefix_start_i": 3136668,
+      "end_i": 3136946,
+      "prefix_warmup_bars": 277,
+      "signal_bars_in_overlap": 9,
+      "signal_output_mismatches": 0,
+      "evidence_threshold_mismatches": 1,
+      "prefix_nan_feature_bars": 0,
+      "signal_mismatch_samples": [],
+      "evidence_mismatch_samples": [
+        {
+          "bar_index": 3136687,
+          "timestamp": "2026-08-28 11:41:00-05:00",
+          "direction": "SHORT",
+          "total_full": 5,
+          "total_prefix": 1,
+          "evidence_threshold_full": false,
+          "evidence_threshold_prefix": false
+        }
+      ],
+      "nan_feature_samples": []
+    },
+    {
+      "id": "aug30_chi_evening",
+      "full_start_i": 3136841,
+      "prefix_start_i": 3137059,
+      "end_i": 3137277,
+      "prefix_warmup_bars": 218,
+      "signal_bars_in_overlap": 5,
+      "signal_output_mismatches": 0,
+      "evidence_threshold_mismatches": 0,
+      "prefix_nan_feature_bars": 0,
+      "signal_mismatch_samples": [],
+      "evidence_mismatch_samples": [],
+      "nan_feature_samples": []
+    }
+  ],
+  "findings": [
+    "Prefix chart load (mid-session start) can change signal_long/short/enter_* at overlap bars when HTF/pivot series are NaN under truncated history.",
+    "gldSnapArmTotal* uses var float init 0.0 \u2014 export never emits na today; 'unknown' reads as 0 until first ARMED assignment.",
+    "On non-ARMED bars, snap holds prior total \u2014 GLD_evidence_threshold_* can disagree with recomputed Layer B total even with full warmup.",
+    "Part C must define explicit export encoding for unset/stale/warmup-invalid totals (na vs hold vs 0) once TV export sample confirms Pine plot behavior.",
+    "Part D ledger must treat evidence_threshold export na/0/hold distinctly \u2014 do not coerce to False silently."
+  ],
+  "pine_snapshot_semantics": {
+    "gldSnapArmTotalLong_init": "var float 0.0 \u2014 NOT na; pre-first-assignment exports read 0",
+    "gldSnapArmTotalShort_init": "var float 0.0 \u2014 NOT na; pre-first-assignment exports read 0",
+    "update_scope": "Only inside ARMED path when total computed (L1181-1184)",
+    "hold_behavior": "Persists last assigned value on WATCH/COOLDOWN/flat bars",
+    "layer_d_evidence_threshold": "p58State==1/-1 AND snap>=takeThreshold \u2014 stale snap can read true/false incorrectly when state and snap disagree",
+    "warmup_risk": "Insufficient chart history \u2192 HTF/pivot features NaN \u2192 Layer A signals may differ; snap totals may reflect prefix-warm feature inputs"
+  },
+  "part_c_status": "BLOCKED \u2014 correct provenance, explicit NaN behavior TBD after TV export confirms plot encoding",
+  "hold_on_real_export": "ACTIVE \u2014 Parts B diagnosis recorded; C/D fixes and gate_open proof still required together"
+}

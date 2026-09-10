@@ -15,7 +15,7 @@ from phase73.market_data.health import DataHealth
 from phase73.replay.runner import _synthetic_bars
 from phase74.config.loader import load_phase74_config, verify_phase73_freeze
 from phase74.market_data.live_provider import StreamLiveDataProvider, compare_replay_live_parity
-from phase74.market_data.ninjatrader.protocol import bar_from_message, parse_line, parse_utc
+from phase74.market_data.ninjatrader.protocol import bar_from_message, parse_utc
 from phase74.market_data.ninjatrader_live import NinjaTraderLiveDataProvider
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -133,10 +133,6 @@ class TestTimestampConversion(unittest.TestCase):
         }
         bar = bar_from_message(msg)
         self.assertEqual(bar.timestamp.second, 0)
-
-    def test_parse_line_strips_utf8_bom(self):
-        msg = parse_line('\ufeff{"type":"hello","seq":0,"auth":"x","contract":"NQ 09-26"}')
-        self.assertEqual(msg["type"], "hello")
 
 
 class TestNinjaTraderLiveProvider(unittest.TestCase):

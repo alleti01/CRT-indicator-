@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.2",
+  "strategy": "Phase72A-SIGNAL-LEDGER",
+  "event_id": "NQ_LONG_20240101T000200Z_TAKE",
+  "event": "SIGNAL_LONG",
+  "direction": "LONG",
+  "symbol": "NQ1!",
+  "timeframe": "1m",
+  "signal_bar_time_utc_ms": 1704067320000,
+  "entry_bar_time_utc_ms": 1704067380000,
+  "alert_generated_time_utc_ms": 1704067320500,
+  "bar_index": 2,
+  "close": 100,
+  "atr": 1.0,
+  "gate_state": {
+    "armed_long": true,
+    "armed_short": false,
+    "evidence_threshold_long": true,
+    "evidence_threshold_short": false,
+    "decide_e_long": true,
+    "decide_e_short": false,
+    "p4_keep_long": true,
+    "p4_keep_short": true,
+    "h1_keep_long": true,
+    "h1_keep_short": true,
+    "gate_open": true,
+    "not_in_cooldown": true,
+    "take_long": true,
+    "take_short": false
+  }
+}

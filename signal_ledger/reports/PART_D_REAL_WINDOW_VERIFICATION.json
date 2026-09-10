@@ -1,0 +1,53 @@
+{
+  "method": "Mirror Part C export synthesis \u2192 gate_export.load_tv_gate_export \u2192 gate_tri_state (same NQ LW windows as Parts B/C; no TV GLD CSV in repo)",
+  "warmup_min_bars": 185,
+  "m1_bars_in_dataset": 3140775,
+  "windows": [
+    {
+      "window_id": "aug28_session",
+      "start": "2026-08-28 08:30",
+      "end": "2026-08-28 16:00",
+      "mirror_bars": 555,
+      "bar_index_min": 3136391,
+      "bar_index_max": 3136945,
+      "bars_below_warmup_min_in_window": 0,
+      "export_csv": "signal_ledger/reports/diagnostics/mirror_gld_export_aug28_session.csv",
+      "bars_total": 555,
+      "bars_any_insufficient_warmup": 0,
+      "bars_evidence_long_insufficient_warmup": 0,
+      "bars_evidence_short_insufficient_warmup": 0,
+      "bars_arm_total_long_insufficient_warmup": 0,
+      "bars_arm_total_short_insufficient_warmup": 0,
+      "bars_pass_reason_code_1": 0,
+      "bars_htf_warmup_ready_false": 0,
+      "samples": [],
+      "matches_item_1_expectation": true
+    },
+    {
+      "window_id": "jul_aug_2026",
+      "start": "2026-07-01 00:00",
+      "end": "2026-08-28 23:59",
+      "mirror_bars": 58784,
+      "bar_index_min": 3078162,
+      "bar_index_max": 3136945,
+      "bars_below_warmup_min_in_window": 0,
+      "export_csv": "signal_ledger/reports/diagnostics/mirror_gld_export_jul_aug_2026.csv",
+      "bars_total": 58784,
+      "bars_any_insufficient_warmup": 0,
+      "bars_evidence_long_insufficient_warmup": 0,
+      "bars_evidence_short_insufficient_warmup": 0,
+      "bars_arm_total_long_insufficient_warmup": 0,
+      "bars_arm_total_short_insufficient_warmup": 0,
+      "bars_pass_reason_code_1": 0,
+      "bars_htf_warmup_ready_false": 0,
+      "samples": [],
+      "matches_item_1_expectation": true
+    }
+  ],
+  "negative_control_prefix_bars_0_199": {
+    "bars_total": 199,
+    "bars_any_insufficient_warmup": 185,
+    "expected_cold_bars": 185,
+    "export_csv": "signal_ledger/reports/diagnostics/mirror_gld_export_prefix_0_199.csv"
+  }
+}

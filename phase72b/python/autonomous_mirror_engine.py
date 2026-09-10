@@ -36,6 +36,7 @@ class MirrorState:
     p58_signal_atr: float = np.nan
     p58_skip_cooldown_dec: bool = False
     p58_block_signals: bool = False
+    gate_snap: bool = False
     cur_opp_id: str = ""
     cur_opp_dir: str = ""
     cur_opp_last_si: int = -1
@@ -140,12 +141,15 @@ class AutonomousMirrorEngine:
         start_i: int,
         cfg: PineConfig = DEFAULT_CFG,
         global_offset: int = 0,
+        *,
+        gate_snap_mode: bool = False,
     ):
         self.s = series
         self.f = features
         self.start_i = start_i
         self.global_offset = global_offset
         self.cfg = cfg
+        self.gate_snap_mode = gate_snap_mode
         self.st = MirrorState()
         self.events: list[EventRow] = []
         self.run_end_i: int = len(series.cl)
@@ -272,7 +276,14 @@ class AutonomousMirrorEngine:
                     st.pb_extreme = np.nan
                     st.p58_block_signals = True
 
-            if not _pos_active(st) and not st.p58_in_trade and st.p58_state != 3 and not st.p58_block_signals:
+            gate_open_cond = (
+                not _pos_active(st) and not st.p58_in_trade and st.p58_state != 3 and not st.p58_block_signals
+            )
+            gate_enter = gate_open_cond
+            if self.gate_snap_mode:
+                st.gate_snap = gate_open_cond
+                gate_enter = st.gate_snap
+            if gate_enter:
                 ctx_dir = f.ctx_dir[k]
                 if st.p58_state == 0:
                     trade_dir = "LONG" if ctx_dir == "BULLISH" else "SHORT" if ctx_dir == "BEARISH" else ""
@@ -483,6 +494,8 @@ def run_mirror(
     end_i: int | None = None,
     cfg: PineConfig = DEFAULT_CFG,
     pad_bars: int = 3000,
+    *,
+    gate_snap_mode: bool = False,
 ) -> tuple[PineSeries, list[EventRow], int, int]:
     s = start_i if start_i is not None else cfg.warmup
     e = end_i if end_i is not None else len(m1) - 61
@@ -492,5 +505,7 @@ def run_mirror(
     feat_start = s - i0
     feat_end = e - i0
     features = precompute_features(series, feat_start, feat_end, cfg)
-    eng = AutonomousMirrorEngine(series, features, feat_start, cfg, global_offset=i0)
+    eng = AutonomousMirrorEngine(
+        series, features, feat_start, cfg, global_offset=i0, gate_snap_mode=gate_snap_mode
+    )
     return series, eng.run(feat_end), s, e

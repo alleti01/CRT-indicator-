@@ -1,0 +1,16 @@
+model_id,family,description
+S0,CURRENT,All baseline shorts (control)
+S1,REVERSAL,Location + false-rev low + reversal strong + HTF bearish + bearish bar
+S2,BREAKDOWN_CONTINUATION,Break 10-bar low + displacement + bearish bar
+S3,FAILED_BOUNCE,Bounce-fail pattern + bearish bar + reaction score
+S4,LONG_FAILURE_REVERSAL,Not aligned with active + 5m bearish + displacement
+S5,FALSE_BREAK_RECLAIM,Failed reclaim + bearish bar
+S6,MICRO_BOS,8-bar micro BOS + bearish bar
+S7,DISPLACEMENT,Displacement body >= 0.5 ATR
+S8,ANTI_CHASE,Exclude late_chase (extension filter)
+S9,CONFLICT_VETO,Exclude HTF contra and pullback conflict
+S10,COMBO,Reversal OR breakdown continuation
+S11,COMBO,Reversal OR failed bounce
+S12,COMBO,Continuation OR failed bounce
+S13,COMBO,Reversal + continuation + failed bounce
+S14,ROLE_MODEL,Location + reaction + no strong conflict + bearish bar

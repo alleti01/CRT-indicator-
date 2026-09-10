@@ -1,0 +1,50 @@
+{
+  "method": "Phase72B mirror inline vs gate_snap_mode (NOT TradingView Pine)",
+  "pine_action": "reverted_to_additive_only \u2014 inline if drives live branch; gldSnapGateOpen export-only",
+  "windows": [
+    {
+      "bars_compared": 555,
+      "mismatch_bars": 0,
+      "identical": true,
+      "mismatches": [],
+      "window_id": "aug28_session",
+      "start": "2026-08-28 08:30",
+      "end": "2026-08-28 16:00",
+      "pre_counts": {
+        "signal_long": 6,
+        "signal_short": 9,
+        "enter_long": 6,
+        "enter_short": 9
+      },
+      "post_counts": {
+        "signal_long": 6,
+        "signal_short": 9,
+        "enter_long": 6,
+        "enter_short": 9
+      }
+    },
+    {
+      "bars_compared": 58784,
+      "mismatch_bars": 0,
+      "identical": true,
+      "mismatches": [],
+      "window_id": "jul_aug_2026",
+      "start": "2026-07-01 00:00",
+      "end": "2026-08-28 23:59",
+      "pre_counts": {
+        "signal_long": 734,
+        "signal_short": 710,
+        "enter_long": 734,
+        "enter_short": 710
+      },
+      "post_counts": {
+        "signal_long": 734,
+        "signal_short": 710,
+        "enter_long": 734,
+        "enter_short": 710
+      }
+    }
+  ],
+  "all_windows_identical": true,
+  "conclusion": "Mirror proxy: inline and same-bar gate_snap are bar-for-bar identical on signal_long/short/enter_long/enter_short."
+}

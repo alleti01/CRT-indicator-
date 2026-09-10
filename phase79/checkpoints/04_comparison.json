@@ -1,0 +1,25 @@
+{
+  "DeltaAvgR": -0.3736226273533703,
+  "DeltaTotalR": -13392.503077481559,
+  "DeltaPF": -0.5121937989879669,
+  "DeltaMaxDD": 12649.039134670727,
+  "DeltaGrossAvgR": -0.0936411501941184,
+  "DeltaGrossTotalR": -3356.567028708174,
+  "killed_winners": {
+    "N": 4346,
+    "pct_of_baseline_winners": 0.42059421271653924,
+    "R_lost_vs_baseline": 11865.05612689209,
+    "TotalR_damage": 11865.05612689209
+  },
+  "saved_losers": {
+    "N": 6787,
+    "pct_of_baseline_losers": 0.26763673646437164,
+    "R_saved": 5565.635411973966,
+    "TotalR_improvement": 5565.635411973966
+  },
+  "path_killed": {
+    "N_path_killed_winners": 4308,
+    "pct_baseline_targets": 0.41691667473144295
+  },
+  "net_be_balance": -6299.420714918124
+}

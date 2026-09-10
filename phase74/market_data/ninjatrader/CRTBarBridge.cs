@@ -45,15 +45,11 @@ namespace NinjaTrader.NinjaScript.Indicators
                 Name = "CRTBarBridge";
                 Calculate = Calculate.OnBarClose;
                 IsOverlay = true;
-                DisplayInDataBox = false;
-                DrawOnPricePanel = false;
-                IsSuspendedWhileInactive = true;
-                BarsRequiredToPlot = 1;
                 BridgeHost = "127.0.0.1";
                 BridgePort = 8765;
-                AuthToken = ReadTokenFromFile();
+                AuthToken = "";
             }
-            else if (State == State.Realtime)
+            else if (State == State.DataLoaded)
             {
                 ConnectBridge();
             }
@@ -65,10 +61,6 @@ namespace NinjaTrader.NinjaScript.Indicators
 
         protected override void OnBarUpdate()
         {
-            // Skip historical replay — bridge only forwards live closed 1m bars.
-            if (State == State.Historical)
-                return;
-
             if (CurrentBar < 1)
                 return;
 
@@ -104,22 +96,22 @@ namespace NinjaTrader.NinjaScript.Indicators
                     _client = new TcpClient();
                     _client.Connect(BridgeHost, BridgePort);
                     _stream = _client.GetStream();
-                    _writer = new StreamWriter(_stream, new UTF8Encoding(false)) { AutoFlush = true };
-                    _reader = new StreamReader(_stream, new UTF8Encoding(false), false);
+                    _writer = new StreamWriter(_stream, Encoding.UTF8) { AutoFlush = true };
+                    _reader = new StreamReader(_stream, Encoding.UTF8, false);
 
                     string contract = Instrument != null ? Instrument.FullName : "UNKNOWN";
                     string hello = string.Format(
                         CultureInfo.InvariantCulture,
                         "{{\"type\":\"hello\",\"seq\":{0},\"auth\":\"{1}\",\"contract\":\"{2}\",\"instrument\":\"{3}\",\"chart_timezone\":\"UTC\"}}\n",
                         _seq,
-                        EscapeJson(ResolveAuthToken()),
+                        EscapeJson(AuthToken ?? ""),
                         EscapeJson(contract),
                         EscapeJson(Instrument != null ? Instrument.MasterInstrument.Name : "UNKNOWN")
                     );
                     _writer.Write(hello);
 
                     string ackLine = _reader.ReadLine();
-                    if (IsAckOk(ackLine))
+                    if (ackLine != null && ackLine.Contains("\"ok\":true"))
                     {
                         _authenticated = true;
                         Print("CRTBarBridge authenticated contract=" + contract);
@@ -184,59 +176,6 @@ namespace NinjaTrader.NinjaScript.Indicators
             _reader = null;
             _stream = null;
             _client = null;
-        }
-
-        private string ResolveAuthToken()
-        {
-            string fromFile = ReadTokenFromFile();
-            if (!string.IsNullOrEmpty(fromFile))
-                return fromFile;
-
-            if (!string.IsNullOrWhiteSpace(AuthToken))
-                return AuthToken.Trim();
-
-            return "";
-        }
-
-        private static string ReadTokenFromFile()
-        {
-            foreach (string path in TokenFilePaths())
-            {
-                try
-                {
-                    if (!File.Exists(path))
-                        continue;
-                    string token = File.ReadAllText(path).Trim();
-                    if (!string.IsNullOrEmpty(token))
-                        return token;
-                }
-                catch
-                {
-                }
-            }
-            return "";
-        }
-
-        private static string[] TokenFilePaths()
-        {
-            string docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            string oneDriveDocs = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "OneDrive",
-                "Documents"
-            );
-            return new[]
-            {
-                Path.Combine(docs, "NinjaTrader 8", "bin", "Custom", "crt_bridge_token.txt"),
-                Path.Combine(oneDriveDocs, "NinjaTrader 8", "bin", "Custom", "crt_bridge_token.txt"),
-            };
-        }
-
-        private static bool IsAckOk(string ackLine)
-        {
-            if (string.IsNullOrEmpty(ackLine))
-                return false;
-            return ackLine.Contains("\"ok\":true") || ackLine.Contains("\"ok\": true");
         }
 
         private static string EscapeJson(string value)

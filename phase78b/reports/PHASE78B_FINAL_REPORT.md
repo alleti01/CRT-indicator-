@@ -20,10 +20,10 @@ Phase78 sweep rate was **100.0%** because the liquidity map places **163** level
 8. **Cluster inflation:** Yes — raw level count exceeds clustered count; multiple labels on same price band.
 9. **Internal sweep speed (median min):** 0.0
 10. **External sweep speed (median min):** 0.0
-11. **External beats random +1/-1:** 0.475 vs 0.499 — NO
-12. **Margin:** -0.025
-13. **External beats flipped:** 0.475 vs 0.518
-14. **Internal beats random:** 0.483 vs 0.496
+11. **External beats random +1/-1:** 0.445 vs 0.483 — NO
+12. **Margin:** -0.038
+13. **External beats flipped:** 0.445 vs 0.522
+14. **Internal beats random:** 0.480 vs 0.497
 
 21. **SHORT ~4x LONG:** Phase78 assigns SHORT on every buy-side (high) sweep; swing/session highs dominate sweep sources.
 22. **Legitimate vs bug:** Implementation-driven asymmetry from sweep-side → direction mapping, not data artifact.

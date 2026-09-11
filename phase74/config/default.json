@@ -59,8 +59,14 @@
     "false_break_percentile": 0.15,
     "false_break_edge_atr": 0.25,
     "late_move_atr": 1.0,
-    "day_max_losers": 3,
-    "day_max_loss_r": 2.0
+    "max_atr_points": 15.0,
+    "nq_point_value": 20.0,
+    "day_max_losers": 2,
+    "day_max_loss_dollars": 400.0,
+    "day_max_winners": 2,
+    "day_big_win_dollars": 500.0,
+    "day_giveback_arm_dollars": 400.0,
+    "day_giveback_dollars": 300.0
   },
   "trail_overlay": {
     "enabled": true,

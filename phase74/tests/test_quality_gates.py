@@ -70,30 +70,69 @@ class QualityGateTests(unittest.TestCase):
         self.assertEqual(d.decision, "TAKE")
         self.assertEqual(d.reason, "TAKE")
 
+    def test_skip_atr_cap_above_15(self) -> None:
+        bars = []
+        for i in range(20):
+            c = 100.0 + i * (8.0 / 19.0)
+            bars.append(_bar(i, c, 140.0, 100.0, c))
+        d = evaluate_quality_gates(bars, "LONG", atr=16.0, cfg=self.cfg)
+        self.assertEqual(d.decision, "SKIP")
+        self.assertEqual(d.reason, "SKIP_ATR_CAP")
+
+    def test_take_at_atr_cap_exactly_15(self) -> None:
+        bars = []
+        for i in range(20):
+            c = 100.0 + i * (8.0 / 19.0)
+            bars.append(_bar(i, c, 130.0, 100.0, c))
+        d = evaluate_quality_gates(bars, "LONG", atr=15.0, cfg=self.cfg)
+        self.assertEqual(d.decision, "TAKE")
+        self.assertEqual(d.reason, "TAKE")
+
 
 class PropDayHaltTests(unittest.TestCase):
-    def test_halt_after_three_losers(self) -> None:
-        h = PropDayHalt(max_losers=3, max_loss_r=5.0)
+    def test_halt_after_two_losers(self) -> None:
+        h = PropDayHalt()
+        h.record_closed(-1.0, dollars=-200.0)
         self.assertFalse(h.should_halt_new_entries())
-        h.record_closed(-1.0)
-        h.record_closed(-1.0)
-        self.assertFalse(h.should_halt_new_entries())
-        h.record_closed(-1.0)
+        h.record_closed(-1.0, dollars=-200.0)
         self.assertTrue(h.should_halt_new_entries())
         self.assertEqual(h.reason, "HALT_DAY_LOSERS")
 
-    def test_halt_at_minus_two_r(self) -> None:
-        h = PropDayHalt(max_losers=5, max_loss_r=2.0)
-        h.record_closed(-2.1)
+    def test_halt_at_minus_400_dollars(self) -> None:
+        h = PropDayHalt()
+        h.record_closed(-1.0, dollars=-400.0)
         self.assertTrue(h.should_halt_new_entries())
-        self.assertEqual(h.reason, "HALT_DAY_R")
+        self.assertEqual(h.reason, "HALT_DAY_DOLLARS")
+
+    def test_halt_after_two_winners(self) -> None:
+        h = PropDayHalt()
+        h.record_closed(2.0, dollars=311.0)
+        self.assertFalse(h.should_halt_new_entries())
+        h.record_closed(2.0, dollars=300.0)
+        self.assertTrue(h.should_halt_new_entries())
+        self.assertEqual(h.reason, "HALT_DAY_WINS")
+
+    def test_halt_after_one_big_win(self) -> None:
+        h = PropDayHalt()
+        h.record_closed(4.31, dollars=1120.0)
+        self.assertTrue(h.should_halt_new_entries())
+        self.assertEqual(h.reason, "HALT_DAY_BIG_WIN")
+
+    def test_halt_giveback_from_peak(self) -> None:
+        h = PropDayHalt()
+        h.record_closed(2.0, dollars=450.0)
+        self.assertFalse(h.should_halt_new_entries())
+        h.record_closed(-1.0, dollars=-300.0)
+        self.assertTrue(h.should_halt_new_entries())
+        self.assertEqual(h.reason, "HALT_DAY_GIVEBACK")
 
     def test_winner_does_not_count_as_loser(self) -> None:
-        h = PropDayHalt(max_losers=3, max_loss_r=2.0)
-        h.record_closed(2.5)
-        h.record_closed(-1.0)
+        h = PropDayHalt()
+        h.record_closed(2.0, dollars=311.0)
+        h.record_closed(-1.0, dollars=-99.0)
         self.assertFalse(h.should_halt_new_entries())
         self.assertEqual(h.losers, 1)
+        self.assertEqual(h.winners, 1)
 
 
 class TrailOverlayTests(unittest.TestCase):

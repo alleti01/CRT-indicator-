@@ -14,6 +14,7 @@ class QualityGateConfig:
     false_break_percentile: float = 0.15
     false_break_edge_atr: float = 0.25
     late_move_atr: float = 1.0
+    max_atr_points: float = 15.0
 
     @classmethod
     def from_dict(cls, raw: dict) -> QualityGateConfig:
@@ -23,6 +24,7 @@ class QualityGateConfig:
             false_break_percentile=float(raw.get("false_break_percentile", 0.15)),
             false_break_edge_atr=float(raw.get("false_break_edge_atr", 0.25)),
             late_move_atr=float(raw.get("late_move_atr", 1.0)),
+            max_atr_points=float(raw.get("max_atr_points", 15.0)),
         )
 
 
@@ -94,5 +96,8 @@ def evaluate_quality_gates(
 
     if progress > cfg.late_move_atr * atr:
         return QualityDecision(**{**base.__dict__, "decision": "SKIP", "reason": "SKIP_LATE_MOVE"})
+
+    if atr > cfg.max_atr_points:
+        return QualityDecision(**{**base.__dict__, "decision": "SKIP", "reason": "SKIP_ATR_CAP"})
 
     return base

@@ -53,8 +53,13 @@ class LiveStack:
         self._quality_log = QualitySkipLogger(cfg.log_dir) if self._quality_enabled else None
         self._day_halt = (
             PropDayHalt(
-                max_losers=int(qg.get("day_max_losers", 3)),
-                max_loss_r=float(qg.get("day_max_loss_r", 2.0)),
+                max_losers=int(qg.get("day_max_losers", 2)),
+                max_loss_dollars=float(qg.get("day_max_loss_dollars", 400.0)),
+                max_winners=int(qg.get("day_max_winners", 2)),
+                big_win_dollars=float(qg.get("day_big_win_dollars", 500.0)),
+                giveback_arm_dollars=float(qg.get("day_giveback_arm_dollars", 400.0)),
+                giveback_dollars=float(qg.get("day_giveback_dollars", 300.0)),
+                point_value=float(qg.get("nq_point_value", 20.0)),
             )
             if self._quality_enabled
             else None
@@ -198,7 +203,7 @@ class LiveStack:
                         extra=extra,
                     )
                     if self._day_halt is not None:
-                        self._day_halt.record_closed(gross_r)
+                        self._day_halt.record_closed(gross_r, atr=entry_atr)
                     self._trail = None
                     self._active_trade_id = None
                     self._active_entry_atr = 0.0

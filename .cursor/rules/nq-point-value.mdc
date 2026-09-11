@@ -1,0 +1,16 @@
+---
+description: Always convert paper P&L to dollars using full NQ point value
+alwaysApply: true
+---
+
+# NQ dollar conversion
+
+When reporting P&L, risk, or "what is that in dollars," use **full NQ**:
+
+- **$20 per point**
+- **$5 per 0.25 tick**
+- 1 contract unless the user says otherwise
+
+Do not use Phase74 `contracts.multiplier` 2.0 / `tick_value` 0.5 (MNQ-sized) for dollar stats. Those config fields stay as-is for the paper engine unless the user asks to change sizing.
+
+Formula: `dollars = points * 20` or `dollars = net_R * ATR_points * 20`.

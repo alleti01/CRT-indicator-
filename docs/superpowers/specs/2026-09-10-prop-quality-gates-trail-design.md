@@ -1,7 +1,7 @@
 # Prop quality gates + 2.5R bank / trail — design
 
 **Date:** 2026-09-10  
-**Status:** Draft for review (approved in conversation; not implemented)  
+**Status:** Implemented in Phase74 (2026-09-10). Replay scorer: `phase74/tools/score_quality_gates.py`.  
 **Mode:** Phase74 local paper only. Frozen Pine and Phase73 engine stay unchanged.
 
 ---

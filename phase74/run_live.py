@@ -67,6 +67,8 @@ def main() -> int:
     ap.add_argument("--max-chase-atr", type=float, default=1.5)
     ap.add_argument("--late-age-seconds", type=int, default=60)
     ap.add_argument("--no-gates", action="store_true", help="Disable auto pass-chase/late in paper mode")
+    ap.add_argument("--no-quality-gates", action="store_true", help="Disable chop/false-break/late-move skips")
+    ap.add_argument("--no-trail", action="store_true", help="Disable 2.5R bank/trail overlay (M0 flatten at 2.5R)")
     args = ap.parse_args()
 
     if args.mode == "paper" and not args.no_gates:
@@ -95,6 +97,10 @@ def main() -> int:
     if args.pass_late:
         eq["pass_late_enabled"] = True
         eq["max_signal_age_seconds"] = args.late_age_seconds
+    if args.no_quality_gates:
+        raw.setdefault("quality_gates", {})["enabled"] = False
+    if args.no_trail:
+        raw.setdefault("trail_overlay", {})["enabled"] = False
     from phase74.config.loader import Phase74Config
 
     cfg = Phase74Config(raw=raw)
@@ -185,6 +191,10 @@ def main() -> int:
 
     print(f"Phase74 mode={args.mode} provider={args.provider} shadow={cfg.shadow_mode} trading={cfg.trading_enabled}")
     print(f"validate={args.validate} pass_chase={args.pass_chase} pass_late={args.pass_late}")
+    print(
+        f"quality_gates={cfg.section('quality_gates').get('enabled', False)} "
+        f"trail_overlay={cfg.section('trail_overlay').get('enabled', False)}"
+    )
     print(f"external_order_routing={cfg.external_order_routing}")
     print(f"Broker adapter: LOCAL_SIM (no external paper venue connected)")
 

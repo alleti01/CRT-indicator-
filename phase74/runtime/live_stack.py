@@ -23,6 +23,10 @@ from phase74.execution.paper_broker import PaperBrokerAdapter
 from phase74.journal.trade_journal import TradeJournal, TradeJournalEntry
 from phase74.latency.tracker import LatencyTracker
 from phase74.market_data.live_provider import StreamLiveDataProvider
+from phase74.quality.day_halt import PropDayHalt
+from phase74.quality.gates import QualityGateConfig, evaluate_quality_gates
+from phase74.quality.logger import QualitySkipLogger
+from phase74.quality.trail import TrailOverlay, TrailOverlayConfig
 from phase74.safety.daily_session import DailySessionSafety
 from phase73.risk.reconciliation import reconcile as p73_reconcile
 
@@ -43,6 +47,22 @@ class LiveStack:
         self._latency_samples: list[float] = []
         self._active_trade_id: str | None = None
         self._active_entry_atr: float = 0.0
+        qg = cfg.section("quality_gates")
+        self._quality_enabled = bool(qg.get("enabled", False))
+        self._quality_cfg = QualityGateConfig.from_dict(qg)
+        self._quality_log = QualitySkipLogger(cfg.log_dir) if self._quality_enabled else None
+        self._day_halt = (
+            PropDayHalt(
+                max_losers=int(qg.get("day_max_losers", 3)),
+                max_loss_r=float(qg.get("day_max_loss_r", 2.0)),
+            )
+            if self._quality_enabled
+            else None
+        )
+        to = cfg.section("trail_overlay")
+        self._trail_enabled = bool(to.get("enabled", False))
+        self._trail_cfg = TrailOverlayConfig.from_dict(to)
+        self._trail: TrailOverlay | None = None
 
         p73 = cfg.to_phase73_config()
         log_dir = cfg.log_dir
@@ -123,6 +143,7 @@ class LiveStack:
                 trade_id = str(uuid.uuid4())
                 self._active_trade_id = trade_id
                 self._active_entry_atr = signal.atr
+                target_px = self.engine.mgmt.target_price if self.engine.mgmt else 0
                 self.journal.open_trade(
                     TradeJournalEntry(
                         trade_id=trade_id,
@@ -134,13 +155,17 @@ class LiveStack:
                         fill_price=result["fill_price"],
                         atr=signal.atr,
                         stop=self.engine.mgmt.stop_price if self.engine.mgmt else 0,
-                        target=self.engine.mgmt.target_price if self.engine.mgmt else 0,
+                        target=target_px,
                         signal_to_fill_ms=self.engine.last_latency.total_signal_to_fill_ms,
                         slippage_points=slip.get("slippage_points", 0),
                         slippage_ticks=slip.get("slippage_ticks", 0),
                         slippage_R=slip.get("slippage_R", 0),
                     )
                 )
+                if self._trail_enabled and self.engine.mgmt is not None:
+                    self._trail = TrailOverlay(self._trail_cfg)
+                    self._trail.hide_m0_target(self.engine.mgmt)
+                    self.engine.book.internal.target_price = self.engine.mgmt.target_price
             return result
 
         def execute_exit(state_before, exit_dec, bar):
@@ -156,6 +181,10 @@ class LiveStack:
                     move = (exit_px - mgmt.entry_price) if mgmt.side == "LONG" else (mgmt.entry_price - exit_px)
                     gross_r = move / risk if risk > 0 else 0.0
                     hold_min = (bar.timestamp - mgmt.entry_time).total_seconds() / 60.0
+                    extra = {
+                        "banked_2r5": bool(self._trail.banked) if self._trail else False,
+                        "locked_r": self._trail_cfg.lock_stop_r if self._trail and self._trail.banked else "",
+                    }
                     self.journal.close_trade(
                         trade_id,
                         exit_timestamp=bar.timestamp.isoformat(),
@@ -166,7 +195,11 @@ class LiveStack:
                         hold_time_minutes=hold_min,
                         MFE=mgmt.mfe_r,
                         MAE=mgmt.mae_r,
+                        extra=extra,
                     )
+                    if self._day_halt is not None:
+                        self._day_halt.record_closed(gross_r)
+                    self._trail = None
                     self._active_trade_id = None
                     self._active_entry_atr = 0.0
             return result
@@ -175,6 +208,9 @@ class LiveStack:
         self.engine._execute_exit = execute_exit  # type: ignore[method-assign]
 
     def _pre_entry_checks(self, signal: PineSignal) -> bool:
+        if self._day_halt is not None and self._day_halt.should_halt_new_entries():
+            log.warning("%s", self._day_halt.reason)
+            return False
         if self.cfg.kill_switch or self.daily.should_halt(int(self.cfg.section("safety").get("max_consecutive_errors", 5))):
             log.warning("HALT_NEW_ENTRIES")
             return False
@@ -199,6 +235,24 @@ class LiveStack:
             return {"ok": False, "reason": reason.value}
         if signal.pine_hash != self.cfg.pine_hash:
             return {"ok": False, "reason": "SIGNAL_HASH_MISMATCH"}
+        if self._quality_enabled:
+            lookback = self._quality_cfg.lookback_bars
+            bars = list(self.market_data.recent_bars(lookback))
+            try:
+                live_atr = float(self.market_data.atr())
+            except (TypeError, ValueError, AttributeError):
+                live_atr = 0.0
+            if live_atr <= 0 and signal.atr > 1.5:
+                live_atr = float(signal.atr)
+            qdec = evaluate_quality_gates(bars, signal.direction, live_atr, self._quality_cfg)
+            if self._quality_log is not None:
+                self._quality_log.log(qdec, signal_id=signal.signal_id, direction=signal.direction)
+            if qdec.decision == "SKIP":
+                log.info("quality skip signal=%s reason=%s", signal.signal_id, qdec.reason)
+                return {"ok": False, "reason": qdec.reason, "quality": qdec.reason}
+        if self._day_halt is not None and self._day_halt.should_halt_new_entries():
+            log.warning("%s signal=%s", self._day_halt.reason, signal.signal_id)
+            return {"ok": False, "reason": self._day_halt.reason}
         tracker.decision_at = datetime.now(timezone.utc)
         result = self.engine.on_webhook_signal(signal, reason)
         tracker.order_submitted_at = datetime.now(timezone.utc)
@@ -212,6 +266,17 @@ class LiveStack:
     def on_bar(self) -> dict[str, Any]:
         if self.broker.health().value == "DISCONNECTED" and self.engine.book.internal.side != "FLAT":
             self.engine.events.log_error({"critical": "BROKER_DISCONNECT_ACTIVE"})
+        bar = self.market_data.latest_bar()
+        if (
+            self._trail is not None
+            and self.engine.mgmt is not None
+            and bar is not None
+            and self.engine.state in (TraderState.LONG_ACTIVE, TraderState.SHORT_ACTIVE)
+        ):
+            trail_dec = self._trail.on_bar(self.engine.mgmt, bar)
+            self.engine.book.internal.stop_price = self.engine.mgmt.stop_price
+            if trail_dec is not None:
+                return self.engine._execute_exit(self.engine.state.value, trail_dec, bar)
         return self.engine.on_bar()
 
     def tick(self) -> bool:

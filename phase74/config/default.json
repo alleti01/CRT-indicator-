@@ -52,6 +52,22 @@
     "tick_value": 0.5,
     "default_quantity": 1
   },
+  "quality_gates": {
+    "enabled": true,
+    "lookback_bars": 20,
+    "chop_box_atr": 2.0,
+    "false_break_percentile": 0.15,
+    "false_break_edge_atr": 0.25,
+    "late_move_atr": 1.0,
+    "day_max_losers": 3,
+    "day_max_loss_r": 2.0
+  },
+  "trail_overlay": {
+    "enabled": true,
+    "bank_trigger_r": 2.5,
+    "lock_stop_r": 2.0,
+    "trail_atr": 1.0
+  },
   "safety": {
     "daily_loss_limit": 500.0,
     "max_open_orders": 2,

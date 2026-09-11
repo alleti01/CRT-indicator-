@@ -33,6 +33,8 @@ def p74_cfg(**mode) -> Phase74Config:
     raw.setdefault("logging", {})["log_dir"] = tempfile.mkdtemp()
     raw.setdefault("persistence", {})["state_file"] = str(Path(raw["logging"]["log_dir"]) / "state.json")
     raw["persistence"]["idempotency_file"] = str(Path(raw["logging"]["log_dir"]) / "idempotency.jsonl")
+    raw.setdefault("quality_gates", {})["enabled"] = False
+    raw.setdefault("trail_overlay", {})["enabled"] = False
     return Phase74Config(raw=raw)
 
 

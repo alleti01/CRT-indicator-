@@ -32,6 +32,13 @@ from phase73.risk.reconciliation import reconcile as p73_reconcile
 
 log = logging.getLogger("phase74.stack")
 
+# Opposite TAKE parks Phase73 in REVERSAL_WATCH_* and then on_bar ignores the stop.
+# Auto-reverse is off, so snap back to the live side and keep managing.
+_REVERSAL_WATCH_RESUME = {
+    TraderState.REVERSAL_WATCH_LONG: TraderState.SHORT_ACTIVE,
+    TraderState.REVERSAL_WATCH_SHORT: TraderState.LONG_ACTIVE,
+}
+
 
 class LiveStack:
     """Dress-rehearsal runtime: live data + secure webhook + paper/local sim + shadow mode."""
@@ -235,6 +242,22 @@ class LiveStack:
             return False
         return True
 
+    def _release_reversal_watch(self) -> None:
+        if self.engine.cfg.auto_reverse_enabled:
+            return
+        resume = _REVERSAL_WATCH_RESUME.get(self.engine.state)
+        if resume is None:
+            return
+        side = self.engine.book.internal.side
+        if self.engine.mgmt is None or side not in ("LONG", "SHORT"):
+            return
+        expected = "SHORT" if resume == TraderState.SHORT_ACTIVE else "LONG"
+        if side != expected:
+            return
+        log.info("release reversal watch %s -> %s", self.engine.state.value, resume.value)
+        self.engine.state = resume
+        self.engine.persist()
+
     def on_webhook_signal(self, signal: PineSignal, reason: WebhookReason, tracker: LatencyTracker) -> dict[str, Any]:
         if reason != WebhookReason.WEBHOOK_VALID:
             return {"ok": False, "reason": reason.value}
@@ -260,6 +283,7 @@ class LiveStack:
             return {"ok": False, "reason": self._day_halt.reason}
         tracker.decision_at = datetime.now(timezone.utc)
         result = self.engine.on_webhook_signal(signal, reason)
+        self._release_reversal_watch()
         tracker.order_submitted_at = datetime.now(timezone.utc)
         tracker.broker_ack_at = tracker.order_submitted_at
         tracker.fill_at = tracker.order_submitted_at if result.get("fill_price") else None
@@ -271,6 +295,7 @@ class LiveStack:
     def on_bar(self) -> dict[str, Any]:
         if self.broker.health().value == "DISCONNECTED" and self.engine.book.internal.side != "FLAT":
             self.engine.events.log_error({"critical": "BROKER_DISCONNECT_ACTIVE"})
+        self._release_reversal_watch()
         bar = self.market_data.latest_bar()
         if (
             self._trail is not None

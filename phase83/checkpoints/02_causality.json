@@ -1,0 +1,12 @@
+{
+  "overnight_checks": 500,
+  "overnight_fail": 0,
+  "twom_checks": 500,
+  "twom_fail": 0,
+  "decision_checks": 200,
+  "decision_fail": 0,
+  "sampled": 1200,
+  "failures": 0,
+  "fail_examples": [],
+  "status": "PASS"
+}

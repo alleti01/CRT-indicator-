@@ -1,0 +1,40 @@
+{
+  "dataset": "lw_1m_paths (phase16/18 raw + postwindow bridge + phase58j extension)",
+  "instrument": "NQ continuous 1m",
+  "contract_construction": "vendor continuous / Databento-style roll concatenated; last duplicate kept",
+  "source_paths": [
+    "/Users/anishalleti/CRT indicator/phase16/data/raw/nq_continuous_1m_oos_20171001_20201201.csv",
+    "/Users/anishalleti/CRT indicator/phase18/data/raw/nq_continuous_1m_raw.csv",
+    "/Users/anishalleti/CRT indicator/phase16/data/raw/nq_continuous_1m_20231201_20260626.csv",
+    "/Users/anishalleti/CRT indicator/phase16/data/raw/nq_continuous_1m_postwindow_to_20260629T0000CT.csv",
+    "/Users/anishalleti/CRT indicator/phase58j/data/nq_continuous_1m_lw_extension.csv"
+  ],
+  "bridge_present": true,
+  "extension_present": true,
+  "raw_1m_core": [
+    "/Users/anishalleti/CRT indicator/phase16/data/raw/nq_continuous_1m_oos_20171001_20201201.csv",
+    "/Users/anishalleti/CRT indicator/phase18/data/raw/nq_continuous_1m_raw.csv",
+    "/Users/anishalleti/CRT indicator/phase16/data/raw/nq_continuous_1m_20231201_20260626.csv"
+  ],
+  "timezone_stored": "America/Chicago",
+  "timezone_sessions": "America/New_York",
+  "index_min": "2017-10-01 17:00:00-05:00",
+  "index_max": "2026-09-02 10:48:00-05:00",
+  "n_bars": 3140775,
+  "ohlc_bad": 0,
+  "atr_period": 14,
+  "ny_min": "2017-10-01 18:00:00-04:00",
+  "ny_max": "2026-09-02 11:48:00-04:00",
+  "n_sessions": 2299,
+  "first_date": "2017-10-03",
+  "last_date": "2026-09-02",
+  "skipped": {
+    "no_rth_open": 0,
+    "thin_overnight": 0,
+    "no_prior_rth": 1,
+    "bad_atr": 0
+  },
+  "rth_dates": 2300,
+  "mean_overnight_bars": 929.6668116572423,
+  "mean_on_range_atr": 21.076534068533068
+}

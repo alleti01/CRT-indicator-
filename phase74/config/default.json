@@ -21,7 +21,13 @@
     "ninjatrader_port": 8765,
     "ninjatrader_auth_env_var": "NINJATRADER_BRIDGE_TOKEN",
     "ninjatrader_bootstrap_bars": 15,
-    "ninjatrader_expected_contract_prefix": "NQ"
+    "ninjatrader_expected_contract_prefix": "NQ",
+    "ninjatrader_preserve_bars_on_disconnect": true,
+    "log_bars_csv": true
+  },
+  "simulation": {
+    "entry_slippage_ticks": 1.0,
+    "exit_slippage_ticks": 1.0
   },
   "webhook": {
     "host": "127.0.0.1",
@@ -45,6 +51,28 @@
     "tick_size": 0.25,
     "tick_value": 0.5,
     "default_quantity": 1
+  },
+  "quality_gates": {
+    "enabled": true,
+    "lookback_bars": 20,
+    "chop_box_atr": 2.0,
+    "false_break_percentile": 0.15,
+    "false_break_edge_atr": 0.25,
+    "late_move_atr": 1.0,
+    "max_atr_points": 15.0,
+    "nq_point_value": 20.0,
+    "day_max_losers": 2,
+    "day_max_loss_dollars": 400.0,
+    "day_max_winners": 2,
+    "day_big_win_dollars": 500.0,
+    "day_giveback_arm_dollars": 400.0,
+    "day_giveback_dollars": 300.0
+  },
+  "trail_overlay": {
+    "enabled": true,
+    "bank_trigger_r": 2.5,
+    "lock_stop_r": 2.0,
+    "trail_atr": 1.0
   },
   "safety": {
     "daily_loss_limit": 500.0,

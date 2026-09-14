@@ -33,6 +33,8 @@ def p74_cfg(**mode) -> Phase74Config:
     raw.setdefault("logging", {})["log_dir"] = tempfile.mkdtemp()
     raw.setdefault("persistence", {})["state_file"] = str(Path(raw["logging"]["log_dir"]) / "state.json")
     raw["persistence"]["idempotency_file"] = str(Path(raw["logging"]["log_dir"]) / "idempotency.jsonl")
+    raw.setdefault("quality_gates", {})["enabled"] = False
+    raw.setdefault("trail_overlay", {})["enabled"] = False
     return Phase74Config(raw=raw)
 
 
@@ -271,6 +273,7 @@ class Phase74IntegrationTests(unittest.TestCase):
         stack.on_webhook_signal(make_test_signal("SIGNAL_LONG", signal_bar_time_utc=bar.timestamp, signal_time_utc=bar.timestamp, signal_price=bar.close), WebhookReason.WEBHOOK_VALID, LatencyTracker())
         r = stack.on_webhook_signal(make_test_signal("SIGNAL_SHORT", signal_bar_time_utc=bar.timestamp, signal_time_utc=bar.timestamp, signal_price=bar.close), WebhookReason.WEBHOOK_VALID, LatencyTracker())
         self.assertEqual(r.get("action"), TraderAction.OPPOSITE_SIGNAL_RECEIVED.value)
+        self.assertEqual(stack.engine.state, TraderState.LONG_ACTIVE)
 
     def test_p74_26_same_direction_duplicate(self):
         cfg = p74_cfg()

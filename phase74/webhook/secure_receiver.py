@@ -37,6 +37,7 @@ class RateLimiter:
 
 SignalCallback = Callable[[PineSignal, WebhookReason, LatencyTracker], None]
 RejectCallback = Callable[[dict, WebhookReason, str], None]
+LedgerCallback = Callable[[dict, datetime], None]
 
 
 class SecureWebhookReceiver:
@@ -48,11 +49,15 @@ class SecureWebhookReceiver:
         on_reject: RejectCallback | None = None,
         deduplicator: SignalDeduplicator | None = None,
         rate_limit: int = 60,
+        on_ledger: LedgerCallback | None = None,
+        ledger_path: str = "/webhook/ledger",
     ) -> None:
         self.cfg = cfg
         self.secret = secret
         self.on_signal = on_signal
         self.on_reject = on_reject or (lambda _p, _r, _d: None)
+        self.on_ledger = on_ledger
+        self.ledger_path = ledger_path
         self.deduplicator = deduplicator or SignalDeduplicator(cfg.log_dir / "signal_ids.jsonl")
         self.rate_limiter = RateLimiter(rate_limit)
         self._server: HTTPServer | None = None
@@ -111,8 +116,34 @@ class SecureWebhookReceiver:
         self.on_signal(result.signal, WebhookReason.WEBHOOK_VALID, tracker)
         return True, WebhookReason.WEBHOOK_VALID, ""
 
+    def handle_ledger_payload(
+        self,
+        payload: dict,
+        *,
+        headers: dict | None = None,
+        query_token: str = "",
+        received_at: datetime | None = None,
+    ) -> tuple[bool, str]:
+        """Log diagnostic ledger alert JSON — never triggers trading."""
+        received_at = received_at or datetime.now(timezone.utc)
+        if self.on_ledger is None:
+            return False, "ledger logging disabled"
+        if headers is not None and not self._auth_ok(headers, query_token=query_token):
+            return False, "auth failed"
+        if not self.rate_limiter.allow():
+            return False, "rate limit"
+        strategy = str(payload.get("strategy", ""))
+        if strategy and "SIGNAL-LEDGER" not in strategy.upper() and "LEDGER" not in strategy.upper():
+            log.warning("ledger webhook unexpected strategy=%s", strategy)
+        self.on_ledger(payload, received_at)
+        event = payload.get("event", "?")
+        event_id = payload.get("event_id", "?")
+        log.info("ledger alert logged event=%s event_id=%s", event, event_id)
+        return True, "logged"
+
     def start(self, host: str, port: int, path: str = "/webhook") -> None:
         receiver = self
+        ledger_path = self.ledger_path
 
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, fmt, *args) -> None:
@@ -120,7 +151,8 @@ class SecureWebhookReceiver:
 
             def do_POST(self) -> None:  # noqa: N802
                 parsed = urlparse(self.path)
-                if parsed.path != path:
+                route = parsed.path
+                if route not in (path, ledger_path):
                     self.send_response(404)
                     self.end_headers()
                     return
@@ -136,6 +168,15 @@ class SecureWebhookReceiver:
                     self.wfile.write(b'{"ok":false}')
                     return
                 hdrs = {k: v for k, v in self.headers.items()}
+                if route == ledger_path:
+                    ok, detail = receiver.handle_ledger_payload(
+                        payload, headers=hdrs, query_token=query_token
+                    )
+                    self.send_response(200 if ok else 409)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"ok": ok, "detail": detail}).encode())
+                    return
                 ok, reason, _ = receiver.handle_payload(payload, headers=hdrs, query_token=query_token)
                 self.send_response(200 if ok else 409)
                 self.send_header("Content-Type", "application/json")
@@ -146,6 +187,8 @@ class SecureWebhookReceiver:
         self._thread = Thread(target=self._server.serve_forever, daemon=True)
         self._thread.start()
         log.info("secure webhook listening %s:%s%s", host, port, path)
+        if self.on_ledger is not None:
+            log.info("ledger alert logger listening %s:%s%s", host, port, ledger_path)
 
     def stop(self) -> None:
         if self._server:

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import socket
 import threading
@@ -137,6 +138,7 @@ class TestTimestampConversion(unittest.TestCase):
 
 class TestNinjaTraderLiveProvider(unittest.TestCase):
     def setUp(self):
+        self._trust = os.environ.pop("NINJATRADER_BRIDGE_TRUST_LOCALHOST", None)
         self.port = _free_port()
         self.token = "test-secret-token"
         self.received: list[Bar] = []
@@ -155,6 +157,10 @@ class TestNinjaTraderLiveProvider(unittest.TestCase):
     def tearDown(self):
         self.client.close()
         self.provider.disconnect()
+        if self._trust is None:
+            os.environ.pop("NINJATRADER_BRIDGE_TRUST_LOCALHOST", None)
+        else:
+            os.environ["NINJATRADER_BRIDGE_TRUST_LOCALHOST"] = self._trust
 
     def test_auth_required(self):
         bad = MockNTClient("127.0.0.1", self.port, "wrong-token")

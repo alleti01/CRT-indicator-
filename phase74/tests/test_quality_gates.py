@@ -45,12 +45,75 @@ class QualityGateTests(unittest.TestCase):
         self.assertEqual(d.reason, "SKIP_CHOP")
 
     def test_skip_false_break_short_at_range_low(self) -> None:
-        bars = []
-        for i in range(20):
-            close = 100.0 if i == 19 else 120.0
-            bars.append(_bar(i, 120.0, 140.0, 100.0, close))
+        bars = [_bar(i, 120.0, 140.0, 100.0, 120.0) for i in range(19)]
+        bars.append(_bar(19, 120.0, 140.0, 100.0, 106.0))
         d = evaluate_quality_gates(bars, "SHORT", atr=10.0, cfg=self.cfg)
         self.assertEqual(d.reason, "SKIP_FALSE_BREAK")
+
+    def _prior_range_then(self, last_o: float, last_h: float, last_l: float, last_c: float) -> list[Bar]:
+        bars = [_bar(i, 100.0, 110.0, 90.0, 100.0) for i in range(19)]
+        bars.append(_bar(19, last_o, last_h, last_l, last_c))
+        return bars
+
+    def test_take_long_close_through_prior_high(self) -> None:
+        bars = self._prior_range_then(100.0, 111.5, 99.0, 111.0)
+        d = evaluate_quality_gates(bars, "LONG", atr=10.0, cfg=self.cfg)
+        self.assertEqual(d.decision, "TAKE")
+        self.assertEqual(d.reason, "TAKE")
+
+    def test_take_short_close_through_prior_low(self) -> None:
+        bars = self._prior_range_then(100.0, 101.0, 88.5, 89.0)
+        d = evaluate_quality_gates(bars, "SHORT", atr=10.0, cfg=self.cfg)
+        self.assertEqual(d.decision, "TAKE")
+        self.assertEqual(d.reason, "TAKE")
+
+    def test_skip_long_near_high_not_through_prior(self) -> None:
+        bars = self._prior_range_then(100.0, 110.0, 100.0, 109.0)
+        d = evaluate_quality_gates(bars, "LONG", atr=10.0, cfg=self.cfg)
+        self.assertEqual(d.reason, "SKIP_FALSE_BREAK")
+
+    def test_close_through_bypasses_late_move(self) -> None:
+        bars = self._prior_range_then(100.0, 114.0, 99.0, 112.0)
+        d = evaluate_quality_gates(bars, "LONG", atr=10.0, cfg=self.cfg)
+        self.assertGreater(d.progress_atr, 1.0)
+        self.assertEqual(d.decision, "TAKE")
+
+    def test_skip_no_trend_mid_box(self) -> None:
+        bars = self._prior_range_then(100.0, 104.0, 98.0, 102.0)
+        d = evaluate_quality_gates(bars, "LONG", atr=10.0, cfg=self.cfg)
+        self.assertLess(abs(d.progress_atr), 0.5)
+        self.assertEqual(d.reason, "SKIP_NO_TREND")
+
+    def test_skip_no_trend_short_flat_progress(self) -> None:
+        bars = self._prior_range_then(100.0, 103.0, 97.0, 99.0)
+        d = evaluate_quality_gates(bars, "SHORT", atr=10.0, cfg=self.cfg)
+        self.assertLess(abs(d.progress_atr), 0.5)
+        self.assertEqual(d.reason, "SKIP_NO_TREND")
+
+    def test_take_at_exactly_half_atr_progress(self) -> None:
+        bars = self._prior_range_then(100.0, 108.0, 99.0, 105.0)
+        d = evaluate_quality_gates(bars, "LONG", atr=10.0, cfg=self.cfg)
+        self.assertAlmostEqual(d.progress_atr, 0.5)
+        self.assertEqual(d.decision, "TAKE")
+
+    def test_close_through_bypasses_no_trend(self) -> None:
+        bars = [_bar(i, 109.0, 110.0, 90.0, 109.0) for i in range(19)]
+        bars.append(_bar(19, 109.0, 112.0, 108.0, 110.5))
+        d = evaluate_quality_gates(bars, "LONG", atr=10.0, cfg=self.cfg)
+        self.assertLess(abs(d.progress_atr), 0.5)
+        self.assertEqual(d.decision, "TAKE")
+
+    def test_skip_chop_even_if_close_through(self) -> None:
+        bars = [_bar(i, 102.0, 105.0, 100.0, 102.0) for i in range(19)]
+        bars.append(_bar(19, 102.0, 106.0, 101.0, 105.5))
+        d = evaluate_quality_gates(bars, "LONG", atr=10.0, cfg=self.cfg)
+        self.assertEqual(d.reason, "SKIP_CHOP")
+
+    def test_skip_atr_cap_even_if_close_through(self) -> None:
+        bars = [_bar(i, 100.0, 140.0, 90.0, 100.0) for i in range(19)]
+        bars.append(_bar(19, 100.0, 142.0, 99.0, 141.0))
+        d = evaluate_quality_gates(bars, "LONG", atr=16.0, cfg=self.cfg)
+        self.assertEqual(d.reason, "SKIP_ATR_CAP")
 
     def test_skip_late_move_long_already_ran(self) -> None:
         bars = []
@@ -87,6 +150,15 @@ class QualityGateTests(unittest.TestCase):
         d = evaluate_quality_gates(bars, "LONG", atr=15.0, cfg=self.cfg)
         self.assertEqual(d.decision, "TAKE")
         self.assertEqual(d.reason, "TAKE")
+
+    def test_take_atr_17_when_cap_is_18(self) -> None:
+        bars = []
+        for i in range(20):
+            c = 100.0 + i * (12.0 / 19.0)
+            bars.append(_bar(i, c, 160.0, 100.0, c))
+        cfg = QualityGateConfig(max_atr_points=18.0)
+        d = evaluate_quality_gates(bars, "LONG", atr=17.3, cfg=cfg)
+        self.assertEqual(d.decision, "TAKE")
 
 
 class PropDayHaltTests(unittest.TestCase):
@@ -133,6 +205,37 @@ class PropDayHaltTests(unittest.TestCase):
         self.assertFalse(h.should_halt_new_entries())
         self.assertEqual(h.losers, 1)
         self.assertEqual(h.winners, 1)
+
+    def test_overnight_wins_do_not_halt_rth(self) -> None:
+        h = PropDayHalt()
+        globex = datetime(2026, 9, 16, 6, 0, tzinfo=timezone.utc)  # 2:00 AM ET
+        h.record_closed(2.0, globex, dollars=222.0)
+        h.record_closed(2.4, globex, dollars=323.0)
+        self.assertTrue(h.should_halt_new_entries(globex))
+        self.assertEqual(h.reason, "HALT_DAY_WINS")
+        rth = datetime(2026, 9, 16, 14, 45, tzinfo=timezone.utc)  # 10:45 AM ET
+        self.assertFalse(h.should_halt_new_entries(rth))
+        self.assertEqual(h.winners, 0)
+        self.assertEqual(h.losers, 0)
+
+    def test_rth_wins_do_not_halt_after_hours(self) -> None:
+        h = PropDayHalt()
+        rth = datetime(2026, 9, 16, 15, 0, tzinfo=timezone.utc)  # 11:00 AM ET
+        h.record_closed(2.0, rth, dollars=390.0)
+        h.record_closed(2.0, rth, dollars=400.0)
+        self.assertTrue(h.should_halt_new_entries(rth))
+        evening = datetime(2026, 9, 16, 22, 10, tzinfo=timezone.utc)  # 6:10 PM ET
+        self.assertFalse(h.should_halt_new_entries(evening))
+        self.assertEqual(h.winners, 0)
+
+    def test_one_globex_loss_does_not_halt_rth(self) -> None:
+        h = PropDayHalt()
+        globex = datetime(2026, 9, 16, 4, 51, tzinfo=timezone.utc)  # 12:51 AM ET
+        h.record_closed(-1.0, globex, dollars=-119.0)
+        self.assertFalse(h.should_halt_new_entries(globex))
+        rth = datetime(2026, 9, 16, 13, 46, tzinfo=timezone.utc)  # 9:46 AM ET
+        self.assertFalse(h.should_halt_new_entries(rth))
+        self.assertEqual(h.losers, 0)
 
 
 class TrailOverlayTests(unittest.TestCase):

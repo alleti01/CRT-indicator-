@@ -1,4 +1,4 @@
-"""Pre-fill quality gates: chop, false-break, late-move."""
+"""Pre-fill quality gates: chop, no-trend, false-break, late-move."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -14,6 +14,7 @@ class QualityGateConfig:
     false_break_percentile: float = 0.15
     false_break_edge_atr: float = 0.25
     late_move_atr: float = 1.0
+    no_trend_atr: float = 0.5
     max_atr_points: float = 15.0
 
     @classmethod
@@ -24,6 +25,7 @@ class QualityGateConfig:
             false_break_percentile=float(raw.get("false_break_percentile", 0.15)),
             false_break_edge_atr=float(raw.get("false_break_edge_atr", 0.25)),
             late_move_atr=float(raw.get("late_move_atr", 1.0)),
+            no_trend_atr=float(raw.get("no_trend_atr", 0.5)),
             max_atr_points=float(raw.get("max_atr_points", 15.0)),
         )
 
@@ -66,6 +68,15 @@ def evaluate_quality_gates(
     progress_atr = progress / atr
     box_atr = box / atr
     percentile = 0.0 if box <= 0 else (close - range_low) / box
+    prior = window[:-1]
+    close_through = False
+    if prior:
+        prior_high = max(b.high for b in prior)
+        prior_low = min(b.low for b in prior)
+        if direction == "LONG":
+            close_through = close >= prior_high
+        else:
+            close_through = close <= prior_low
 
     base = QualityDecision(
         decision="TAKE",
@@ -83,19 +94,22 @@ def evaluate_quality_gates(
     if box <= 0 or box < cfg.chop_box_atr * atr:
         return QualityDecision(**{**base.__dict__, "decision": "SKIP", "reason": "SKIP_CHOP"})
 
-    edge = cfg.false_break_edge_atr * atr
-    if direction == "SHORT":
-        at_low = percentile <= cfg.false_break_percentile or close <= range_low + edge
-        if at_low:
-            return QualityDecision(**{**base.__dict__, "decision": "SKIP", "reason": "SKIP_FALSE_BREAK"})
-    else:
-        from_high = 0.0 if box <= 0 else (range_high - close) / box
-        at_high = from_high <= cfg.false_break_percentile or close >= range_high - edge
-        if at_high:
-            return QualityDecision(**{**base.__dict__, "decision": "SKIP", "reason": "SKIP_FALSE_BREAK"})
+    if not close_through:
+        if abs(progress) < cfg.no_trend_atr * atr:
+            return QualityDecision(**{**base.__dict__, "decision": "SKIP", "reason": "SKIP_NO_TREND"})
+        edge = cfg.false_break_edge_atr * atr
+        if direction == "SHORT":
+            at_low = percentile <= cfg.false_break_percentile or close <= range_low + edge
+            if at_low:
+                return QualityDecision(**{**base.__dict__, "decision": "SKIP", "reason": "SKIP_FALSE_BREAK"})
+        else:
+            from_high = 0.0 if box <= 0 else (range_high - close) / box
+            at_high = from_high <= cfg.false_break_percentile or close >= range_high - edge
+            if at_high:
+                return QualityDecision(**{**base.__dict__, "decision": "SKIP", "reason": "SKIP_FALSE_BREAK"})
 
-    if progress > cfg.late_move_atr * atr:
-        return QualityDecision(**{**base.__dict__, "decision": "SKIP", "reason": "SKIP_LATE_MOVE"})
+        if progress > cfg.late_move_atr * atr:
+            return QualityDecision(**{**base.__dict__, "decision": "SKIP", "reason": "SKIP_LATE_MOVE"})
 
     if atr > cfg.max_atr_points:
         return QualityDecision(**{**base.__dict__, "decision": "SKIP", "reason": "SKIP_ATR_CAP"})

@@ -160,6 +160,44 @@ class QualityGateTests(unittest.TestCase):
         d = evaluate_quality_gates(bars, "LONG", atr=17.3, cfg=cfg)
         self.assertEqual(d.decision, "TAKE")
 
+    def test_take_continuation_short_three_of_four_bearish_at_lows(self) -> None:
+        """9:34 shape: dump then small green pause at the 20-bar low still TAKEs."""
+        bars = [_bar(i, 130.0, 140.0, 120.0, 130.0) for i in range(16)]
+        bars.append(_bar(16, 128.0, 129.0, 118.0, 119.0))
+        bars.append(_bar(17, 119.0, 120.0, 110.0, 111.0))
+        bars.append(_bar(18, 111.0, 112.0, 102.0, 103.0))
+        bars.append(_bar(19, 103.0, 106.0, 100.0, 104.0))
+        d = evaluate_quality_gates(bars, "SHORT", atr=10.0, cfg=self.cfg)
+        self.assertGreater(d.progress_atr, 1.0)
+        self.assertLessEqual(d.percentile_in_box, 0.15)
+        self.assertEqual(d.decision, "TAKE")
+        self.assertEqual(d.reason, "TAKE")
+
+    def test_skip_spike_long_two_of_four_bullish_at_highs(self) -> None:
+        """3:32 shape: mixed candles then one spike into the 20-bar high still SKIPs."""
+        bars = [_bar(i, 110.0, 120.0, 100.0, 110.0) for i in range(16)]
+        bars.append(_bar(16, 110.0, 111.0, 108.0, 109.0))
+        bars.append(_bar(17, 109.0, 112.0, 108.0, 111.0))
+        bars.append(_bar(18, 111.0, 112.0, 109.0, 110.0))
+        bars.append(_bar(19, 110.0, 120.0, 109.5, 119.0))
+        d = evaluate_quality_gates(bars, "LONG", atr=10.0, cfg=self.cfg)
+        self.assertEqual(d.decision, "SKIP")
+        self.assertEqual(d.reason, "SKIP_FALSE_BREAK")
+
+    def test_two_bearish_bodies_do_not_bypass_false_break(self) -> None:
+        bars = [_bar(i, 120.0, 140.0, 100.0, 120.0) for i in range(18)]
+        bars.append(_bar(18, 120.0, 121.0, 110.0, 111.0))
+        bars.append(_bar(19, 111.0, 112.0, 100.0, 106.0))
+        d = evaluate_quality_gates(bars, "SHORT", atr=10.0, cfg=self.cfg)
+        self.assertEqual(d.reason, "SKIP_FALSE_BREAK")
+
+    def test_long_close_equal_prior_high_is_not_through(self) -> None:
+        bars = [_bar(i, 100.0, 110.0, 90.0, 100.0) for i in range(19)]
+        bars.append(_bar(19, 108.0, 110.0, 107.0, 110.0))
+        d = evaluate_quality_gates(bars, "LONG", atr=10.0, cfg=self.cfg)
+        self.assertEqual(d.decision, "SKIP")
+        self.assertEqual(d.reason, "SKIP_FALSE_BREAK")
+
 
 class PropDayHaltTests(unittest.TestCase):
     def test_halt_after_two_losers(self) -> None:

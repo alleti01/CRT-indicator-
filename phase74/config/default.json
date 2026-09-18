@@ -61,6 +61,8 @@
     "late_move_atr": 1.0,
     "no_trend_atr": 0.5,
     "max_atr_points": 18.0,
+    "pa_lookback_bars": 4,
+    "pa_min_bodies": 3,
     "nq_point_value": 20.0,
     "day_max_losers": 4,
     "day_max_loss_dollars": 400.0,

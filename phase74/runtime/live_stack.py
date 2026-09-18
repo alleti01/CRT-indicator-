@@ -23,8 +23,8 @@ from phase74.execution.paper_broker import PaperBrokerAdapter
 from phase74.journal.trade_journal import TradeJournal, TradeJournalEntry
 from phase74.latency.tracker import LatencyTracker
 from phase74.market_data.live_provider import StreamLiveDataProvider
-from phase74.quality.day_halt import PropDayHalt
-from phase74.quality.gates import QualityGateConfig, evaluate_quality_gates
+from phase74.quality.day_halt import PropDayHalt, new_entries_blocked_session
+from phase74.quality.gates import QualityDecision, QualityGateConfig, evaluate_quality_gates
 from phase74.quality.logger import QualitySkipLogger
 from phase74.quality.trail import TrailOverlay, TrailOverlayConfig
 from phase74.safety.daily_session import DailySessionSafety
@@ -56,6 +56,7 @@ class LiveStack:
         self._active_entry_atr: float = 0.0
         qg = cfg.section("quality_gates")
         self._quality_enabled = bool(qg.get("enabled", False))
+        self._allow_globex_entries = bool(qg.get("allow_globex_entries", False))
         self._quality_cfg = QualityGateConfig.from_dict(qg)
         self._quality_log = QualitySkipLogger(cfg.log_dir) if self._quality_enabled else None
         self._day_halt = (
@@ -210,7 +211,7 @@ class LiveStack:
                         extra=extra,
                     )
                     if self._day_halt is not None:
-                        self._day_halt.record_closed(gross_r, atr=entry_atr)
+                        self._day_halt.record_closed(gross_r, bar.timestamp, atr=entry_atr)
                     self._trail = None
                     self._active_trade_id = None
                     self._active_entry_atr = 0.0
@@ -220,7 +221,7 @@ class LiveStack:
         self.engine._execute_exit = execute_exit  # type: ignore[method-assign]
 
     def _pre_entry_checks(self, signal: PineSignal) -> bool:
-        if self._day_halt is not None and self._day_halt.should_halt_new_entries():
+        if self._day_halt is not None and self._day_halt.should_halt_new_entries(signal.signal_time_utc):
             log.warning("%s", self._day_halt.reason)
             return False
         if self.cfg.kill_switch or self.daily.should_halt(int(self.cfg.section("safety").get("max_consecutive_errors", 5))):
@@ -263,6 +264,19 @@ class LiveStack:
             return {"ok": False, "reason": reason.value}
         if signal.pine_hash != self.cfg.pine_hash:
             return {"ok": False, "reason": "SIGNAL_HASH_MISMATCH"}
+        globex_block = new_entries_blocked_session(
+            signal.signal_time_utc,
+            allow_globex_entries=self._allow_globex_entries,
+        )
+        if globex_block:
+            if self._quality_log is not None:
+                self._quality_log.log(
+                    QualityDecision(decision="SKIP", reason=globex_block),
+                    signal_id=signal.signal_id,
+                    direction=signal.direction,
+                )
+            log.info("quality skip signal=%s reason=%s", signal.signal_id, globex_block)
+            return {"ok": False, "reason": globex_block, "quality": globex_block}
         if self._quality_enabled:
             lookback = self._quality_cfg.lookback_bars
             bars = list(self.market_data.recent_bars(lookback))
@@ -278,7 +292,7 @@ class LiveStack:
             if qdec.decision == "SKIP":
                 log.info("quality skip signal=%s reason=%s", signal.signal_id, qdec.reason)
                 return {"ok": False, "reason": qdec.reason, "quality": qdec.reason}
-        if self._day_halt is not None and self._day_halt.should_halt_new_entries():
+        if self._day_halt is not None and self._day_halt.should_halt_new_entries(signal.signal_time_utc):
             log.warning("%s signal=%s", self._day_halt.reason, signal.signal_id)
             return {"ok": False, "reason": self._day_halt.reason}
         tracker.decision_at = datetime.now(timezone.utc)

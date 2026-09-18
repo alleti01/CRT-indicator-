@@ -8,7 +8,7 @@ from phase73.market_data.bar import Bar
 from phase73.trader.fsm import TraderAction
 from phase73.trader.management import ManagementState, build_management
 from phase73.config.loader import Phase73Config
-from phase74.quality.day_halt import PropDayHalt
+from phase74.quality.day_halt import PropDayHalt, new_entries_blocked_session
 from phase74.quality.gates import QualityGateConfig, evaluate_quality_gates
 from phase74.quality.trail import TrailOverlay, TrailOverlayConfig
 
@@ -274,6 +274,24 @@ class PropDayHaltTests(unittest.TestCase):
         rth = datetime(2026, 9, 16, 13, 46, tzinfo=timezone.utc)  # 9:46 AM ET
         self.assertFalse(h.should_halt_new_entries(rth))
         self.assertEqual(h.losers, 0)
+
+
+class GlobexEntryBlockTests(unittest.TestCase):
+    def test_pre_rth_blocked(self) -> None:
+        ts = datetime(2026, 9, 18, 12, 0, tzinfo=timezone.utc)  # 8:00 AM ET
+        self.assertEqual(new_entries_blocked_session(ts), "SKIP_GLOBEX")
+
+    def test_rth_allowed(self) -> None:
+        ts = datetime(2026, 9, 18, 13, 30, tzinfo=timezone.utc)  # 9:30 AM ET
+        self.assertEqual(new_entries_blocked_session(ts), "")
+
+    def test_after_hours_blocked(self) -> None:
+        ts = datetime(2026, 9, 18, 20, 0, tzinfo=timezone.utc)  # 4:00 PM ET
+        self.assertEqual(new_entries_blocked_session(ts), "SKIP_GLOBEX")
+
+    def test_allow_globex_opt_in(self) -> None:
+        ts = datetime(2026, 9, 18, 12, 0, tzinfo=timezone.utc)
+        self.assertEqual(new_entries_blocked_session(ts, allow_globex_entries=True), "")
 
 
 class TrailOverlayTests(unittest.TestCase):

@@ -283,24 +283,42 @@ namespace NinjaTrader.NinjaScript.AddOns
             }
 
             OrderAction action = command == "ENTER_LONG" ? OrderAction.Buy : OrderAction.Sell;
-            // NT8 public API: Account.CreateOrder(Instrument, OrderAction, OrderType, OrderEntry, TimeInForce, qty, limit, stop, oco, name, gtd, text)
-            Order order = _account.CreateOrder(
-                inst,
-                action,
-                OrderType.Market,
-                OrderEntry.Automated,
-                TimeInForce.Day,
-                quantity,
-                0,
-                0,
-                "",
-                "CRT85-ENTRY",
-                DateTime.MaxValue,
-                commandId
-            );
+            Order order = CreateNtOrder(inst, action, OrderType.Market, TimeInForce.Day, quantity, 0, 0, "", "CRT85-ENTRY", commandId);
             Emit("ORDER_RECEIVED", commandId, "OK", order != null ? order.OrderId : "", 0, 0);
             _account.Submit(new[] { order });
             Emit("ORDER_SUBMITTED", commandId, "OK", order != null ? order.OrderId : "", 0, 0);
+        }
+
+        private Order CreateNtOrder(
+            Instrument inst,
+            OrderAction action,
+            OrderType orderType,
+            TimeInForce tif,
+            int quantity,
+            double limitPrice,
+            double stopPrice,
+            string oco,
+            string name,
+            string commandId)
+        {
+            // NT8: CreateOrder(..., oco, name, gtd, CustomOrder). Command id is Order.Text.
+            Order order = _account.CreateOrder(
+                inst,
+                action,
+                orderType,
+                OrderEntry.Automated,
+                tif,
+                quantity,
+                limitPrice,
+                stopPrice,
+                oco ?? "",
+                name,
+                DateTime.MaxValue,
+                null
+            );
+            if (order != null)
+                order.Text = commandId ?? "";
+            return order;
         }
 
         private void PlaceProtection(string line, string commandId)
@@ -327,8 +345,8 @@ namespace NinjaTrader.NinjaScript.AddOns
 
             _ocoId = Guid.NewGuid().ToString("N");
             OrderAction exit = _side == "LONG" ? OrderAction.Sell : OrderAction.Buy;
-            Order stopOrd = _account.CreateOrder(inst, exit, OrderType.StopMarket, OrderEntry.Automated, TimeInForce.Gtc, qty, 0, stop, _ocoId, "CRT85-STOP", DateTime.MaxValue, commandId);
-            Order tgtOrd = _account.CreateOrder(inst, exit, OrderType.Limit, OrderEntry.Automated, TimeInForce.Gtc, qty, target, 0, _ocoId, "CRT85-TARGET", DateTime.MaxValue, commandId);
+            Order stopOrd = CreateNtOrder(inst, exit, OrderType.StopMarket, TimeInForce.Gtc, qty, 0, stop, _ocoId, "CRT85-STOP", commandId);
+            Order tgtOrd = CreateNtOrder(inst, exit, OrderType.Limit, TimeInForce.Gtc, qty, target, 0, _ocoId, "CRT85-TARGET", commandId);
             try
             {
                 _account.Submit(new[] { stopOrd, tgtOrd });
@@ -430,7 +448,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             if (e == null || e.Order == null)
                 return;
             Order o = e.Order;
-            string commandId = o.CustomText ?? "";
+            string commandId = o.Text ?? "";
             if (o.OrderState == OrderState.Accepted || o.OrderState == OrderState.Working)
                 Emit("ORDER_ACCEPTED", commandId, "OK", o.OrderId, 0, 0);
             else if (o.OrderState == OrderState.Rejected)
@@ -444,7 +462,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             if (e == null || e.Execution == null)
                 return;
             Execution ex = e.Execution;
-            string commandId = ex.Order != null ? (ex.Order.CustomText ?? "") : "";
+            string commandId = ex.Order != null ? (ex.Order.Text ?? "") : "";
             int remaining = 0;
             if (ex.Order != null)
                 remaining = Math.Max(0, ex.Order.Quantity - ex.Order.Filled);
@@ -723,4 +741,3 @@ namespace NinjaTrader.NinjaScript.AddOns
         }
     }
 }
-#endregion

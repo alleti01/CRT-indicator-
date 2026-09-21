@@ -237,9 +237,9 @@ class PropDayHaltTests(unittest.TestCase):
         self.assertTrue(h.should_halt_new_entries(later))
         self.assertEqual(h.reason, "HALT_DAY_WINS")
 
-    def test_live_config_is_one_winner_per_session(self) -> None:
+    def test_live_config_is_two_winners_per_session(self) -> None:
         qg = load_phase74_config().section("quality_gates")
-        self.assertEqual(int(qg["day_max_winners"]), 1)
+        self.assertEqual(int(qg["day_max_winners"]), 2)
 
     def test_seed_journal_restores_win_halt(self) -> None:
         td = Path(tempfile.mkdtemp())

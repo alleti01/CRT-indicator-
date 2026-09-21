@@ -9,6 +9,7 @@ from phase73.market_data.bar import Bar
 from phase74.quality.gates import QualityGateConfig, evaluate_quality_gates
 from phase74.quality.sideways import (
     SidewaysOverlayConfig,
+    capture_prebreak_boundary,
     compute_window_metrics,
     detect_false_break,
     detect_sideways_state,
@@ -121,6 +122,14 @@ class SidewaysOverlayGlobexTests(unittest.TestCase):
         self.assertTrue(d.false_break)
         self.assertEqual(d.reason, PASS_FALSE_BREAK)
 
+    def test_wick_below_close_inside_is_false_break_short(self) -> None:
+        bars = _wide_overlap(last4="RRRR")[:-1]
+        prior_low = min(b.low for b in bars)
+        bars.append(_gbar(19, 120.0, 140.0, prior_low - 4.0, prior_low + 2.0))
+        d = _overlay(bars, "SHORT")
+        self.assertTrue(d.false_break)
+        self.assertEqual(d.reason, PASS_FALSE_BREAK)
+
     def test_close_through_frozen_boundary_is_escape(self) -> None:
         bars = _wide_overlap(last4="GGGG")[:-1]
         prior_high = max(b.high for b in bars)
@@ -129,6 +138,26 @@ class SidewaysOverlayGlobexTests(unittest.TestCase):
         self.assertTrue(d.escape.close_through)
         self.assertIn(d.reason, (TAKE_RANGE_ESCAPE, "TAKE", TAKE_RANGE_ESCAPE_RETEST))
         self.assertEqual(d.decision, "TAKE")
+
+    def test_close_through_frozen_boundary_short(self) -> None:
+        bars = _wide_overlap(last4="RRRR")[:-1]
+        prior_low = min(b.low for b in bars)
+        bars.append(_gbar(19, prior_low + 1.0, prior_low + 4.0, prior_low - 6.0, prior_low - 3.0))
+        d = _overlay(bars, "SHORT")
+        self.assertTrue(d.escape.close_through)
+        self.assertEqual(d.decision, "TAKE")
+
+    def test_breakout_bar_does_not_raise_its_own_wall(self) -> None:
+        bars = _wide_overlap(last4="GGGG")[:-1]
+        wall = capture_prebreak_boundary(bars + [_gbar(19, 140.0, 200.0, 130.0, 199.0)])
+        self.assertIsNotNone(wall)
+        assert wall is not None
+        prior_high = max(b.high for b in bars)
+        self.assertEqual(wall[0], prior_high)
+        self.assertLess(wall[0], 200.0)
+        d = _overlay(bars + [_gbar(19, 140.0, 200.0, 130.0, prior_high + 2.0)], "LONG")
+        self.assertEqual(d.metrics.range_upper_prebreak, prior_high)
+        self.assertTrue(d.escape.close_through)
 
     def test_break_retest_hold(self) -> None:
         bars = []

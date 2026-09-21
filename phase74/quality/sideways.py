@@ -79,6 +79,22 @@ def _pair_overlap(a: Bar, b: Bar) -> float:
     return max(0.0, inter) / union
 
 
+def capture_prebreak_boundary(
+    bars: Sequence[Bar], lookback: int = 20
+) -> tuple[float, float] | None:
+    """Frozen wall from bars before the decision bar.
+
+    known_at: close of bars[-2]. Decision-bar high/low is excluded.
+    """
+    if len(bars) < 2:
+        return None
+    window = list(bars)[-lookback:] if len(bars) >= lookback else list(bars)
+    prior = window[:-1]
+    if not prior:
+        return None
+    return max(b.high for b in prior), min(b.low for b in prior)
+
+
 def compute_window_metrics(
     bars: Sequence[Bar],
     direction: str,
@@ -100,6 +116,10 @@ def compute_window_metrics(
     window = list(bars)[-cfg.lookback_bars :]
     prior = window[:-1]
     current = window[-1]
+    wall = capture_prebreak_boundary(window, lookback=len(window))
+    if wall is None:
+        return None
+    upper, lower = wall
     highs = [b.high for b in window]
     lows = [b.low for b in window]
     range_width = max(highs) - min(lows)
@@ -118,8 +138,8 @@ def compute_window_metrics(
         total_path_20=total_path,
         directional_efficiency_20=efficiency,
         adjacent_overlap_ratio=overlap,
-        range_upper_prebreak=max(b.high for b in prior),
-        range_lower_prebreak=min(b.low for b in prior),
+        range_upper_prebreak=upper,
+        range_lower_prebreak=lower,
         close=current.close,
         high=current.high,
         low=current.low,

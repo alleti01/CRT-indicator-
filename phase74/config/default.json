@@ -78,6 +78,10 @@
     "lock_stop_r": 2.0,
     "trail_atr": 1.0
   },
+  "range_lock": {
+    "enabled": true,
+    "arm_on": "any"
+  },
   "safety": {
     "daily_loss_limit": 500.0,
     "max_open_orders": 2,

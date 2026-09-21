@@ -36,6 +36,7 @@ def p74_cfg(**mode) -> Phase74Config:
     raw.setdefault("quality_gates", {})["enabled"] = False
     raw["quality_gates"]["allow_globex_entries"] = True
     raw.setdefault("trail_overlay", {})["enabled"] = False
+    raw.setdefault("range_lock", {})["enabled"] = False
     return Phase74Config(raw=raw)
 
 

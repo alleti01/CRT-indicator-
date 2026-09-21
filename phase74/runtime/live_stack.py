@@ -26,6 +26,7 @@ from phase74.market_data.live_provider import StreamLiveDataProvider
 from phase74.quality.day_halt import PropDayHalt, new_entries_blocked_session
 from phase74.quality.gates import QualityDecision, QualityGateConfig, evaluate_quality_gates
 from phase74.quality.logger import QualitySkipLogger
+from phase74.quality.range_lock import RangeLock, RangeLockConfig, seed_from_paper_trades
 from phase74.quality.trail import TrailOverlay, TrailOverlayConfig
 from phase74.safety.daily_session import DailySessionSafety
 from phase73.risk.reconciliation import reconcile as p73_reconcile
@@ -76,6 +77,13 @@ class LiveStack:
         self._trail_enabled = bool(to.get("enabled", False))
         self._trail_cfg = TrailOverlayConfig.from_dict(to)
         self._trail: TrailOverlay | None = None
+        rl = cfg.section("range_lock")
+        self.range_lock = RangeLock(
+            RangeLockConfig.from_dict(rl),
+            path=cfg.log_dir / "range_lock.json",
+        )
+        self._trade_hi: float | None = None
+        self._trade_lo: float | None = None
 
         p73 = cfg.to_phase73_config()
         log_dir = cfg.log_dir
@@ -109,6 +117,7 @@ class LiveStack:
             persistence=StatePersistence(state_path),
         )
         self._patch_engine_broker_submit()
+        seed_from_paper_trades(self.range_lock, cfg.log_dir / "paper_trades.csv")
 
     def _with_live_atr(self, signal: PineSignal) -> PineSignal:
         """Prefer NT-computed ATR over Pine webhook placeholder (often 1.0)."""
@@ -179,6 +188,9 @@ class LiveStack:
                     self._trail = TrailOverlay(self._trail_cfg)
                     self._trail.hide_m0_target(self.engine.mgmt)
                     self.engine.book.internal.target_price = self.engine.mgmt.target_price
+                fill_px = float(result["fill_price"])
+                self._trade_hi = fill_px
+                self._trade_lo = fill_px
             return result
 
         def execute_exit(state_before, exit_dec, bar):
@@ -212,6 +224,13 @@ class LiveStack:
                     )
                     if self._day_halt is not None:
                         self._day_halt.record_closed(gross_r, bar.timestamp, atr=entry_atr)
+                    self._expand_trade_range(bar)
+                    arm_stop_only = self.range_lock.cfg.arm_on == "stop"
+                    if self._trade_hi is not None and self._trade_lo is not None:
+                        if not arm_stop_only or gross_r <= 0:
+                            self.range_lock.arm(self._trade_hi, self._trade_lo, bar.timestamp)
+                    self._trade_hi = None
+                    self._trade_lo = None
                     self._trail = None
                     self._active_trade_id = None
                     self._active_entry_atr = 0.0
@@ -219,6 +238,14 @@ class LiveStack:
 
         self.engine._execute_entry = execute_entry  # type: ignore[method-assign]
         self.engine._execute_exit = execute_exit  # type: ignore[method-assign]
+
+    def _expand_trade_range(self, bar) -> None:
+        if bar is None:
+            return
+        hi = float(bar.high)
+        lo = float(bar.low)
+        self._trade_hi = hi if self._trade_hi is None else max(self._trade_hi, hi)
+        self._trade_lo = lo if self._trade_lo is None else min(self._trade_lo, lo)
 
     def _pre_entry_checks(self, signal: PineSignal) -> bool:
         if self._day_halt is not None and self._day_halt.should_halt_new_entries(signal.signal_time_utc):
@@ -292,6 +319,21 @@ class LiveStack:
             if qdec.decision == "SKIP":
                 log.info("quality skip signal=%s reason=%s", signal.signal_id, qdec.reason)
                 return {"ok": False, "reason": qdec.reason, "quality": qdec.reason}
+        bar = self.market_data.latest_bar()
+        if bar is not None:
+            lock_reason = self.range_lock.evaluate(float(bar.close), signal.signal_time_utc)
+            if lock_reason:
+                qdec = QualityDecision(
+                    decision="SKIP",
+                    reason=lock_reason,
+                    close=float(bar.close),
+                    range_low=float(self.range_lock.low or 0.0),
+                    range_high=float(self.range_lock.high or 0.0),
+                )
+                if self._quality_log is not None:
+                    self._quality_log.log(qdec, signal_id=signal.signal_id, direction=signal.direction)
+                log.info("quality skip signal=%s reason=%s", signal.signal_id, lock_reason)
+                return {"ok": False, "reason": lock_reason, "quality": lock_reason}
         if self._day_halt is not None and self._day_halt.should_halt_new_entries(signal.signal_time_utc):
             log.warning("%s signal=%s", self._day_halt.reason, signal.signal_id)
             return {"ok": False, "reason": self._day_halt.reason}
@@ -311,6 +353,8 @@ class LiveStack:
             self.engine.events.log_error({"critical": "BROKER_DISCONNECT_ACTIVE"})
         self._release_reversal_watch()
         bar = self.market_data.latest_bar()
+        if self._trade_hi is not None:
+            self._expand_trade_range(bar)
         if (
             self._trail is not None
             and self.engine.mgmt is not None

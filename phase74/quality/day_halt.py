@@ -1,8 +1,10 @@
 """Prop day halt for a $2,000 DD / 50k / 1 NQ book (America/New_York session)."""
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta, timezone
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 _NY = ZoneInfo("America/New_York")
@@ -127,3 +129,22 @@ class PropDayHalt:
             return True
         self.reason = ""
         return False
+
+
+def seed_day_halt_from_paper_trades(halt: PropDayHalt, csv_path: Path) -> bool:
+    """Replay closed journal rows so a restart keeps today's win/loss halt."""
+    if not csv_path.exists():
+        return False
+    seeded = False
+    with csv_path.open(encoding="utf-8", newline="") as fh:
+        for row in csv.DictReader(fh):
+            if not row.get("exit_timestamp") or not row.get("net_R"):
+                continue
+            raw = row["exit_timestamp"].replace("Z", "+00:00")
+            when = datetime.fromisoformat(raw)
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+            atr = float(row["atr"]) if row.get("atr") else None
+            halt.record_closed(float(row["net_R"]), when, atr=atr)
+            seeded = True
+    return seeded

@@ -23,7 +23,11 @@ from phase74.execution.paper_broker import PaperBrokerAdapter
 from phase74.journal.trade_journal import TradeJournal, TradeJournalEntry
 from phase74.latency.tracker import LatencyTracker
 from phase74.market_data.live_provider import StreamLiveDataProvider
-from phase74.quality.day_halt import PropDayHalt, new_entries_blocked_session
+from phase74.quality.day_halt import (
+    PropDayHalt,
+    new_entries_blocked_session,
+    seed_day_halt_from_paper_trades,
+)
 from phase74.quality.gates import QualityDecision, QualityGateConfig, evaluate_quality_gates
 from phase74.quality.logger import QualitySkipLogger
 from phase74.quality.range_lock import RangeLock, RangeLockConfig, seed_from_paper_trades
@@ -73,6 +77,8 @@ class LiveStack:
             if self._quality_enabled
             else None
         )
+        if self._day_halt is not None:
+            seed_day_halt_from_paper_trades(self._day_halt, cfg.log_dir / "paper_trades.csv")
         to = cfg.section("trail_overlay")
         self._trail_enabled = bool(to.get("enabled", False))
         self._trail_cfg = TrailOverlayConfig.from_dict(to)

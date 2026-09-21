@@ -1,14 +1,21 @@
 """Unit tests for Phase74 quality gates, day halt, and trail overlay."""
 from __future__ import annotations
 
+import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from phase73.market_data.bar import Bar
 from phase73.trader.fsm import TraderAction
 from phase73.trader.management import ManagementState, build_management
 from phase73.config.loader import Phase73Config
-from phase74.quality.day_halt import PropDayHalt, new_entries_blocked_session
+from phase74.config.loader import load_phase74_config
+from phase74.quality.day_halt import (
+    PropDayHalt,
+    new_entries_blocked_session,
+    seed_day_halt_from_paper_trades,
+)
 from phase74.quality.gates import QualityGateConfig, evaluate_quality_gates
 from phase74.quality.trail import TrailOverlay, TrailOverlayConfig
 
@@ -221,6 +228,33 @@ class PropDayHaltTests(unittest.TestCase):
         h.record_closed(2.0, dollars=300.0)
         self.assertTrue(h.should_halt_new_entries())
         self.assertEqual(h.reason, "HALT_DAY_WINS")
+
+    def test_one_winner_halts_when_max_is_one(self) -> None:
+        h = PropDayHalt(max_winners=1, big_win_dollars=10_000.0)
+        now = datetime(2026, 9, 21, 14, 20, tzinfo=timezone.utc)  # 10:20 AM ET
+        h.record_closed(2.1, now, dollars=665.0)
+        later = datetime(2026, 9, 21, 17, 10, tzinfo=timezone.utc)  # 1:10 PM ET
+        self.assertTrue(h.should_halt_new_entries(later))
+        self.assertEqual(h.reason, "HALT_DAY_WINS")
+
+    def test_live_config_is_one_winner_per_session(self) -> None:
+        qg = load_phase74_config().section("quality_gates")
+        self.assertEqual(int(qg["day_max_winners"]), 1)
+
+    def test_seed_journal_restores_win_halt(self) -> None:
+        td = Path(tempfile.mkdtemp())
+        csv_path = td / "paper_trades.csv"
+        csv_path.write_text(
+            "net_R,atr,exit_timestamp\n"
+            "2.1,15.77,2026-09-21T14:17:00+00:00\n",
+            encoding="utf-8",
+        )
+        h = PropDayHalt(max_winners=1, big_win_dollars=10_000.0)
+        self.assertTrue(seed_day_halt_from_paper_trades(h, csv_path))
+        now = datetime(2026, 9, 21, 18, 0, tzinfo=timezone.utc)
+        self.assertTrue(h.should_halt_new_entries(now))
+        self.assertEqual(h.reason, "HALT_DAY_WINS")
+        self.assertEqual(h.winners, 1)
 
     def test_halt_after_one_big_win(self) -> None:
         h = PropDayHalt()

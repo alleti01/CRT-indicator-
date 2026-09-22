@@ -23,6 +23,7 @@ class ExecutionBridgeServer:
         auth_token: str,
         on_event: Callable[[Event], None] | None = None,
         on_auth: Callable[[], None] | None = None,
+        on_hello: Callable[[str, str], None] | None = None,
         on_disconnect: Callable[[], None] | None = None,
     ) -> None:
         if host not in {"127.0.0.1", "localhost", "::1"}:
@@ -34,6 +35,7 @@ class ExecutionBridgeServer:
         self.auth_token = auth_token
         self._on_event = on_event
         self._on_auth = on_auth
+        self._on_hello = on_hello
         self._on_disconnect = on_disconnect
         self.connected = False
         self.authenticated = False
@@ -157,6 +159,8 @@ class ExecutionBridgeServer:
                 return
             self.authenticated = True
             client.sendall(encode_message({"type": "ack", "ok": True, "detail": "OK"}).encode("utf-8"))
+            if self._on_hello:
+                self._on_hello(str(obj.get("account", "")), str(obj.get("instrument", "")))
             if self._on_auth:
                 self._on_auth()
             self._flush()

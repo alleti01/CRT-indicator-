@@ -77,6 +77,8 @@ class RangeLock:
         return ""
 
     def arm(self, high: float, low: float, now: datetime) -> None:
+        if not self.cfg.enabled:
+            return
         if high < low:
             high, low = low, high
         self.high = float(high)

@@ -241,6 +241,10 @@ class PropDayHaltTests(unittest.TestCase):
         qg = load_phase74_config().section("quality_gates")
         self.assertEqual(int(qg["day_max_winners"]), 2)
 
+    def test_live_config_range_lock_is_off(self) -> None:
+        rl = load_phase74_config().section("range_lock")
+        self.assertFalse(bool(rl.get("enabled")))
+
     def test_seed_journal_restores_win_halt(self) -> None:
         td = Path(tempfile.mkdtemp())
         csv_path = td / "paper_trades.csv"

@@ -6,7 +6,7 @@ import uuid
 from dataclasses import replace
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
 from phase74.execution.slippage_router import SlippageSimRouter
 from phase73.logging.decision_logger import DecisionLogger
@@ -48,13 +48,19 @@ _REVERSAL_WATCH_RESUME = {
 class LiveStack:
     """Dress-rehearsal runtime: live data + secure webhook + paper/local sim + shadow mode."""
 
-    def __init__(self, cfg: Phase74Config, market_data: StreamLiveDataProvider) -> None:
+    def __init__(
+        self,
+        cfg: Phase74Config,
+        market_data: StreamLiveDataProvider,
+        execution_adapter: Optional[Any] = None,
+    ) -> None:
         ok, errs = verify_phase73_freeze()
         if not ok:
             raise RuntimeError(f"PHASE73_ENGINE_FREEZE_FAILED: {errs}")
 
         self.cfg = cfg
         self.market_data = market_data
+        self.execution_adapter = execution_adapter
         self.webhook_status = "NOT_STARTED"
         self._latency_samples: list[float] = []
         self._active_trade_id: str | None = None
@@ -197,6 +203,7 @@ class LiveStack:
                 fill_px = float(result["fill_price"])
                 self._trade_hi = fill_px
                 self._trade_lo = fill_px
+                self._route_nt_entry(signal, fill_px)
             return result
 
         def execute_exit(state_before, exit_dec, bar):
@@ -240,6 +247,7 @@ class LiveStack:
                     self._trail = None
                     self._active_trade_id = None
                     self._active_entry_atr = 0.0
+                    self._route_nt_flatten()
             return result
 
         self.engine._execute_entry = execute_entry  # type: ignore[method-assign]
@@ -275,6 +283,53 @@ class LiveStack:
         if not self.cfg.trading_enabled and not self.cfg.shadow_mode:
             return False
         return True
+
+    def _route_nt_entry(self, signal: PineSignal, fill_price: float) -> None:
+        adapter = self.execution_adapter
+        if adapter is None:
+            return
+        try:
+            routing = bool(adapter.cfg.routing_enabled())
+        except AttributeError:
+            routing = False
+        if not routing:
+            log.info("NT execution skip: routing disabled")
+            return
+        if not getattr(adapter.transport, "authenticated", False):
+            log.warning("NT execution skip: CRTExecutionBridge not connected")
+            return
+        from phase85.execution.intent import ExecutionIntent
+        from phase85.execution.state_machine import ExecutionState
+
+        now = datetime.now(timezone.utc)
+        intent = ExecutionIntent(
+            side=signal.direction,
+            quantity=1,
+            instrument=str(adapter.cfg.expected_contract or "MNQ 12-26"),
+            command_id=str(uuid.uuid4()),
+            event_id=signal.signal_id,
+            signal_id=signal.signal_id,
+            expected_entry=float(fill_price),
+            signal_atr=float(signal.atr),
+            signal_time=signal.signal_time_utc,
+            webhook_received=now,
+            decision_time=now,
+            phase73_decision="TAKE",
+        )
+        result = adapter.request_entry(intent)
+        log.info("NT execution entry allowed=%s reason=%s", result.allowed, result.reason)
+        if result.allowed and getattr(adapter, "state", None) == ExecutionState.FILLED_UNPROTECTED:
+            prot = adapter.place_protection()
+            log.info("NT execution protect allowed=%s reason=%s", prot.allowed, prot.reason)
+
+    def _route_nt_flatten(self) -> None:
+        adapter = self.execution_adapter
+        if adapter is None:
+            return
+        if getattr(adapter, "side", "FLAT") == "FLAT":
+            return
+        result = adapter.flatten()
+        log.info("NT execution flatten allowed=%s reason=%s", result.allowed, result.reason)
 
     def _release_reversal_watch(self) -> None:
         if self.engine.cfg.auto_reverse_enabled:
@@ -355,6 +410,12 @@ class LiveStack:
         return result
 
     def on_bar(self) -> dict[str, Any]:
+        if self.execution_adapter is not None:
+            try:
+                healthy = self.market_data.health().state.value == "DATA_HEALTHY"
+                self.execution_adapter.mark_data_healthy(healthy)
+            except AttributeError:
+                pass
         if self.broker.health().value == "DISCONNECTED" and self.engine.book.internal.side != "FLAT":
             self.engine.events.log_error({"critical": "BROKER_DISCONNECT_ACTIVE"})
         self._release_reversal_watch()

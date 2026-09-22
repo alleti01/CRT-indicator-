@@ -25,6 +25,54 @@ from phase73.webhook.schemas import make_test_signal
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
 
+def _start_execution_layer():
+    """Listen on 8766 for CRTExecutionBridge. SIM / 1 MNQ only. Never FUNDED."""
+    from phase85.config import load_phase85_config
+    from phase85.execution.adapter import NinjaTraderExecutionAdapter
+    from phase85.execution.kill_switch import ExecutionKillSwitch, KillState
+    from phase85.ninjatrader.execution_server import ExecutionBridgeServer
+    from phase85.ninjatrader.live_transport import LiveNtTransport
+
+    token = os.environ.get("NINJATRADER_EXECUTION_BRIDGE_TOKEN", "").strip()
+    if not token:
+        raise RuntimeError("NINJATRADER_EXECUTION_BRIDGE_TOKEN not set — required for --execution")
+    account = os.environ.get("EXPECTED_ACCOUNT", "").strip() or "Sim101"
+    contract = os.environ.get("EXPECTED_CONTRACT", "").strip() or "MNQ 12-26"
+    p85 = load_phase85_config(
+        overlay={
+            "execution_mode": "SIM",
+            "shadow_mode": False,
+            "trading_enabled": True,
+            "external_order_routing": True,
+            "nt_execution_bridge_enabled": True,
+            "expected_account": account,
+            "expected_contract": contract,
+            "allowed_instrument_root": "MNQ",
+            "allow_nq_execution": False,
+            "_test_token": token,
+        },
+        env=False,
+    )
+    transport = LiveNtTransport(expected_account=account, expected_instrument=contract)
+    server = ExecutionBridgeServer(
+        p85.bind_host,
+        p85.bind_port,
+        auth_token=token,
+        on_event=transport.handle_event,
+        on_hello=transport.handle_hello,
+        on_disconnect=transport.handle_disconnect,
+    )
+    transport.attach_server(server)
+    server.start()
+    adapter = NinjaTraderExecutionAdapter(
+        p85,
+        transport,
+        kill=ExecutionKillSwitch(KillState.EXECUTION_ENABLED),
+    )
+    transport.attach_adapter(adapter)
+    return adapter, server, transport
+
+
 def _build_ninjatrader_provider(cfg, on_bar):
     from phase74.market_data.ninjatrader_live import NinjaTraderLiveDataProvider
 
@@ -48,7 +96,7 @@ def _build_ninjatrader_provider(cfg, on_bar):
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Phase74 live paper dress rehearsal")
-    ap.add_argument("--mode", choices=["shadow", "paper", "parity-check"], default="shadow")
+    ap.add_argument("--mode", choices=["shadow", "paper", "live", "parity-check"], default="shadow")
     ap.add_argument(
         "--bars",
         type=int,
@@ -69,7 +117,16 @@ def main() -> int:
     ap.add_argument("--no-gates", action="store_true", help="Disable auto pass-chase/late in paper mode")
     ap.add_argument("--no-quality-gates", action="store_true", help="Disable chop/false-break/late-move skips")
     ap.add_argument("--no-trail", action="store_true", help="Disable 2.5R bank/trail overlay (M0 flatten at 2.5R)")
+    ap.add_argument(
+        "--execution",
+        action="store_true",
+        help="Start Phase85 CRTExecutionBridge listener (SIM, 1 MNQ). Not funded NQ.",
+    )
     args = ap.parse_args()
+
+    if args.mode == "live":
+        args.mode = "paper"
+        args.execution = True
 
     if args.mode == "paper" and not args.no_gates:
         args.pass_chase = True
@@ -89,7 +146,7 @@ def main() -> int:
         raw.setdefault("mode", {})["shadow_mode"] = False
         raw.setdefault("mode", {})["trading_enabled"] = True
         raw.setdefault("contracts", {})["contract_month"] = "202609"
-    raw.setdefault("mode", {})["external_order_routing"] = False
+    raw.setdefault("mode", {})["external_order_routing"] = bool(args.execution)
     eq = raw.setdefault("entry_quality", {})
     if args.pass_chase:
         eq["pass_chase_enabled"] = True
@@ -150,7 +207,10 @@ def main() -> int:
         )
         md.connect()
 
-    stack = LiveStack(cfg, md)
+    execution = None
+    if args.execution:
+        execution = _start_execution_layer()
+    stack = LiveStack(cfg, md, execution_adapter=None if execution is None else execution[0])
     stack_holder["stack"] = stack
 
     session = None
@@ -196,7 +256,19 @@ def main() -> int:
         f"trail_overlay={cfg.section('trail_overlay').get('enabled', False)}"
     )
     print(f"external_order_routing={cfg.external_order_routing}")
-    print(f"Broker adapter: LOCAL_SIM (no external paper venue connected)")
+    if execution is None:
+        print("Broker adapter: LOCAL_SIM (no external paper venue connected)")
+        print("NT execution: OFF")
+    else:
+        adapter, _server, transport = execution
+        print("Broker adapter: LOCAL_SIM journal + NT SIM execution (1 MNQ)")
+        print(
+            f"NT execution: SIM account={adapter.cfg.expected_account or '<unset>'} "
+            f"contract={adapter.cfg.expected_contract or '<unset>'} port={adapter.cfg.bind_port} FUNDED=off"
+        )
+        print("Enable CRTExecutionBridge in NT (host 127.0.0.1 port 8766). NQ is rejected by the AddOn.")
+        if not transport.authenticated:
+            print("NT execution waiting for AddOn connect...")
 
     if args.provider == "ninjatrader":
         deadline = None if args.bars == 0 else time.time() + max(60, args.bars * 60)
@@ -209,6 +281,8 @@ def main() -> int:
                 print(
                     f"bars={count} health={health.state.value} contract={md.contract_identity} atr_ready={md.atr_ready}"
                 )
+            if stack.execution_adapter is not None:
+                stack.execution_adapter.mark_data_healthy(health.state.value == "DATA_HEALTHY")
             if health.state.value == "DATA_HEALTHY" and last_count >= int(
                 cfg.section("market_data").get("ninjatrader_bootstrap_bars", 15)
             ):
@@ -260,6 +334,8 @@ def main() -> int:
         print(f"Bar log: {bar_logger.path}")
     print("VERDICT:", "PHASE74_SHADOW_READY" if cfg.shadow_mode else "PHASE74_LIVE_PAPER_PASS")
     md.disconnect()
+    if execution is not None:
+        execution[2].disconnect()
     return 0
 
 

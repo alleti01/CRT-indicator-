@@ -79,7 +79,7 @@
     "trail_atr": 1.0
   },
   "range_lock": {
-    "enabled": true,
+    "enabled": false,
     "arm_on": "any"
   },
   "safety": {

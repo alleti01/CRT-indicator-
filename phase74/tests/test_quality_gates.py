@@ -245,6 +245,10 @@ class PropDayHaltTests(unittest.TestCase):
         rl = load_phase74_config().section("range_lock")
         self.assertFalse(bool(rl.get("enabled")))
 
+    def test_live_config_allows_globex_entries(self) -> None:
+        qg = load_phase74_config().section("quality_gates")
+        self.assertTrue(bool(qg.get("allow_globex_entries")))
+
     def test_seed_journal_restores_win_halt(self) -> None:
         td = Path(tempfile.mkdtemp())
         csv_path = td / "paper_trades.csv"

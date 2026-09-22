@@ -70,7 +70,7 @@
     "day_big_win_dollars": 1000.0,
     "day_giveback_arm_dollars": 400.0,
     "day_giveback_dollars": 300.0,
-    "allow_globex_entries": false
+    "allow_globex_entries": true
   },
   "trail_overlay": {
     "enabled": true,

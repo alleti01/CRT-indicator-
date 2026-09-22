@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import json
 import logging
+import socket
 import time
 from collections import deque
 from datetime import datetime, timezone
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 from typing import Callable
 from urllib.parse import parse_qs, urlparse
@@ -84,6 +85,11 @@ class SecureWebhookReceiver:
     ) -> tuple[bool, WebhookReason, str]:
         received_at = received_at or datetime.now(timezone.utc)
         tracker = LatencyTracker(webhook_received_at=received_at)
+        # TradingView placeholders sometimes insert a leading space (" {{time}}").
+        for key in ("signal_id", "signal_time_utc", "signal_bar_time_utc", "signal_price", "atr"):
+            value = payload.get(key)
+            if isinstance(value, str):
+                payload[key] = value.strip()
 
         if headers is not None and not self._auth_ok(headers, query_token=query_token):
             self.on_reject(payload, WebhookReason.WEBHOOK_INVALID, "auth failed")
@@ -146,8 +152,14 @@ class SecureWebhookReceiver:
         ledger_path = self.ledger_path
 
         class Handler(BaseHTTPRequestHandler):
+            timeout = 5
+
             def log_message(self, fmt, *args) -> None:
                 return
+
+            def setup(self) -> None:
+                super().setup()
+                self.request.settimeout(5)
 
             def do_POST(self) -> None:  # noqa: N802
                 parsed = urlparse(self.path)
@@ -157,8 +169,11 @@ class SecureWebhookReceiver:
                     self.end_headers()
                     return
                 query_token = parse_qs(parsed.query).get("token", [""])[0]
-                length = int(self.headers.get("Content-Length", 0))
-                body = self.rfile.read(length)
+                try:
+                    length = int(self.headers.get("Content-Length", 0))
+                    body = self.rfile.read(length)
+                except (TimeoutError, socket.timeout, ConnectionResetError, BrokenPipeError, OSError):
+                    return
                 try:
                     payload = json.loads(body.decode())
                 except json.JSONDecodeError:
@@ -183,7 +198,7 @@ class SecureWebhookReceiver:
                 self.end_headers()
                 self.wfile.write(json.dumps({"ok": ok, "reason": reason.value}).encode())
 
-        self._server = HTTPServer((host, port), Handler)
+        self._server = ThreadingHTTPServer((host, port), Handler)
         self._thread = Thread(target=self._server.serve_forever, daemon=True)
         self._thread.start()
         log.info("secure webhook listening %s:%s%s", host, port, path)

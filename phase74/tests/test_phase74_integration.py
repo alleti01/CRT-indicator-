@@ -66,6 +66,24 @@ class Phase74IntegrationTests(unittest.TestCase):
         self.assertFalse(recv.handle_payload(p, headers={}, query_token="wrong")[0])
         td.cleanup()
 
+    def test_leading_space_in_tv_timestamp_is_accepted(self):
+        cfg = load_phase74_config().to_phase73_config()
+        td = tempfile.TemporaryDirectory()
+        recv = SecureWebhookReceiver(
+            cfg,
+            "secret",
+            lambda s, r, t: None,
+            deduplicator=__import__(
+                "phase73.webhook.deduplicator", fromlist=["SignalDeduplicator"]
+            ).SignalDeduplicator(Path(td.name) / "ids.jsonl"),
+        )
+        p = make_test_signal().to_dict()
+        p["signal_time_utc"] = " " + p["signal_time_utc"]
+        p["signal_bar_time_utc"] = " " + p["signal_bar_time_utc"]
+        ok, reason, detail = recv.handle_payload(p, headers={"Authorization": "Bearer secret"})
+        self.assertTrue(ok, (reason, detail))
+        td.cleanup()
+
     def test_p74_03_stale_webhook(self):
         cfg = load_phase74_config().to_phase73_config()
         old = datetime.now(timezone.utc) - timedelta(seconds=500)

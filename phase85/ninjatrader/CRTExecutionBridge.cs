@@ -63,8 +63,8 @@ namespace NinjaTrader.NinjaScript.AddOns
                 Name = "CRTExecutionBridge";
                 BridgeHost = "127.0.0.1";
                 BridgePort = 8766;
-                ExpectedAccount = "";
-                ExpectedContract = "";
+                ExpectedAccount = "Sim101";
+                ExpectedContract = "MNQ 12-26";
             }
             else if (State == State.Realtime || State == State.Configure)
             {
@@ -84,6 +84,10 @@ namespace NinjaTrader.NinjaScript.AddOns
                 try
                 {
                     DisconnectBridge();
+                    if (string.IsNullOrWhiteSpace(ExpectedAccount))
+                        ExpectedAccount = "Sim101";
+                    if (string.IsNullOrWhiteSpace(ExpectedContract))
+                        ExpectedContract = "MNQ 12-26";
                     if (BridgeHost != "127.0.0.1" && BridgeHost != "localhost")
                     {
                         Print("CRTExecutionBridge refuse non-local host");

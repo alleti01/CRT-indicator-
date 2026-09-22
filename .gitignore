@@ -29,4 +29,5 @@ phase53/results/opportunity_discovery/event_dataset.parquet
 forward_rehearsal/sessions/
 phase73/logs/
 phase74/logs/
+phase85/logs/sim_activation_gate.json
 

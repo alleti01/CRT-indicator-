@@ -26,7 +26,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s
 
 
 def _start_execution_layer():
-    """Listen on 8766 for CRTExecutionBridge. SIM / 1 MNQ only. Never FUNDED."""
+    """Listen on 8766 for CRTExecutionBridge. FUNDED 1 NQ on the eval account."""
     from phase85.config import load_phase85_config
     from phase85.execution.adapter import NinjaTraderExecutionAdapter
     from phase85.execution.kill_switch import ExecutionKillSwitch, KillState
@@ -36,19 +36,25 @@ def _start_execution_layer():
     token = os.environ.get("NINJATRADER_EXECUTION_BRIDGE_TOKEN", "").strip()
     if not token:
         raise RuntimeError("NINJATRADER_EXECUTION_BRIDGE_TOKEN not set — required for --execution")
-    account = os.environ.get("EXPECTED_ACCOUNT", "").strip() or "Sim101"
-    contract = os.environ.get("EXPECTED_CONTRACT", "").strip() or "MNQ 12-26"
+    account = os.environ.get("EXPECTED_ACCOUNT", "").strip() or "TDFYSL50366329071"
+    contract = os.environ.get("EXPECTED_CONTRACT", "").strip() or "NQ 12-26"
+    funded = os.environ.get("ALLOWED_FUNDED_ACCOUNT", "").strip() or account
+    gate = ROOT / "phase85" / "logs" / "sim_activation_gate.json"
     p85 = load_phase85_config(
         overlay={
-            "execution_mode": "SIM",
+            "execution_mode": "FUNDED",
             "shadow_mode": False,
             "trading_enabled": True,
             "external_order_routing": True,
             "nt_execution_bridge_enabled": True,
             "expected_account": account,
+            "allowed_funded_account": funded,
+            "funded_account_verified": True,
             "expected_contract": contract,
-            "allowed_instrument_root": "MNQ",
-            "allow_nq_execution": False,
+            "allowed_instrument_root": "NQ",
+            "allow_nq_execution": True,
+            "point_value": 20.0,
+            "sim_gate_path": str(gate),
             "_test_token": token,
         },
         env=False,
@@ -120,7 +126,7 @@ def main() -> int:
     ap.add_argument(
         "--execution",
         action="store_true",
-        help="Start Phase85 CRTExecutionBridge listener (SIM, 1 MNQ). Not funded NQ.",
+        help="Start Phase85 CRTExecutionBridge listener (FUNDED 1 NQ eval).",
     )
     args = ap.parse_args()
 
@@ -261,12 +267,12 @@ def main() -> int:
         print("NT execution: OFF")
     else:
         adapter, _server, transport = execution
-        print("Broker adapter: LOCAL_SIM journal + NT SIM execution (1 MNQ)")
+        print("Broker adapter: LOCAL_SIM journal + NT FUNDED execution (1 NQ)")
         print(
-            f"NT execution: SIM account={adapter.cfg.expected_account or '<unset>'} "
-            f"contract={adapter.cfg.expected_contract or '<unset>'} port={adapter.cfg.bind_port} FUNDED=off"
+            f"NT execution: FUNDED account={adapter.cfg.expected_account or '<unset>'} "
+            f"contract={adapter.cfg.expected_contract or '<unset>'} port={adapter.cfg.bind_port}"
         )
-        print("Enable CRTExecutionBridge in NT (host 127.0.0.1 port 8766). NQ is rejected by the AddOn.")
+        print("Enable CRTExecutionBridge in NT (host 127.0.0.1 port 8766, 1 NQ).")
         if not transport.authenticated:
             print("NT execution waiting for AddOn connect...")
 

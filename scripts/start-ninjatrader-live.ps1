@@ -1,4 +1,4 @@
-# Phase74 paper journal + Phase85 NT SIM execution (1 MNQ). Not funded NQ.
+# Phase74 paper journal + Phase85 NT FUNDED execution (1 NQ eval).
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
@@ -9,13 +9,20 @@ if (-not (Test-Path $envFile)) {
     exit 1
 }
 
-function Ensure-EnvKey {
+function Set-EnvKey {
     param([string]$Path, [string]$Key, [string]$Value)
-    $lines = Get-Content -Path $Path
-    if ($lines | Where-Object { $_ -match "^$([regex]::Escape($Key))=" }) {
-        return
+    $lines = @(Get-Content -Path $Path)
+    $found = $false
+    $out = foreach ($line in $lines) {
+        if ($line -match "^$([regex]::Escape($Key))=") {
+            $found = $true
+            "$Key=$Value"
+        } else {
+            $line
+        }
     }
-    Add-Content -Path $Path -Value "$Key=$Value"
+    if (-not $found) { $out += "$Key=$Value" }
+    Set-Content -Path $Path -Value $out -Encoding UTF8
 }
 
 function New-RandomToken {
@@ -32,19 +39,21 @@ Get-Content $envFile | ForEach-Object {
 
 if (-not $env:NINJATRADER_EXECUTION_BRIDGE_TOKEN) {
     $execToken = New-RandomToken
-    Ensure-EnvKey -Path $envFile -Key "NINJATRADER_EXECUTION_BRIDGE_TOKEN" -Value $execToken
+    Set-EnvKey -Path $envFile -Key "NINJATRADER_EXECUTION_BRIDGE_TOKEN" -Value $execToken
     $env:NINJATRADER_EXECUTION_BRIDGE_TOKEN = $execToken
 }
-if (-not $env:EXPECTED_ACCOUNT) {
-    Ensure-EnvKey -Path $envFile -Key "EXPECTED_ACCOUNT" -Value "Sim101"
-    $env:EXPECTED_ACCOUNT = "Sim101"
-}
-if (-not $env:EXPECTED_CONTRACT) {
-    Ensure-EnvKey -Path $envFile -Key "EXPECTED_CONTRACT" -Value "MNQ 12-26"
-    $env:EXPECTED_CONTRACT = "MNQ 12-26"
-}
 
-$env:EXECUTION_MODE = "SIM"
+$account = "TDFYSL50366329071"
+$contract = "NQ 12-26"
+Set-EnvKey -Path $envFile -Key "EXPECTED_ACCOUNT" -Value $account
+Set-EnvKey -Path $envFile -Key "ALLOWED_FUNDED_ACCOUNT" -Value $account
+Set-EnvKey -Path $envFile -Key "EXPECTED_CONTRACT" -Value $contract
+Set-EnvKey -Path $envFile -Key "FUNDED_ACCOUNT_VERIFIED" -Value "true"
+$env:EXPECTED_ACCOUNT = $account
+$env:ALLOWED_FUNDED_ACCOUNT = $account
+$env:EXPECTED_CONTRACT = $contract
+$env:FUNDED_ACCOUNT_VERIFIED = "true"
+$env:EXECUTION_MODE = "FUNDED"
 $env:SHADOW_MODE = "false"
 $env:TRADING_ENABLED = "true"
 $env:EXTERNAL_ORDER_ROUTING = "true"
@@ -76,6 +85,5 @@ if ($existing) {
     Start-Sleep -Seconds 2
 }
 
-Write-Host "Starting LIVE stack: Friday rules, range lock OFF, NT SIM execution 1 MNQ..." -ForegroundColor Cyan
-Write-Host "  FUNDED stays off. Enable CRTExecutionBridge (127.0.0.1:8766, account=$($env:EXPECTED_ACCOUNT), contract=$($env:EXPECTED_CONTRACT))"
+Write-Host "Starting LIVE stack: 1 NQ FUNDED eval $account / $contract" -ForegroundColor Cyan
 & $python phase74\run_live.py --provider ninjatrader --mode live --webhook --bars 0

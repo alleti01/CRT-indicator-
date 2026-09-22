@@ -22,7 +22,7 @@ namespace NinjaTrader.NinjaScript.AddOns
     {
         private const int ProtocolVersion = 1;
         private const int MaxQuantity = 1;
-        private const string AllowedRoot = "MNQ";
+        private const string AllowedRoot = "NQ";
 
         private TcpClient _client;
         private NetworkStream _stream;
@@ -63,8 +63,8 @@ namespace NinjaTrader.NinjaScript.AddOns
                 Name = "CRTExecutionBridge";
                 BridgeHost = "127.0.0.1";
                 BridgePort = 8766;
-                ExpectedAccount = "Sim101";
-                ExpectedContract = "MNQ 12-26";
+                ExpectedAccount = "TDFYSL50366329071";
+                ExpectedContract = "NQ 12-26";
             }
             else if (State == State.Realtime || State == State.Configure)
             {
@@ -85,9 +85,9 @@ namespace NinjaTrader.NinjaScript.AddOns
                 {
                     DisconnectBridge();
                     if (string.IsNullOrWhiteSpace(ExpectedAccount))
-                        ExpectedAccount = "Sim101";
+                        ExpectedAccount = "TDFYSL50366329071";
                     if (string.IsNullOrWhiteSpace(ExpectedContract))
-                        ExpectedContract = "MNQ 12-26";
+                        ExpectedContract = "NQ 12-26";
                     if (BridgeHost != "127.0.0.1" && BridgeHost != "localhost")
                     {
                         Print("CRTExecutionBridge refuse non-local host");
@@ -553,8 +553,6 @@ namespace NinjaTrader.NinjaScript.AddOns
             int space = root.IndexOf(' ');
             if (space > 0)
                 root = root.Substring(0, space);
-            if (root.Equals("NQ", StringComparison.OrdinalIgnoreCase))
-                return false;
             if (!root.Equals(AllowedRoot, StringComparison.OrdinalIgnoreCase))
                 return false;
             if (!string.IsNullOrEmpty(ExpectedContract) && instrument != ExpectedContract && instrument != AllowedRoot)

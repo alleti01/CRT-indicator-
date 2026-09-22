@@ -54,6 +54,8 @@
   },
   "quality_gates": {
     "enabled": true,
+    "filter_signals": false,
+    "cdx_repeat_seconds": 300,
     "lookback_bars": 20,
     "chop_box_atr": 2.0,
     "false_break_percentile": 0.15,

@@ -249,6 +249,12 @@ class PropDayHaltTests(unittest.TestCase):
         qg = load_phase74_config().section("quality_gates")
         self.assertTrue(bool(qg.get("allow_globex_entries")))
 
+    def test_live_config_trusts_cdx_prints(self) -> None:
+        qg = load_phase74_config().section("quality_gates")
+        self.assertTrue(bool(qg.get("enabled")))
+        self.assertFalse(bool(qg.get("filter_signals")))
+        self.assertEqual(int(qg.get("cdx_repeat_seconds", 0)), 300)
+
     def test_seed_journal_restores_win_halt(self) -> None:
         td = Path(tempfile.mkdtemp())
         csv_path = td / "paper_trades.csv"
@@ -380,6 +386,83 @@ class TrailOverlayTests(unittest.TestCase):
         assert dec is not None
         self.assertEqual(dec.reason, "TRAIL_STOP")
         self.assertAlmostEqual(dec.exit_price, 130.0)
+
+
+class CdxTrustStackTests(unittest.TestCase):
+    def _stack(self, *, filter_signals: bool, repeat: int = 300):
+        from phase73.replay.runner import _synthetic_bars
+        from phase73.webhook.schemas import WebhookReason, make_test_signal
+        from phase74.latency.tracker import LatencyTracker
+        from phase74.market_data.live_provider import StreamLiveDataProvider
+        from phase74.runtime.live_stack import LiveStack
+        from phase74.tests.test_phase74_integration import p74_cfg
+
+        cfg = p74_cfg()
+        cfg.raw["quality_gates"]["enabled"] = True
+        cfg.raw["quality_gates"]["filter_signals"] = filter_signals
+        cfg.raw["quality_gates"]["cdx_repeat_seconds"] = repeat
+        md = StreamLiveDataProvider(_synthetic_bars(50))
+        md.connect()
+        while md.advance():
+            pass
+        return LiveStack(cfg, md), md
+
+    def test_filters_off_does_not_skip_for_pa(self) -> None:
+        from phase73.webhook.schemas import WebhookReason, make_test_signal
+        from phase74.latency.tracker import LatencyTracker
+        from phase74.quality.gates import evaluate_quality_gates
+
+        stack, md = self._stack(filter_signals=False)
+        bars = list(md.recent_bars(20))
+        atr = float(md.atr())
+        gate = evaluate_quality_gates(bars, "LONG", atr)
+        self.assertEqual(gate.decision, "SKIP")
+        bar = md.latest_bar()
+        now = md.current_time()
+        result = stack.on_webhook_signal(
+            make_test_signal(
+                "SIGNAL_LONG",
+                signal_bar_time_utc=bar.timestamp,
+                signal_time_utc=now,
+                signal_price=bar.close,
+            ),
+            WebhookReason.WEBHOOK_VALID,
+            LatencyTracker(),
+        )
+        self.assertTrue(result.get("ok"), result)
+
+    def test_cdx_repeat_collapses_same_direction(self) -> None:
+        from phase73.webhook.schemas import WebhookReason, make_test_signal
+        from phase74.latency.tracker import LatencyTracker
+
+        stack, md = self._stack(filter_signals=False, repeat=300)
+        bar = md.latest_bar()
+        now = md.current_time()
+        first = stack.on_webhook_signal(
+            make_test_signal(
+                "SIGNAL_LONG",
+                signal_id="cdx-1",
+                signal_bar_time_utc=bar.timestamp,
+                signal_time_utc=now,
+                signal_price=bar.close,
+            ),
+            WebhookReason.WEBHOOK_VALID,
+            LatencyTracker(),
+        )
+        self.assertTrue(first.get("ok"), first)
+        second = stack.on_webhook_signal(
+            make_test_signal(
+                "SIGNAL_LONG",
+                signal_id="cdx-2",
+                signal_bar_time_utc=bar.timestamp,
+                signal_time_utc=now + timedelta(seconds=90),
+                signal_price=bar.close,
+            ),
+            WebhookReason.WEBHOOK_VALID,
+            LatencyTracker(),
+        )
+        self.assertFalse(second.get("ok"))
+        self.assertEqual(second.get("reason"), "SKIP_CDX_REPEAT")
 
 
 if __name__ == "__main__":

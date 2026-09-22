@@ -135,8 +135,12 @@ def main() -> int:
         args.execution = True
 
     if args.mode == "paper" and not args.no_gates:
-        args.pass_chase = True
-        args.pass_late = True
+        # CDX-as-printed: do not second-guess chase/late. PA filters live in quality_gates.filter_signals.
+        if bool(load_phase74_config().section("quality_gates").get("filter_signals", True)):
+            args.pass_chase = True
+            args.pass_late = True
+        else:
+            args.no_gates = True
 
     ok, errs = verify_phase73_freeze()
     if not ok:
@@ -206,6 +210,16 @@ def main() -> int:
     if args.provider == "ninjatrader":
         md = _build_ninjatrader_provider(cfg, on_nt_bar)
         md.connect()
+        from phase74.market_data.ninjatrader_live import load_closed_bars_csv
+
+        seeded = md.seed_closed_bars(
+            load_closed_bars_csv(
+                cfg.log_dir / "bars.csv",
+                limit=int(cfg.section("market_data").get("ninjatrader_bootstrap_bars", 15)),
+            )
+        )
+        if seeded:
+            print(f"Seeded {seeded} closed bars from bars.csv (ATR warmup skip)")
     else:
         md = StreamLiveDataProvider(
             df,
@@ -259,6 +273,7 @@ def main() -> int:
     print(f"validate={args.validate} pass_chase={args.pass_chase} pass_late={args.pass_late}")
     print(
         f"quality_gates={cfg.section('quality_gates').get('enabled', False)} "
+        f"filter_signals={cfg.section('quality_gates').get('filter_signals', True)} "
         f"trail_overlay={cfg.section('trail_overlay').get('enabled', False)}"
     )
     print(f"external_order_routing={cfg.external_order_routing}")

@@ -67,6 +67,10 @@ class LiveStack:
         self._active_entry_atr: float = 0.0
         qg = cfg.section("quality_gates")
         self._quality_enabled = bool(qg.get("enabled", False))
+        self._filter_signals = bool(qg.get("filter_signals", True))
+        self._cdx_repeat_seconds = int(qg.get("cdx_repeat_seconds", 0) or 0)
+        self._last_cdx_direction: str | None = None
+        self._last_cdx_time: datetime | None = None
         self._allow_globex_entries = bool(qg.get("allow_globex_entries", False))
         self._quality_cfg = QualityGateConfig.from_dict(qg)
         self._quality_log = QualitySkipLogger(cfg.log_dir) if self._quality_enabled else None
@@ -261,6 +265,20 @@ class LiveStack:
         self._trade_hi = hi if self._trade_hi is None else max(self._trade_hi, hi)
         self._trade_lo = lo if self._trade_lo is None else min(self._trade_lo, lo)
 
+    def _cdx_repeat_reason(self, signal: PineSignal) -> str:
+        if self._cdx_repeat_seconds <= 0 or self._last_cdx_direction is None or self._last_cdx_time is None:
+            return ""
+        if signal.direction != self._last_cdx_direction:
+            return ""
+        age = (signal.signal_time_utc - self._last_cdx_time).total_seconds()
+        if 0 <= age < self._cdx_repeat_seconds:
+            return "SKIP_CDX_REPEAT"
+        return ""
+
+    def _remember_cdx(self, signal: PineSignal) -> None:
+        self._last_cdx_direction = signal.direction
+        self._last_cdx_time = signal.signal_time_utc
+
     def _pre_entry_checks(self, signal: PineSignal) -> bool:
         if self._day_halt is not None and self._day_halt.should_halt_new_entries(signal.signal_time_utc):
             log.warning("%s", self._day_halt.reason)
@@ -365,7 +383,18 @@ class LiveStack:
                 )
             log.info("quality skip signal=%s reason=%s", signal.signal_id, globex_block)
             return {"ok": False, "reason": globex_block, "quality": globex_block}
-        if self._quality_enabled:
+        repeat = self._cdx_repeat_reason(signal)
+        if repeat:
+            if self._quality_log is not None:
+                self._quality_log.log(
+                    QualityDecision(decision="SKIP", reason=repeat),
+                    signal_id=signal.signal_id,
+                    direction=signal.direction,
+                )
+            log.info("quality skip signal=%s reason=%s", signal.signal_id, repeat)
+            return {"ok": False, "reason": repeat, "quality": repeat}
+        self._remember_cdx(signal)
+        if self._quality_enabled and self._filter_signals:
             lookback = self._quality_cfg.lookback_bars
             bars = list(self.market_data.recent_bars(lookback))
             try:

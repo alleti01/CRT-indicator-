@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
@@ -131,14 +132,42 @@ class PropDayHalt:
         return False
 
 
-def seed_day_halt_from_paper_trades(halt: PropDayHalt, csv_path: Path) -> bool:
+def nt_rejected_signal_ids(audit_path: Path) -> set[str]:
+    """Signal ids NinjaTrader refused. Those paper rows are not account results."""
+    rejected: set[str] = set()
+    if not audit_path.exists():
+        return rejected
+    for line in audit_path.read_text(encoding="utf-8").splitlines():
+        if "COMMAND_REJECTED" not in line and "ORDER_REJECTED" not in line:
+            continue
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if rec.get("event") not in {"COMMAND_REJECTED", "ORDER_REJECTED"}:
+            continue
+        signal_id = str(rec.get("signal_id") or "")
+        if signal_id:
+            rejected.add(signal_id)
+    return rejected
+
+
+def seed_day_halt_from_paper_trades(
+    halt: PropDayHalt,
+    csv_path: Path,
+    *,
+    audit_path: Path | None = None,
+) -> bool:
     """Replay closed journal rows so a restart keeps today's win/loss halt."""
     if not csv_path.exists():
         return False
+    rejected = nt_rejected_signal_ids(audit_path) if audit_path is not None else set()
     seeded = False
     with csv_path.open(encoding="utf-8", newline="") as fh:
         for row in csv.DictReader(fh):
             if not row.get("exit_timestamp") or not row.get("net_R"):
+                continue
+            if str(row.get("pine_signal_id") or "") in rejected:
                 continue
             raw = row["exit_timestamp"].replace("Z", "+00:00")
             when = datetime.fromisoformat(raw)

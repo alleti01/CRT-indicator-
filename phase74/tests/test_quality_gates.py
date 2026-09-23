@@ -270,6 +270,24 @@ class PropDayHaltTests(unittest.TestCase):
         self.assertEqual(h.reason, "HALT_DAY_WINS")
         self.assertEqual(h.winners, 1)
 
+    def test_seed_skips_nt_rejected_signal(self) -> None:
+        td = Path(tempfile.mkdtemp())
+        csv_path = td / "paper_trades.csv"
+        csv_path.write_text(
+            "pine_signal_id,net_R,atr,exit_timestamp\n"
+            "rejected-short,-1.0,5.0,2026-09-22T23:17:00+00:00\n"
+            "kept-short,-1.0,5.0,2026-09-22T23:20:00+00:00\n",
+            encoding="utf-8",
+        )
+        audit = td / "audit.jsonl"
+        audit.write_text(
+            '{"event":"COMMAND_REJECTED","reason":"REJECT_POSITION_OPEN","signal_id":"rejected-short"}\n',
+            encoding="utf-8",
+        )
+        h = PropDayHalt()
+        seed_day_halt_from_paper_trades(h, csv_path, audit_path=audit)
+        self.assertEqual(h.losers, 1)
+
     def test_halt_after_one_big_win(self) -> None:
         h = PropDayHalt()
         h.record_closed(4.31, dollars=1120.0)

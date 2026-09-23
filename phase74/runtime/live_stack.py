@@ -33,6 +33,7 @@ from phase74.quality.logger import QualitySkipLogger
 from phase74.quality.range_lock import RangeLock, RangeLockConfig, seed_from_paper_trades
 from phase74.quality.trail import TrailOverlay, TrailOverlayConfig
 from phase74.safety.daily_session import DailySessionSafety
+from phase73.execution.positions import PositionBook, PositionSnapshot
 from phase73.risk.reconciliation import reconcile as p73_reconcile
 
 log = logging.getLogger("phase74.stack")
@@ -88,7 +89,11 @@ class LiveStack:
             else None
         )
         if self._day_halt is not None:
-            seed_day_halt_from_paper_trades(self._day_halt, cfg.log_dir / "paper_trades.csv")
+            seed_day_halt_from_paper_trades(
+                self._day_halt,
+                cfg.log_dir / "paper_trades.csv",
+                audit_path=cfg.log_dir.parent.parent / "phase85" / "logs" / "audit.jsonl",
+            )
         to = cfg.section("trail_overlay")
         self._trail_enabled = bool(to.get("enabled", False))
         self._trail_cfg = TrailOverlayConfig.from_dict(to)
@@ -160,6 +165,8 @@ class LiveStack:
                 self.engine.pending_signal = None
                 return {"ok": True, "shadow": True, "action": action}
             if not self._pre_entry_checks(signal):
+                self.engine.state = TraderState.FLAT
+                self.engine.pending_signal = None
                 return {"ok": False, "reason": "PRE_ENTRY_BLOCKED"}
             bar = self.market_data.latest_bar()
             if bar is None:
@@ -207,7 +214,11 @@ class LiveStack:
                 fill_px = float(result["fill_price"])
                 self._trade_hi = fill_px
                 self._trade_lo = fill_px
-                self._route_nt_entry(signal, fill_px)
+                rejected = self._route_nt_entry(signal, fill_px)
+                if rejected:
+                    self._void_rejected_paper_entry(trade_id)
+                    log.warning("void paper entry NT rejected reason=%s signal=%s", rejected, signal.signal_id)
+                    return {"ok": False, "reason": rejected}
             return result
 
         def execute_exit(state_before, exit_dec, bar):
@@ -283,6 +294,10 @@ class LiveStack:
         if self._day_halt is not None and self._day_halt.should_halt_new_entries(signal.signal_time_utc):
             log.warning("%s", self._day_halt.reason)
             return False
+        blocked = self._nt_entry_block_reason()
+        if blocked:
+            log.warning("NT entry blocked reason=%s signal=%s", blocked, signal.signal_id)
+            return False
         if self.cfg.kill_switch or self.daily.should_halt(int(self.cfg.section("safety").get("max_consecutive_errors", 5))):
             log.warning("HALT_NEW_ENTRIES")
             return False
@@ -302,20 +317,54 @@ class LiveStack:
             return False
         return True
 
-    def _route_nt_entry(self, signal: PineSignal, fill_price: float) -> None:
+    def _nt_entry_block_reason(self) -> str:
+        """Block a new paper trade while NinjaTrader still has this position open."""
         adapter = self.execution_adapter
         if adapter is None:
-            return
+            return ""
+        try:
+            routing = bool(adapter.cfg.routing_enabled())
+        except AttributeError:
+            return ""
+        if not routing or not getattr(adapter.transport, "authenticated", False):
+            return ""
+        from phase85.execution.gates import blocks_new_entries
+
+        if blocks_new_entries(adapter.state):
+            return "REJECT_POSITION_OPEN"
+        return ""
+
+    def _void_rejected_paper_entry(self, trade_id: str | None) -> None:
+        """Drop a paper fill NinjaTrader refused so it cannot become a halt loss."""
+        if trade_id:
+            self.journal._open.pop(trade_id, None)
+        self.engine.mgmt = None
+        self.engine.book = PositionBook()
+        self.engine.state = TraderState.FLAT
+        self.engine.pending_signal = None
+        self.broker.broker_position = PositionSnapshot()
+        self._trail = None
+        self._trade_hi = None
+        self._trade_lo = None
+        self._active_trade_id = None
+        self._active_entry_atr = 0.0
+        self.engine.persist()
+
+    def _route_nt_entry(self, signal: PineSignal, fill_price: float) -> str:
+        """Send the entry. Return a reject reason, or empty when the order was accepted or not routed."""
+        adapter = self.execution_adapter
+        if adapter is None:
+            return ""
         try:
             routing = bool(adapter.cfg.routing_enabled())
         except AttributeError:
             routing = False
         if not routing:
             log.info("NT execution skip: routing disabled")
-            return
+            return ""
         if not getattr(adapter.transport, "authenticated", False):
             log.warning("NT execution skip: CRTExecutionBridge not connected")
-            return
+            return ""
         from phase85.execution.intent import ExecutionIntent
         from phase85.execution.state_machine import ExecutionState
 
@@ -336,9 +385,15 @@ class LiveStack:
         )
         result = adapter.request_entry(intent)
         log.info("NT execution entry allowed=%s reason=%s", result.allowed, result.reason)
-        if result.allowed and getattr(adapter, "state", None) == ExecutionState.FILLED_UNPROTECTED:
+        if not result.allowed:
+            return result.reason or "NT_REJECTED"
+        for ev in result.events or []:
+            if ev.event in {"COMMAND_REJECTED", "ORDER_REJECTED"}:
+                return ev.reason or ev.event
+        if getattr(adapter, "state", None) == ExecutionState.FILLED_UNPROTECTED:
             prot = adapter.place_protection()
             log.info("NT execution protect allowed=%s reason=%s", prot.allowed, prot.reason)
+        return ""
 
     def _route_nt_flatten(self) -> None:
         adapter = self.execution_adapter

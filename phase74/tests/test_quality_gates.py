@@ -360,6 +360,20 @@ class GlobexEntryBlockTests(unittest.TestCase):
         self.assertEqual(new_entries_blocked_session(ts, allow_globex_entries=True), "")
 
 
+class HoldWinnerTests(unittest.TestCase):
+    def test_hour_stop_is_skipped_only_while_green(self) -> None:
+        from types import SimpleNamespace
+
+        from phase74.runtime.live_stack import _keep_winner_past_hour
+
+        long_mgmt = SimpleNamespace(side="LONG", entry_price=100.0)
+        green = SimpleNamespace(close=101.0)
+        red = SimpleNamespace(close=99.0)
+        self.assertTrue(_keep_winner_past_hour("MAX_HOLD_60M", long_mgmt, green))
+        self.assertFalse(_keep_winner_past_hour("MAX_HOLD_60M", long_mgmt, red))
+        self.assertFalse(_keep_winner_past_hour("M0_STOP", long_mgmt, green))
+
+
 class TrailOverlayTests(unittest.TestCase):
     def _mgmt(self) -> ManagementState:
         cfg = Phase73Config(

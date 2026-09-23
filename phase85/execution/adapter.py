@@ -412,6 +412,7 @@ class NinjaTraderExecutionAdapter:
             self._safe_transition(ExecutionState.EXIT_PENDING)
             self.audit.write("TARGET_FILLED", price=ev.fill_price)
             self.ledger.update_last(exit_time=ev.created_at_utc, exit_price=ev.fill_price, exit_reason="TARGET")
+            self._finish_exit()
             return
         if name == "STOP_FILLED":
             if self.state not in {ExecutionState.POSITION_PROTECTED, ExecutionState.EXIT_PENDING}:
@@ -419,6 +420,7 @@ class NinjaTraderExecutionAdapter:
             self._safe_transition(ExecutionState.EXIT_PENDING)
             self.audit.write("STOP_FILLED", price=ev.fill_price)
             self.ledger.update_last(exit_time=ev.created_at_utc, exit_price=ev.fill_price, exit_reason="STOP")
+            self._finish_exit()
             return
         if name == "POSITION_FLAT":
             self.side = "FLAT"
@@ -450,6 +452,19 @@ class NinjaTraderExecutionAdapter:
             return
         if name == "ORDER_CANCELLED":
             return
+
+    def _finish_exit(self) -> None:
+        """A stop or target fill closes the position even if NT never sends POSITION_FLAT."""
+        self.side = "FLAT"
+        self.quantity = 0
+        self.filled_qty = 0
+        self.stop_working = False
+        self.target_working = False
+        self.flatten_confirmed = True
+        if self.state == ExecutionState.EXIT_PENDING:
+            self._safe_transition(ExecutionState.FLAT)
+        if self.state == ExecutionState.FLAT and self.kill.state is not KillState.EXECUTION_HALTED:
+            self._safe_transition(ExecutionState.IDLE)
 
     def _maybe_protected(self) -> None:
         if self.stop_working and self.target_working:

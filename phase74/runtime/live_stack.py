@@ -38,6 +38,17 @@ from phase73.risk.reconciliation import reconcile as p73_reconcile
 
 log = logging.getLogger("phase74.stack")
 
+
+def _keep_winner_past_hour(reason: str, mgmt, bar) -> bool:
+    """A one-hour time stop does not apply once the trade is green."""
+    if reason != "MAX_HOLD_60M" or mgmt is None or bar is None:
+        return False
+    if mgmt.side == "LONG":
+        return float(bar.close) > float(mgmt.entry_price)
+    if mgmt.side == "SHORT":
+        return float(bar.close) < float(mgmt.entry_price)
+    return False
+
 # Opposite TAKE parks Phase73 in REVERSAL_WATCH_* and then on_bar ignores the stop.
 # Auto-reverse is off, so snap back to the live side and keep managing.
 _REVERSAL_WATCH_RESUME = {
@@ -225,6 +236,9 @@ class LiveStack:
             trade_id = self._active_trade_id
             entry_atr = self._active_entry_atr
             mgmt = self.engine.mgmt
+            if _keep_winner_past_hour(getattr(exit_dec, "reason", ""), mgmt, bar):
+                log.info("hold past 60m while in profit close=%s", getattr(bar, "close", None))
+                return {"ok": True, "holding": True}
             result = original_exit(state_before, exit_dec, bar)
             if result.get("ok"):
                 self.broker.broker_position.side = "FLAT"

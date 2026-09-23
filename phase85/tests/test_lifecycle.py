@@ -41,6 +41,18 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(adapter.side, "FLAT")
         self.assertEqual(adapter.state, ExecutionState.IDLE)
 
+    def test_stop_fill_without_position_flat_allows_next_entry(self) -> None:
+        from phase85.protocol.messages import Event
+
+        adapter, _ = ready_sim(self.tmp)
+        adapter.request_entry(make_intent(side="LONG", signal_id="stuck", event_id="stuck"))
+        adapter.place_protection()
+        adapter.apply_external_events([Event(event="STOP_FILLED", fill_price=100.0)])
+        self.assertEqual(adapter.side, "FLAT")
+        self.assertEqual(adapter.state, ExecutionState.IDLE)
+        nxt = adapter.request_entry(make_intent(signal_id="next", event_id="next", command_id="next-cmd"))
+        self.assertTrue(nxt.allowed, nxt.reason)
+
     def test_enter_rejected(self) -> None:
         adapter, _ = ready_sim(self.tmp, reject_next_entry=True)
         result = adapter.request_entry(make_intent())

@@ -77,6 +77,8 @@ class LiveStack:
         self._latency_samples: list[float] = []
         self._active_trade_id: str | None = None
         self._active_entry_atr: float = 0.0
+        self._active_entry_risk: float = 0.0
+        self._stop_points = float(cfg.section("risk").get("stop_points", 0) or 0)
         qg = cfg.section("quality_gates")
         self._quality_enabled = bool(qg.get("enabled", False))
         self._filter_signals = bool(qg.get("filter_signals", True))
@@ -187,6 +189,8 @@ class LiveStack:
                 return {"ok": False, "reason": "ORDER_IDEMPOTENT_DUPLICATE"}
             signal = self._with_live_atr(signal)
             result = original_execute(signal, state_before, take_action)
+            if result.get("ok") and self.engine.mgmt is not None:
+                self._apply_fixed_stop()
             if result.get("ok") and result.get("fill_price") is not None:
                 from phase73.execution.orders import Order, OrderSide
 
@@ -194,7 +198,7 @@ class LiveStack:
                 order = Order.new(action_name, side, 1, self.cfg.symbol, signal.signal_id)
                 self.broker.submit(order, result["fill_price"])
                 self.idempotency.record(signal.signal_id, action_name, order_id=order.order_id)
-                risk = self.engine.cfg.stop_atr * signal.atr
+                risk = self._active_entry_risk or self.engine.cfg.stop_atr * signal.atr
                 slip = self.broker.record_slippage(signal.signal_price, result["fill_price"], risk)
                 trade_id = str(uuid.uuid4())
                 self._active_trade_id = trade_id
@@ -244,7 +248,7 @@ class LiveStack:
                 self.broker.broker_position.side = "FLAT"
                 if trade_id and mgmt:
                     exit_px = float(exit_dec.exit_price or bar.close)
-                    risk = self.engine.cfg.stop_atr * entry_atr
+                    risk = self._active_entry_risk or self.engine.cfg.stop_atr * entry_atr
                     move = (exit_px - mgmt.entry_price) if mgmt.side == "LONG" else (mgmt.entry_price - exit_px)
                     gross_r = move / risk if risk > 0 else 0.0
                     hold_min = (bar.timestamp - mgmt.entry_time).total_seconds() / 60.0
@@ -277,6 +281,7 @@ class LiveStack:
                     self._trail = None
                     self._active_trade_id = None
                     self._active_entry_atr = 0.0
+                    self._active_entry_risk = 0.0
                     self._route_nt_flatten()
             return result
 
@@ -332,6 +337,28 @@ class LiveStack:
             return False
         return True
 
+    def _apply_fixed_stop(self) -> None:
+        """Use a fixed point stop. R multiples stay on that distance."""
+        points = self._stop_points
+        mgmt = self.engine.mgmt
+        if points <= 0 or mgmt is None:
+            return
+        target_r = float(self.engine.cfg.target_r)
+        if mgmt.side == "LONG":
+            mgmt.stop_price = mgmt.entry_price - points
+            mgmt.target_price = mgmt.entry_price + target_r * points
+        elif mgmt.side == "SHORT":
+            mgmt.stop_price = mgmt.entry_price + points
+            mgmt.target_price = mgmt.entry_price - target_r * points
+        else:
+            return
+        mgmt.risk = points
+        self._active_entry_risk = points
+        for snap in (self.engine.book.internal, self.engine.book.desired, self.engine.book.broker):
+            if snap.side == mgmt.side:
+                snap.stop_price = mgmt.stop_price
+                snap.target_price = mgmt.target_price
+
     def _nt_entry_block_reason(self) -> str:
         """Block a new paper trade while NinjaTrader still has this position open."""
         adapter = self.execution_adapter
@@ -363,6 +390,7 @@ class LiveStack:
         self._trade_lo = None
         self._active_trade_id = None
         self._active_entry_atr = 0.0
+        self._active_entry_risk = 0.0
         self.engine.persist()
 
     def _route_nt_entry(self, signal: PineSignal, fill_price: float) -> str:
@@ -392,7 +420,7 @@ class LiveStack:
             event_id=signal.signal_id,
             signal_id=signal.signal_id,
             expected_entry=float(fill_price),
-            signal_atr=float(signal.atr),
+            signal_atr=float(self._stop_points or signal.atr),
             signal_time=signal.signal_time_utc,
             webhook_received=now,
             decision_time=now,

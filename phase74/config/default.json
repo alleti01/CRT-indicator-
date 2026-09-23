@@ -74,6 +74,9 @@
     "day_giveback_dollars": 300.0,
     "allow_globex_entries": true
   },
+  "risk": {
+    "stop_points": 10.0
+  },
   "trail_overlay": {
     "enabled": true,
     "bank_trigger_r": 2.5,

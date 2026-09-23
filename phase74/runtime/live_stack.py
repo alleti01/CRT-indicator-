@@ -237,6 +237,7 @@ class LiveStack:
                     extra = {
                         "banked_2r5": bool(self._trail.banked) if self._trail else False,
                         "breakeven_armed": bool(self._trail.breakeven_armed) if self._trail else False,
+                        "locked_r": self._trail_cfg.lock_stop_r if self._trail and self._trail.banked else "",
                     }
                     self.journal.close_trade(
                         trade_id,

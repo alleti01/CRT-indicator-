@@ -77,8 +77,9 @@
   "trail_overlay": {
     "enabled": true,
     "bank_trigger_r": 2.5,
-    "lock_stop_r": 2.0,
-    "trail_atr": 1.0
+    "runner_trigger_r": 4.0,
+    "trail_atr": 2.0,
+    "lock_stop_r": 2.0
   },
   "range_lock": {
     "enabled": false,

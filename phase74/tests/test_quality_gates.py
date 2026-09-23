@@ -371,39 +371,53 @@ class TrailOverlayTests(unittest.TestCase):
         et = _ts(0)
         return build_management("LONG", 100.0, 10.0, cfg, et)
 
-    def test_no_flatten_at_2_5r_locks_stop(self) -> None:
+    def test_green_close_then_close_through_entry_scratches(self) -> None:
         overlay = TrailOverlay(TrailOverlayConfig())
         mgmt = self._mgmt()
-        bar = _bar(1, 110.0, 126.0, 123.0, 124.0)
-        dec = overlay.on_bar(mgmt, bar)
+        self.assertIsNone(overlay.on_bar(mgmt, _bar(1, 100.0, 102.0, 100.2, 101.0)))
+        self.assertTrue(overlay.breakeven_armed)
+        # Wick back through entry does not exit.
+        self.assertIsNone(overlay.on_bar(mgmt, _bar(2, 101.0, 101.5, 99.0, 101.2)))
+        dec = overlay.on_bar(mgmt, _bar(3, 101.0, 101.0, 99.0, 99.5))
+        self.assertIsNotNone(dec)
+        assert dec is not None
+        self.assertEqual(dec.reason, "BREAKEVEN")
+        self.assertAlmostEqual(dec.exit_price, 100.0)
+
+    def test_prove_at_2_5r_keeps_original_stop(self) -> None:
+        overlay = TrailOverlay(TrailOverlayConfig())
+        mgmt = self._mgmt()
+        original = mgmt.stop_price
+        dec = overlay.on_bar(mgmt, _bar(1, 110.0, 126.0, 119.0, 119.5))
         self.assertIsNone(dec)
         self.assertTrue(overlay.banked)
-        self.assertAlmostEqual(mgmt.stop_price, 120.0)
+        self.assertFalse(overlay.breakeven_armed)
+        self.assertAlmostEqual(mgmt.stop_price, original)
 
-    def test_same_bar_2_5_then_through_lock_exits_plus_2r(self) -> None:
+    def test_pullback_through_entry_after_proof_stays_on(self) -> None:
         overlay = TrailOverlay(TrailOverlayConfig())
         mgmt = self._mgmt()
-        bar = _bar(1, 110.0, 126.0, 119.0, 119.5)
-        dec = overlay.on_bar(mgmt, bar)
-        self.assertIsNotNone(dec)
-        assert dec is not None
-        self.assertEqual(dec.reason, "TRAIL_STOP")
-        self.assertAlmostEqual(dec.exit_price, 120.0)
-        self.assertEqual(dec.action, TraderAction.EXIT_PROFIT)
-
-    def test_trail_ratchets_then_exits(self) -> None:
-        overlay = TrailOverlay(TrailOverlayConfig())
-        mgmt = self._mgmt()
-        overlay.on_bar(mgmt, _bar(1, 110.0, 126.0, 123.0, 124.0))
-        self.assertAlmostEqual(mgmt.stop_price, 120.0)
-        dec = overlay.on_bar(mgmt, _bar(2, 124.0, 140.0, 132.0, 138.0))
+        overlay.on_bar(mgmt, _bar(1, 100.0, 103.0, 100.5, 102.0))
+        self.assertTrue(overlay.breakeven_armed)
+        overlay.on_bar(mgmt, _bar(2, 110.0, 126.0, 121.0, 124.0))
+        self.assertTrue(overlay.banked)
+        dec = overlay.on_bar(mgmt, _bar(3, 110.0, 112.0, 98.0, 99.0))
         self.assertIsNone(dec)
-        self.assertAlmostEqual(mgmt.stop_price, 130.0)
-        dec = overlay.on_bar(mgmt, _bar(3, 138.0, 139.0, 129.0, 130.0))
+
+    def test_wide_trail_starts_after_4r_and_waits_a_bar(self) -> None:
+        overlay = TrailOverlay(TrailOverlayConfig())
+        mgmt = self._mgmt()
+        overlay.on_bar(mgmt, _bar(1, 110.0, 126.0, 121.0, 124.0))
+        # 4R is 140. This bar arms the trail; its own low does not stop it out.
+        dec = overlay.on_bar(mgmt, _bar(2, 124.0, 141.0, 110.0, 140.0))
+        self.assertIsNone(dec)
+        self.assertTrue(overlay.trailing)
+        self.assertAlmostEqual(overlay.active_trail_stop or 0.0, 121.0)
+        dec = overlay.on_bar(mgmt, _bar(3, 140.0, 142.0, 120.0, 122.0))
         self.assertIsNotNone(dec)
         assert dec is not None
         self.assertEqual(dec.reason, "TRAIL_STOP")
-        self.assertAlmostEqual(dec.exit_price, 130.0)
+        self.assertAlmostEqual(dec.exit_price or 0.0, 121.0)
 
 
 class CdxTrustStackTests(unittest.TestCase):

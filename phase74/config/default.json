@@ -68,7 +68,7 @@
     "nq_point_value": 20.0,
     "day_max_losers": 2,
     "day_max_loss_dollars": 400.0,
-    "day_max_winners": 2,
+    "day_max_winners": 1,
     "day_big_win_dollars": 1000.0,
     "day_giveback_arm_dollars": 400.0,
     "day_giveback_dollars": 300.0,

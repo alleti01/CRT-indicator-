@@ -239,7 +239,7 @@ class PropDayHaltTests(unittest.TestCase):
 
     def test_live_config_is_two_winners_per_session(self) -> None:
         qg = load_phase74_config().section("quality_gates")
-        self.assertEqual(int(qg["day_max_winners"]), 2)
+        self.assertEqual(int(qg["day_max_winners"]), 1)
 
     def test_live_config_range_lock_is_off(self) -> None:
         rl = load_phase74_config().section("range_lock")

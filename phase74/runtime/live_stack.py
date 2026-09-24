@@ -270,7 +270,9 @@ class LiveStack:
                         extra=extra,
                     )
                     if self._day_halt is not None:
-                        self._day_halt.record_closed(gross_r, bar.timestamp, atr=entry_atr)
+                        self._day_halt.record_closed(
+                            gross_r, bar.timestamp, dollars=move * 20.0
+                        )
                     self._expand_trade_range(bar)
                     arm_stop_only = self.range_lock.cfg.arm_on == "stop"
                     if self._trade_hi is not None and self._trade_lo is not None:

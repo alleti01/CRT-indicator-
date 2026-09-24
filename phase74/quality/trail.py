@@ -13,13 +13,19 @@ class TrailOverlayConfig:
     bank_trigger_r: float = 2.5
     lock_stop_r: float = 2.0
     trail_atr: float = 1.0
+    profit_cap_points: float = 0.0
 
     @classmethod
     def from_dict(cls, raw: dict) -> TrailOverlayConfig:
+        dollars = raw.get("profit_cap_dollars")
+        points = raw.get("profit_cap_points", 0.0)
+        if dollars is not None:
+            points = float(dollars) / float(raw.get("point_value", 20.0))
         return cls(
             bank_trigger_r=float(raw.get("bank_trigger_r", 2.5)),
             lock_stop_r=float(raw.get("lock_stop_r", 2.0)),
             trail_atr=float(raw.get("trail_atr", 1.0)),
+            profit_cap_points=float(points or 0.0),
         )
 
 
@@ -39,6 +45,13 @@ class TrailOverlay:
         update_excursion(mgmt, bar)
         risk = mgmt.risk
         if risk <= 0:
+            return None
+        cap = self.cfg.profit_cap_points
+        if cap > 0:
+            if mgmt.side == "LONG" and bar.high >= mgmt.entry_price + cap:
+                return ExitDecision(TraderAction.EXIT_PROFIT, "PROFIT_CAP", mgmt.entry_price + cap)
+            if mgmt.side == "SHORT" and bar.low <= mgmt.entry_price - cap:
+                return ExitDecision(TraderAction.EXIT_PROFIT, "PROFIT_CAP", mgmt.entry_price - cap)
             return None
 
         return self._trail(mgmt, bar)

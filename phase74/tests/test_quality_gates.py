@@ -385,6 +385,16 @@ class TrailOverlayTests(unittest.TestCase):
         et = _ts(0)
         return build_management("LONG", 100.0, 10.0, cfg, et)
 
+    def test_profit_cap_holds_through_2r_and_exits_at_1200(self) -> None:
+        overlay = TrailOverlay(TrailOverlayConfig(profit_cap_points=60.0))
+        mgmt = self._mgmt()
+        self.assertIsNone(overlay.on_bar(mgmt, _bar(1, 100.0, 130.0, 100.0, 125.0)))
+        dec = overlay.on_bar(mgmt, _bar(2, 125.0, 160.0, 120.0, 155.0))
+        self.assertIsNotNone(dec)
+        assert dec is not None
+        self.assertEqual(dec.reason, "PROFIT_CAP")
+        self.assertAlmostEqual(dec.exit_price or 0.0, 160.0)
+
     def test_same_bar_2_5_then_through_lock_exits_plus_2r(self) -> None:
         overlay = TrailOverlay(TrailOverlayConfig())
         mgmt = self._mgmt()

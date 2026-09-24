@@ -81,7 +81,9 @@
     "enabled": true,
     "bank_trigger_r": 2.5,
     "lock_stop_r": 2.0,
-    "trail_atr": 1.0
+    "trail_atr": 1.0,
+    "profit_cap_dollars": 1200.0,
+    "point_value": 20.0
   },
   "range_lock": {
     "enabled": false,

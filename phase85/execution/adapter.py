@@ -283,8 +283,27 @@ class NinjaTraderExecutionAdapter:
         events = self.transport.send(cmd)
         self._apply_events(events)
         if not self.flatten_confirmed:
+            self.query_position()
+        if not self.flatten_confirmed:
             return AdapterResult(False, "FLATTEN_UNCONFIRMED", events=events, command=cmd)
         return AdapterResult(True, "FLAT", events=events, command=cmd)
+
+    def query_position(self) -> None:
+        cmd = Command(
+            command="QUERY_POSITION",
+            command_id=f"q-{uuid.uuid4()}",
+            created_at_utc=_iso(utc_now()),
+            account=self.cfg.expected_account,
+            instrument=self.cfg.expected_contract or self.transport.instrument,
+        )
+        events = self.transport.send(cmd)
+        self._apply_events(events)
+        if self.side == "FLAT" and self.state in {
+            ExecutionState.FLATTENING,
+            ExecutionState.EXIT_PENDING,
+            ExecutionState.POSITION_PROTECTED,
+        }:
+            self._finish_exit()
 
     def cancel_entry(self) -> AdapterResult:
         cmd = Command(
@@ -352,6 +371,10 @@ class NinjaTraderExecutionAdapter:
             self.audit.write("PARTIAL_FILL", qty=self.filled_qty, remaining=self.remaining_qty)
             return
         if name == "FILLED":
+            if self.state in {ExecutionState.FLATTENING, ExecutionState.EXIT_PENDING}:
+                self.audit.write("FILL", price=ev.fill_price, qty=ev.fill_quantity or 0)
+                self._finish_exit()
+                return
             if ev.fill_quantity:
                 self.filled_qty = max(self.filled_qty, ev.fill_quantity)
             if ev.fill_price is not None:
@@ -461,7 +484,9 @@ class NinjaTraderExecutionAdapter:
         self.stop_working = False
         self.target_working = False
         self.flatten_confirmed = True
-        if self.state == ExecutionState.EXIT_PENDING:
+        if self.state == ExecutionState.POSITION_PROTECTED:
+            self._safe_transition(ExecutionState.EXIT_PENDING)
+        if self.state in {ExecutionState.EXIT_PENDING, ExecutionState.FLATTENING}:
             self._safe_transition(ExecutionState.FLAT)
         if self.state == ExecutionState.FLAT and self.kill.state is not KillState.EXECUTION_HALTED:
             self._safe_transition(ExecutionState.IDLE)

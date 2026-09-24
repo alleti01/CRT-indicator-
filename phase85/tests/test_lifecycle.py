@@ -53,6 +53,18 @@ class LifecycleTests(unittest.TestCase):
         nxt = adapter.request_entry(make_intent(signal_id="next", event_id="next", command_id="next-cmd"))
         self.assertTrue(nxt.allowed, nxt.reason)
 
+    def test_flatten_fill_clears_position_without_flat_event(self) -> None:
+        from phase85.protocol.messages import Event
+
+        adapter, _ = ready_sim(self.tmp)
+        adapter.request_entry(make_intent(side="LONG", signal_id="flat1", event_id="flat1"))
+        adapter.place_protection()
+        adapter.state
+        adapter._safe_transition(ExecutionState.FLATTENING)
+        adapter.apply_external_events([Event(event="FILLED", fill_price=101.0, fill_quantity=1)])
+        self.assertEqual(adapter.side, "FLAT")
+        self.assertEqual(adapter.state, ExecutionState.IDLE)
+
     def test_enter_rejected(self) -> None:
         adapter, _ = ready_sim(self.tmp, reject_next_entry=True)
         result = adapter.request_entry(make_intent())

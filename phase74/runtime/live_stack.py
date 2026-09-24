@@ -371,10 +371,15 @@ class LiveStack:
         if not routing or not getattr(adapter.transport, "authenticated", False):
             return ""
         from phase85.execution.gates import blocks_new_entries
+        from phase85.execution.state_machine import ExecutionState
 
-        if blocks_new_entries(adapter.state):
-            return "REJECT_POSITION_OPEN"
-        return ""
+        if not blocks_new_entries(adapter.state):
+            return ""
+        if adapter.state != ExecutionState.HALTED:
+            adapter.query_position()
+        if not blocks_new_entries(adapter.state):
+            return ""
+        return "REJECT_POSITION_OPEN"
 
     def _void_rejected_paper_entry(self, trade_id: str | None) -> None:
         """Drop a paper fill NinjaTrader refused so it cannot become a halt loss."""

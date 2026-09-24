@@ -75,7 +75,7 @@
     "allow_globex_entries": true
   },
   "risk": {
-    "stop_points": 10.0
+    "stop_points": 14.25
   },
   "trail_overlay": {
     "enabled": true,

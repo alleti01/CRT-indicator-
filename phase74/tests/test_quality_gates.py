@@ -385,19 +385,6 @@ class TrailOverlayTests(unittest.TestCase):
         et = _ts(0)
         return build_management("LONG", 100.0, 10.0, cfg, et)
 
-    def test_green_close_then_close_through_entry_scratches(self) -> None:
-        overlay = TrailOverlay(TrailOverlayConfig())
-        mgmt = self._mgmt()
-        self.assertIsNone(overlay.on_bar(mgmt, _bar(1, 100.0, 102.0, 100.2, 101.0)))
-        self.assertTrue(overlay.breakeven_armed)
-        # Wick back through entry does not exit.
-        self.assertIsNone(overlay.on_bar(mgmt, _bar(2, 101.0, 101.5, 99.0, 101.2)))
-        dec = overlay.on_bar(mgmt, _bar(3, 101.0, 101.0, 99.0, 99.5))
-        self.assertIsNotNone(dec)
-        assert dec is not None
-        self.assertEqual(dec.reason, "BREAKEVEN")
-        self.assertAlmostEqual(dec.exit_price, 100.0)
-
     def test_same_bar_2_5_then_through_lock_exits_plus_2r(self) -> None:
         overlay = TrailOverlay(TrailOverlayConfig())
         mgmt = self._mgmt()

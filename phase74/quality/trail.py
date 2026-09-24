@@ -1,4 +1,4 @@
-"""Original 2.5R trail, plus a breakeven scratch before the trade proves itself."""
+"""1-contract bank at 2.5R then trail (suppresses M0_TARGET flatten)."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -41,15 +41,6 @@ class TrailOverlay:
         if risk <= 0:
             return None
 
-        proved = self._favorable(mgmt, bar) >= self.cfg.bank_trigger_r * risk
-        if not self.banked and not proved:
-            if self.breakeven_armed and self._close_through_entry(mgmt, bar):
-                return ExitDecision(TraderAction.EXIT_PROFIT, "BREAKEVEN", mgmt.entry_price)
-            if self._close_in_profit(mgmt, bar):
-                self.breakeven_armed = True
-            return None
-
-        self.breakeven_armed = False
         return self._trail(mgmt, bar)
 
     def _trail(self, mgmt: ManagementState, bar: Bar) -> ExitDecision | None:
@@ -78,18 +69,3 @@ class TrailOverlay:
                 if bar.high >= mgmt.stop_price:
                     return ExitDecision(TraderAction.EXIT_PROFIT, "TRAIL_STOP", mgmt.stop_price)
         return None
-
-    def _favorable(self, mgmt: ManagementState, bar: Bar) -> float:
-        if mgmt.side == "LONG":
-            return bar.high - mgmt.entry_price
-        return mgmt.entry_price - bar.low
-
-    def _close_in_profit(self, mgmt: ManagementState, bar: Bar) -> bool:
-        if mgmt.side == "LONG":
-            return bar.close > mgmt.entry_price
-        return bar.close < mgmt.entry_price
-
-    def _close_through_entry(self, mgmt: ManagementState, bar: Bar) -> bool:
-        if mgmt.side == "LONG":
-            return bar.close < mgmt.entry_price
-        return bar.close > mgmt.entry_price

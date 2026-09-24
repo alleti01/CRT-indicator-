@@ -41,11 +41,11 @@ class ExecutionRouteTests(unittest.TestCase):
         mgmt = stack.engine.mgmt
         self.assertIsNotNone(mgmt)
         assert mgmt is not None
-        self.assertAlmostEqual(abs(mgmt.stop_price - mgmt.entry_price), 10.0)
-        self.assertAlmostEqual(mgmt.risk, 10.0)
+        self.assertAlmostEqual(abs(mgmt.stop_price - mgmt.entry_price), 14.25)
+        self.assertAlmostEqual(mgmt.risk, 14.25)
         self.assertIsNotNone(adapter.last_m0)
         assert adapter.last_m0 is not None
-        self.assertAlmostEqual(abs(adapter.last_m0.stop_price - adapter.last_m0.actual_fill), 10.0)
+        self.assertAlmostEqual(abs(adapter.last_m0.stop_price - adapter.last_m0.actual_fill), 14.25)
 
     def test_no_adapter_stays_local_sim(self) -> None:
         cfg = p74_cfg()

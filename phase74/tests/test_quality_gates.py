@@ -395,6 +395,16 @@ class TrailOverlayTests(unittest.TestCase):
         self.assertEqual(dec.reason, "PROFIT_CAP")
         self.assertAlmostEqual(dec.exit_price or 0.0, 160.0)
 
+    def test_reversal_exits_after_a_ten_point_pullback(self) -> None:
+        overlay = TrailOverlay(TrailOverlayConfig(profit_cap_points=60.0, reversal_trail_points=10.0))
+        mgmt = self._mgmt()
+        self.assertIsNone(overlay.on_bar(mgmt, _bar(1, 100.0, 120.0, 110.0, 118.0)))
+        dec = overlay.on_bar(mgmt, _bar(2, 118.0, 119.0, 109.0, 112.0))
+        self.assertIsNotNone(dec)
+        assert dec is not None
+        self.assertEqual(dec.reason, "REVERSAL")
+        self.assertAlmostEqual(dec.exit_price or 0.0, 110.0)
+
     def test_same_bar_2_5_then_through_lock_exits_plus_2r(self) -> None:
         overlay = TrailOverlay(TrailOverlayConfig())
         mgmt = self._mgmt()

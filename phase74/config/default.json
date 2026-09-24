@@ -83,6 +83,7 @@
     "lock_stop_r": 2.0,
     "trail_atr": 1.0,
     "profit_cap_dollars": 1200.0,
+    "reversal_trail_points": 10.0,
     "point_value": 20.0
   },
   "range_lock": {

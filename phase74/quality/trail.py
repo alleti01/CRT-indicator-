@@ -14,6 +14,7 @@ class TrailOverlayConfig:
     lock_stop_r: float = 2.0
     trail_atr: float = 1.0
     profit_cap_points: float = 0.0
+    reversal_trail_points: float = 10.0
 
     @classmethod
     def from_dict(cls, raw: dict) -> TrailOverlayConfig:
@@ -26,6 +27,7 @@ class TrailOverlayConfig:
             lock_stop_r=float(raw.get("lock_stop_r", 2.0)),
             trail_atr=float(raw.get("trail_atr", 1.0)),
             profit_cap_points=float(points or 0.0),
+            reversal_trail_points=float(raw.get("reversal_trail_points", 10.0)),
         )
 
 
@@ -48,13 +50,32 @@ class TrailOverlay:
             return None
         cap = self.cfg.profit_cap_points
         if cap > 0:
-            if mgmt.side == "LONG" and bar.high >= mgmt.entry_price + cap:
-                return ExitDecision(TraderAction.EXIT_PROFIT, "PROFIT_CAP", mgmt.entry_price + cap)
-            if mgmt.side == "SHORT" and bar.low <= mgmt.entry_price - cap:
-                return ExitDecision(TraderAction.EXIT_PROFIT, "PROFIT_CAP", mgmt.entry_price - cap)
-            return None
+            return self._cap_or_reversal(mgmt, bar, cap)
 
         return self._trail(mgmt, bar)
+
+    def _cap_or_reversal(self, mgmt: ManagementState, bar: Bar, cap: float) -> ExitDecision | None:
+        trail = self.cfg.reversal_trail_points
+        if mgmt.side == "LONG" and bar.high >= mgmt.entry_price + cap:
+            return ExitDecision(TraderAction.EXIT_PROFIT, "PROFIT_CAP", mgmt.entry_price + cap)
+        if mgmt.side == "SHORT" and bar.low <= mgmt.entry_price - cap:
+            return ExitDecision(TraderAction.EXIT_PROFIT, "PROFIT_CAP", mgmt.entry_price - cap)
+        if self.extreme is not None:
+            if mgmt.side == "LONG" and bar.low <= self.extreme - trail:
+                return ExitDecision(TraderAction.EXIT_PROFIT, "REVERSAL", self.extreme - trail)
+            if mgmt.side == "SHORT" and bar.high >= self.extreme + trail:
+                return ExitDecision(TraderAction.EXIT_PROFIT, "REVERSAL", self.extreme + trail)
+        favorable = (bar.high - mgmt.entry_price) if mgmt.side == "LONG" else (mgmt.entry_price - bar.low)
+        if favorable < mgmt.risk:
+            return None
+        price = bar.high if mgmt.side == "LONG" else bar.low
+        if self.extreme is None:
+            self.extreme = price
+        elif mgmt.side == "LONG":
+            self.extreme = max(self.extreme, price)
+        else:
+            self.extreme = min(self.extreme, price)
+        return None
 
     def _trail(self, mgmt: ManagementState, bar: Bar) -> ExitDecision | None:
         risk = mgmt.risk

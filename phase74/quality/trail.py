@@ -14,6 +14,7 @@ class TrailOverlayConfig:
     lock_stop_r: float = 2.0
     trail_atr: float = 1.0
     profit_cap_points: float = 0.0
+    profit_cap_r: float = 0.0
     reversal_trail_points: float = 10.0
 
     @classmethod
@@ -27,6 +28,7 @@ class TrailOverlayConfig:
             lock_stop_r=float(raw.get("lock_stop_r", 2.0)),
             trail_atr=float(raw.get("trail_atr", 1.0)),
             profit_cap_points=float(points or 0.0),
+            profit_cap_r=float(raw.get("profit_cap_r", 0.0) or 0.0),
             reversal_trail_points=float(raw.get("reversal_trail_points", 10.0)),
         )
 
@@ -48,7 +50,7 @@ class TrailOverlay:
         risk = mgmt.risk
         if risk <= 0:
             return None
-        cap = self.cfg.profit_cap_points
+        cap = self.cfg.profit_cap_r * risk if self.cfg.profit_cap_r > 0 else self.cfg.profit_cap_points
         if cap > 0:
             return self._cap_or_reversal(mgmt, bar, cap)
 

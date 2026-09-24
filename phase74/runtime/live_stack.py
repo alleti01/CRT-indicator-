@@ -345,7 +345,7 @@ class LiveStack:
         mgmt = self.engine.mgmt
         if points <= 0 or mgmt is None:
             return
-        target_r = float(self.engine.cfg.target_r)
+        target_r = self._trail_cfg.profit_cap_r or float(self.engine.cfg.target_r)
         if mgmt.side == "LONG":
             mgmt.stop_price = mgmt.entry_price - points
             mgmt.target_price = mgmt.entry_price + target_r * points

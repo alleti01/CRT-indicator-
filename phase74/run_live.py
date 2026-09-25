@@ -215,9 +215,12 @@ def main() -> int:
         seeded = md.seed_closed_bars(
             load_closed_bars_csv(
                 cfg.log_dir / "bars.csv",
-                limit=int(cfg.section("market_data").get("ninjatrader_bootstrap_bars", 15)),
+                limit=2000,
             )
         )
+        md._cache.duplicate_bars = 0
+        md._cache.out_of_order_bars = 0
+        md._cache.gap_bars = 0
         if seeded:
             print(f"Seeded {seeded} closed bars from bars.csv (ATR warmup skip)")
     else:

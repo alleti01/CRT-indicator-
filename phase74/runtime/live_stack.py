@@ -79,6 +79,7 @@ class LiveStack:
         self._active_entry_atr: float = 0.0
         self._active_entry_risk: float = 0.0
         self._stop_points = float(cfg.section("risk").get("stop_points", 0) or 0)
+        self._wick_target: float | None = None
         qg = cfg.section("quality_gates")
         self._quality_enabled = bool(qg.get("enabled", False))
         self._filter_signals = bool(qg.get("filter_signals", True))
@@ -281,6 +282,7 @@ class LiveStack:
                     self._trade_hi = None
                     self._trade_lo = None
                     self._trail = None
+                    self._wick_target = None
                     self._active_trade_id = None
                     self._active_entry_atr = 0.0
                     self._active_entry_risk = 0.0
@@ -356,10 +358,49 @@ class LiveStack:
             return
         mgmt.risk = points
         self._active_entry_risk = points
+        self._apply_wick_stop()
         for snap in (self.engine.book.internal, self.engine.book.desired, self.engine.book.broker):
             if snap.side == mgmt.side:
                 snap.stop_price = mgmt.stop_price
                 snap.target_price = mgmt.target_price
+
+    def _apply_wick_stop(self) -> None:
+        """Stop mirrors the first unswept wick. The entry candle is not part of that stop."""
+        mgmt = self.engine.mgmt
+        if mgmt is None:
+            return
+        recent = list(self.market_data.recent_bars(2000))
+        if not recent:
+            self._wick_target = None
+            return
+        from phase74.quality.wick_targets import wick_targets
+
+        found = wick_targets(mgmt.side, mgmt.entry_price, recent, recent[-1].timestamp)
+        if found is None:
+            self._wick_target = None
+            log.info("wick target missing, fixed stop remains %.2f", self._stop_points)
+            return
+        target, second = found
+        risk = abs(target - mgmt.entry_price)
+        if risk <= 0:
+            self._wick_target = None
+            return
+        if mgmt.side == "LONG":
+            mgmt.stop_price = mgmt.entry_price - risk
+        else:
+            mgmt.stop_price = mgmt.entry_price + risk
+        mgmt.target_price = target
+        mgmt.risk = risk
+        self._active_entry_risk = risk
+        self._wick_target = target
+        log.info(
+            "wick stop side=%s risk=%.2f stop=%.2f tp1=%.2f tp2=%s",
+            mgmt.side,
+            risk,
+            mgmt.stop_price,
+            target,
+            "" if second is None else f"{second:.2f}",
+        )
 
     def _nt_entry_block_reason(self) -> str:
         """Block a new paper trade while NinjaTrader still has this position open."""
@@ -393,6 +434,7 @@ class LiveStack:
         self.engine.pending_signal = None
         self.broker.broker_position = PositionSnapshot()
         self._trail = None
+        self._wick_target = None
         self._trade_hi = None
         self._trade_lo = None
         self._active_trade_id = None
@@ -427,7 +469,7 @@ class LiveStack:
             event_id=signal.signal_id,
             signal_id=signal.signal_id,
             expected_entry=float(fill_price),
-            signal_atr=float(self._stop_points or signal.atr),
+            signal_atr=float(self._active_entry_risk or self._stop_points or signal.atr),
             signal_time=signal.signal_time_utc,
             webhook_received=now,
             decision_time=now,
@@ -554,6 +596,30 @@ class LiveStack:
             self.engine.events.log_error({"critical": "BROKER_DISCONNECT_ACTIVE"})
         self._release_reversal_watch()
         bar = self.market_data.latest_bar()
+        mgmt = self.engine.mgmt
+        if (
+            bar is not None
+            and mgmt is not None
+            and bar.timestamp <= mgmt.entry_time
+        ):
+            log.info("entry candle stays outside the stop close=%s", bar.close)
+            return {"ok": True, "holding": True}
+        if (
+            bar is not None
+            and mgmt is not None
+            and self._wick_target is not None
+            and self.engine.state in (TraderState.LONG_ACTIVE, TraderState.SHORT_ACTIVE)
+        ):
+            hit = (
+                mgmt.side == "LONG" and bar.high >= self._wick_target
+            ) or (
+                mgmt.side == "SHORT" and bar.low <= self._wick_target
+            )
+            if hit:
+                from phase73.trader.management import ExitDecision
+
+                exit_dec = ExitDecision(TraderAction.EXIT_PROFIT, "WICK_TARGET", self._wick_target)
+                return self.engine._execute_exit(self.engine.state.value, exit_dec, bar)
         if self._trade_hi is not None:
             self._expand_trade_range(bar)
         if (

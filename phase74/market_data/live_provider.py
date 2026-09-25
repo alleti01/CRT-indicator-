@@ -32,7 +32,7 @@ class StreamLiveDataProvider(MarketDataProvider):
     ) -> None:
         self._df = df if df is not None else pd.DataFrame()
         self._i = -1
-        self._cache = BarCache()
+        self._cache = BarCache(maxlen=2000)
         self._staleness_limit = staleness_limit_seconds
         self._atr_period = atr_period
         self._exchange = exchange

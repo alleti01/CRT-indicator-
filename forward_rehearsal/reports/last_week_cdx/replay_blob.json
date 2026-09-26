@@ -1,0 +1,1439 @@
+[
+  {
+    "id": "tue_1052",
+    "et": "2026-09-22 10:52",
+    "side": "SHORT",
+    "status": "EXECUTION_FAILURE",
+    "entry": 30926.75,
+    "exit": null,
+    "pnl": null,
+    "stop_pts": null,
+    "signal_time": "2026-09-22T10:52:00-04:00",
+    "signal_price": 30930.75,
+    "signal_tf_field": "1m",
+    "delta_sec": 0.0,
+    "atr": 34.107142857142854,
+    "sideways": true,
+    "efficiency": 0.043478260869565216,
+    "overlap": 0.7102359711324012,
+    "range_position": 0.48604651162790696,
+    "stops": {
+      "5": 30999.20535714286,
+      "10": 30999.20535714286,
+      "20": 30999.20535714286
+    },
+    "mfe_h": 41.0,
+    "mae_h": 138.75,
+    "mfe_n": {
+      "1": 3.5,
+      "2": 3.5,
+      "3": 8.25,
+      "6": 21.5
+    },
+    "post": null,
+    "class": "",
+    "sys5": {
+      "s1": [
+        -72.4553571428587,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -72.4553571428587,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys10": {
+      "s1": [
+        -72.4553571428587,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -72.4553571428587,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys20": {
+      "s1": [
+        -72.4553571428587,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -72.4553571428587,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    }
+  },
+  {
+    "id": "tue_1512",
+    "et": "2026-09-22 15:12",
+    "side": "LONG",
+    "status": "INCOMPLETE",
+    "entry": 31002.5,
+    "exit": null,
+    "pnl": null,
+    "stop_pts": null,
+    "signal_time": "2026-09-22T15:12:00-04:00",
+    "signal_price": 31001.5,
+    "signal_tf_field": "1m",
+    "delta_sec": 0.0,
+    "atr": 12.392857142857142,
+    "sideways": true,
+    "efficiency": 0.11617312072892938,
+    "overlap": 0.6995312132710867,
+    "range_position": 0.7701149425287356,
+    "stops": {
+      "5": 30970.880357142858,
+      "10": 30965.380357142858,
+      "20": 30965.380357142858
+    },
+    "mfe_h": 68.0,
+    "mae_h": 19.75,
+    "mfe_n": {
+      "1": 2.0,
+      "2": 12.25,
+      "3": 13.5,
+      "6": 24.5
+    },
+    "post": null,
+    "class": "",
+    "sys5": {
+      "s1": [
+        1.5,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        -14.25,
+        "ESCAPE:HORIZON_8H"
+      ],
+      "s3": [
+        1.5,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        -13.25,
+        "EXIT_SIDEWAYS_ESCAPE_FAILURE"
+      ],
+      "entry_how": "ESCAPE"
+    },
+    "sys10": {
+      "s1": [
+        1.5,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        -14.25,
+        "ESCAPE:HORIZON_8H"
+      ],
+      "s3": [
+        1.5,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        -13.25,
+        "EXIT_SIDEWAYS_ESCAPE_FAILURE"
+      ],
+      "entry_how": "ESCAPE"
+    },
+    "sys20": {
+      "s1": [
+        1.5,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        -14.25,
+        "ESCAPE:HORIZON_8H"
+      ],
+      "s3": [
+        1.5,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        -13.25,
+        "EXIT_SIDEWAYS_ESCAPE_FAILURE"
+      ],
+      "entry_how": "ESCAPE"
+    }
+  },
+  {
+    "id": "wed_0104",
+    "et": "2026-09-23 01:04",
+    "side": "SHORT",
+    "status": "COMPLETE",
+    "entry": 31025.5,
+    "exit": 31030.0,
+    "pnl": -90.0,
+    "stop_pts": 4.5,
+    "signal_time": "2026-09-23T01:04:00-04:00",
+    "signal_price": 31026.0,
+    "signal_tf_field": "1m",
+    "delta_sec": 0.0,
+    "atr": 7.196428571428571,
+    "sideways": true,
+    "efficiency": 0.2247557003257329,
+    "overlap": 0.6740232765822602,
+    "range_position": 0.36363636363636365,
+    "stops": {
+      "5": 31051.60982142857,
+      "10": 31052.60982142857,
+      "20": 31052.60982142857
+    },
+    "mfe_h": 114.75,
+    "mae_h": 69.25,
+    "mfe_n": {
+      "1": 0.0,
+      "2": 0.25,
+      "3": 0.25,
+      "6": 1.75
+    },
+    "post": {
+      "post_mfe": 19.5,
+      "post_mae": 69.25,
+      "recover_min": 3.0,
+      "t_025": 16.0,
+      "t_050": 18.0,
+      "t_1": 18.0,
+      "t_2": 180.0
+    },
+    "class": "PREMATURE_BOT_STOP",
+    "sys5": {
+      "s1": [
+        -26.109821428570285,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -26.109821428570285,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys10": {
+      "s1": [
+        -27.109821428570285,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -27.109821428570285,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys20": {
+      "s1": [
+        -27.109821428570285,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -27.109821428570285,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    }
+  },
+  {
+    "id": "wed_0207",
+    "et": "2026-09-23 02:07",
+    "side": "LONG",
+    "status": "COMPLETE",
+    "entry": 31051.75,
+    "exit": 31044.75,
+    "pnl": -140.0,
+    "stop_pts": 7.0,
+    "signal_time": "2026-09-23T02:07:00-04:00",
+    "signal_price": 31051.0,
+    "signal_tf_field": "1m",
+    "delta_sec": 0.0,
+    "atr": 12.803571428571429,
+    "sideways": true,
+    "efficiency": 0.0984251968503937,
+    "overlap": 0.8327516030871233,
+    "range_position": 0.9705882352941176,
+    "stops": {
+      "5": 31026.10982142857,
+      "10": 31020.35982142857,
+      "20": 31018.35982142857
+    },
+    "mfe_h": 43.0,
+    "mae_h": 243.5,
+    "mfe_n": {
+      "1": 1.5,
+      "2": 1.5,
+      "3": 6.25,
+      "6": 7.0
+    },
+    "post": {
+      "post_mfe": 43.0,
+      "post_mae": 141.0,
+      "recover_min": 6.0,
+      "t_025": 6.0,
+      "t_050": 6.0,
+      "t_1": 12.0,
+      "t_2": 24.0
+    },
+    "class": "PREMATURE_BOT_STOP",
+    "sys5": {
+      "s1": [
+        -25.640178571429715,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        -20.122321428571013,
+        "ESCAPE:STRUCT_STOP"
+      ],
+      "s3": [
+        -4.0,
+        "EXIT_SIDEWAYS_NO_PROGRESS"
+      ],
+      "s4": [
+        -20.122321428571013,
+        "STRUCT_STOP"
+      ],
+      "entry_how": "ESCAPE"
+    },
+    "sys10": {
+      "s1": [
+        -31.390178571429715,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        -26.622321428571013,
+        "ESCAPE:STRUCT_STOP"
+      ],
+      "s3": [
+        -4.0,
+        "EXIT_SIDEWAYS_NO_PROGRESS"
+      ],
+      "s4": [
+        -26.622321428571013,
+        "STRUCT_STOP"
+      ],
+      "entry_how": "ESCAPE"
+    },
+    "sys20": {
+      "s1": [
+        -33.390178571429715,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        -28.622321428571013,
+        "ESCAPE:STRUCT_STOP"
+      ],
+      "s3": [
+        -4.0,
+        "EXIT_SIDEWAYS_NO_PROGRESS"
+      ],
+      "s4": [
+        -28.622321428571013,
+        "STRUCT_STOP"
+      ],
+      "entry_how": "ESCAPE"
+    }
+  },
+  {
+    "id": "wed_1056",
+    "et": "2026-09-23 10:56",
+    "side": "LONG",
+    "status": "INCOMPLETE",
+    "entry": 30810.5,
+    "exit": null,
+    "pnl": null,
+    "stop_pts": null,
+    "signal_time": "2026-09-23T10:57:00-04:00",
+    "signal_price": 30811.0,
+    "signal_tf_field": "1m",
+    "delta_sec": 60.0,
+    "atr": 42.05357142857143,
+    "sideways": true,
+    "efficiency": 0.1843843843843844,
+    "overlap": 0.6883819097787143,
+    "range_position": 0.7197049525816649,
+    "stops": {
+      "5": 30684.897321428572,
+      "10": 30640.647321428572,
+      "20": 30640.647321428572
+    },
+    "mfe_h": 17.25,
+    "mae_h": 164.0,
+    "mfe_n": {
+      "1": 7.0,
+      "2": 15.75,
+      "3": 17.25,
+      "6": 17.25
+    },
+    "post": null,
+    "class": "",
+    "sys5": {
+      "s1": [
+        -125.60267857142753,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -125.60267857142753,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys10": {
+      "s1": [
+        -17.0,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -17.0,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys20": {
+      "s1": [
+        -17.0,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -17.0,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    }
+  },
+  {
+    "id": "thu_0139",
+    "et": "2026-09-24 01:39",
+    "side": "LONG",
+    "status": "COMPLETE",
+    "entry": 30691.25,
+    "exit": 30682.5,
+    "pnl": -175.0,
+    "stop_pts": 8.75,
+    "signal_time": "2026-09-24T01:39:00-04:00",
+    "signal_price": 30691.75,
+    "signal_tf_field": "1m",
+    "delta_sec": 0.0,
+    "atr": 12.839285714285714,
+    "sideways": true,
+    "efficiency": 0.05429864253393665,
+    "overlap": 0.7319478805603165,
+    "range_position": 0.4378698224852071,
+    "stops": {
+      "5": 30679.108035714286,
+      "10": 30679.108035714286,
+      "20": 30673.108035714286
+    },
+    "mfe_h": 7.25,
+    "mae_h": 321.25,
+    "mfe_n": {
+      "1": 7.25,
+      "2": 7.25,
+      "3": 7.25,
+      "6": 7.25
+    },
+    "post": {
+      "post_mfe": 7.25,
+      "post_mae": 321.25,
+      "recover_min": 1.0,
+      "t_025": 1.0,
+      "t_050": 1.0,
+      "t_1": null,
+      "t_2": null
+    },
+    "class": "TRUE_FAILURE",
+    "sys5": {
+      "s1": [
+        -12.141964285714494,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -12.141964285714494,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys10": {
+      "s1": [
+        -12.141964285714494,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -12.141964285714494,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys20": {
+      "s1": [
+        -18.141964285714494,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -18.141964285714494,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    }
+  },
+  {
+    "id": "thu_0151",
+    "et": "2026-09-24 01:51",
+    "side": "SHORT",
+    "status": "COMPLETE",
+    "entry": 30658.0,
+    "exit": 30668.5,
+    "pnl": -210.0,
+    "stop_pts": 10.5,
+    "signal_time": "2026-09-24T01:51:01-04:00",
+    "signal_price": 30657.75,
+    "signal_tf_field": "1m",
+    "delta_sec": 1.0,
+    "atr": 13.392857142857142,
+    "sideways": true,
+    "efficiency": 0.09197651663405088,
+    "overlap": 0.6892560110263417,
+    "range_position": 0.042735042735042736,
+    "stops": {
+      "5": 30709.41964285714,
+      "10": 30711.16964285714,
+      "20": 30716.66964285714
+    },
+    "mfe_h": 288.0,
+    "mae_h": 12.0,
+    "mfe_n": {
+      "1": 1.25,
+      "2": 28.5,
+      "3": 51.0,
+      "6": 93.5
+    },
+    "post": {
+      "post_mfe": 288.0,
+      "post_mae": 12.0,
+      "recover_min": 2.0,
+      "t_025": 3.0,
+      "t_050": 4.0,
+      "t_1": 4.0,
+      "t_2": 5.0
+    },
+    "class": "PREMATURE_BOT_STOP",
+    "sys5": {
+      "s1": [
+        81.75,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        97.75,
+        "ESCAPE:HORIZON_8H"
+      ],
+      "s3": [
+        81.75,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        97.75,
+        "HORIZON_8H"
+      ],
+      "entry_how": "ESCAPE"
+    },
+    "sys10": {
+      "s1": [
+        81.75,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        97.75,
+        "ESCAPE:HORIZON_8H"
+      ],
+      "s3": [
+        81.75,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        97.75,
+        "HORIZON_8H"
+      ],
+      "entry_how": "ESCAPE"
+    },
+    "sys20": {
+      "s1": [
+        81.75,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        97.75,
+        "ESCAPE:HORIZON_8H"
+      ],
+      "s3": [
+        81.75,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        97.75,
+        "HORIZON_8H"
+      ],
+      "entry_how": "ESCAPE"
+    }
+  },
+  {
+    "id": "thu_0703",
+    "et": "2026-09-24 07:03",
+    "side": "LONG",
+    "status": "COMPLETE",
+    "entry": 30488.75,
+    "exit": 30478.0,
+    "pnl": -215.0,
+    "stop_pts": 10.75,
+    "signal_time": "2026-09-24T07:03:00-04:00",
+    "signal_price": 30488.75,
+    "signal_tf_field": "1m",
+    "delta_sec": 0.0,
+    "atr": 23.446428571428573,
+    "sideways": true,
+    "efficiency": 0.15223336371923427,
+    "overlap": 0.7825164975502712,
+    "range_position": 0.6528735632183909,
+    "stops": {
+      "5": 30470.57767857143,
+      "10": 30419.57767857143,
+      "20": 30413.82767857143
+    },
+    "mfe_h": 338.75,
+    "mae_h": 68.5,
+    "mfe_n": {
+      "1": 1.5,
+      "2": 1.5,
+      "3": 1.5,
+      "6": 24.0
+    },
+    "post": {
+      "post_mfe": 329.75,
+      "post_mae": 68.5,
+      "recover_min": 11.0,
+      "t_025": 12.0,
+      "t_050": 12.0,
+      "t_1": 12.0,
+      "t_2": 13.0
+    },
+    "class": "PREMATURE_BOT_STOP",
+    "sys5": {
+      "s1": [
+        -18.172321428570285,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -18.172321428570285,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys10": {
+      "s1": [
+        253.5,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        253.5,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys20": {
+      "s1": [
+        253.5,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        253.5,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    }
+  },
+  {
+    "id": "thu_0803",
+    "et": "2026-09-24 08:03",
+    "side": "SHORT",
+    "status": "COMPLETE",
+    "entry": 30455.0,
+    "exit": 30436.0,
+    "pnl": 380.0,
+    "stop_pts": null,
+    "signal_time": "2026-09-24T08:03:00-04:00",
+    "signal_price": 30452.75,
+    "signal_tf_field": "1m",
+    "delta_sec": 0.0,
+    "atr": 20.892857142857142,
+    "sideways": true,
+    "efficiency": 0.1221826809015421,
+    "overlap": 0.7105792933902645,
+    "range_position": 0.05014749262536873,
+    "stops": {
+      "5": 30462.29464285714,
+      "10": 30502.04464285714,
+      "20": 30513.79464285714
+    },
+    "mfe_h": 34.75,
+    "mae_h": 372.5,
+    "mfe_n": {
+      "1": 20.75,
+      "2": 20.75,
+      "3": 20.75,
+      "6": 20.75
+    },
+    "post": null,
+    "class": "",
+    "sys5": {
+      "s1": [
+        -7.294642857141298,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -7.294642857141298,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys10": {
+      "s1": [
+        -47.0446428571413,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -47.0446428571413,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys20": {
+      "s1": [
+        -58.7946428571413,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -58.7946428571413,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    }
+  },
+  {
+    "id": "thu_0821",
+    "et": "2026-09-24 08:21",
+    "side": "LONG",
+    "status": "COMPLETE",
+    "entry": 30501.75,
+    "exit": 30491.0,
+    "pnl": -215.0,
+    "stop_pts": 10.75,
+    "signal_time": "2026-09-24T08:21:00-04:00",
+    "signal_price": 30500.0,
+    "signal_tf_field": "1m",
+    "delta_sec": 0.0,
+    "atr": 20.589285714285715,
+    "sideways": true,
+    "efficiency": 0.009009009009009009,
+    "overlap": 0.7550634137228782,
+    "range_position": 0.869942196531792,
+    "stops": {
+      "5": 30427.970535714285,
+      "10": 30419.220535714285,
+      "20": 30419.220535714285
+    },
+    "mfe_h": 325.75,
+    "mae_h": 81.5,
+    "mfe_n": {
+      "1": 4.0,
+      "2": 4.0,
+      "3": 4.0,
+      "6": 4.0
+    },
+    "post": {
+      "post_mfe": 325.75,
+      "post_mae": 81.5,
+      "recover_min": 1.0,
+      "t_025": 3.0,
+      "t_050": 41.0,
+      "t_1": 50.0,
+      "t_2": 66.0
+    },
+    "class": "PREMATURE_BOT_STOP",
+    "sys5": {
+      "s1": [
+        -73.77946428571522,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -73.77946428571522,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys10": {
+      "s1": [
+        174.5,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        174.5,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys20": {
+      "s1": [
+        174.5,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        174.5,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    }
+  },
+  {
+    "id": "thu_1130",
+    "et": "2026-09-24 11:30",
+    "side": "SHORT",
+    "status": "COMPLETE",
+    "entry": 30512.75,
+    "exit": 30527.0,
+    "pnl": -285.0,
+    "stop_pts": 14.25,
+    "signal_time": "2026-09-24T11:30:00-04:00",
+    "signal_price": 30513.5,
+    "signal_tf_field": "1m",
+    "delta_sec": 0.0,
+    "atr": 29.339285714285715,
+    "sideways": false,
+    "efficiency": 0.39879759519038077,
+    "overlap": 0.6734835140042378,
+    "range_position": 0.04788213627992634,
+    "stops": {
+      "5": 30559.216964285715,
+      "10": 30574.216964285715,
+      "20": 30641.216964285715
+    },
+    "mfe_h": 10.25,
+    "mae_h": 314.75,
+    "mfe_n": {
+      "1": 10.25,
+      "2": 10.25,
+      "3": 10.25,
+      "6": 10.25
+    },
+    "post": {
+      "post_mfe": 10.25,
+      "post_mae": 314.75,
+      "recover_min": 1.0,
+      "t_025": 1.0,
+      "t_050": 2.0,
+      "t_1": null,
+      "t_2": null
+    },
+    "class": "TRUE_FAILURE",
+    "sys5": {
+      "s1": [
+        -46.46696428571522,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        -46.46696428571522,
+        "STRUCT_STOP"
+      ],
+      "s3": [
+        -46.46696428571522,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        -46.46696428571522,
+        "STRUCT_STOP"
+      ],
+      "entry_how": "IMMEDIATE"
+    },
+    "sys10": {
+      "s1": [
+        -61.46696428571522,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        -61.46696428571522,
+        "STRUCT_STOP"
+      ],
+      "s3": [
+        -61.46696428571522,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        -61.46696428571522,
+        "STRUCT_STOP"
+      ],
+      "entry_how": "IMMEDIATE"
+    },
+    "sys20": {
+      "s1": [
+        -128.46696428571522,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        -128.46696428571522,
+        "STRUCT_STOP"
+      ],
+      "s3": [
+        -128.46696428571522,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        -128.46696428571522,
+        "STRUCT_STOP"
+      ],
+      "entry_how": "IMMEDIATE"
+    }
+  },
+  {
+    "id": "thu_1224",
+    "et": "2026-09-24 12:24",
+    "side": "LONG",
+    "status": "COMPLETE",
+    "entry": 30683.25,
+    "exit": 30691.25,
+    "pnl": 160.0,
+    "stop_pts": null,
+    "signal_time": "2026-09-24T12:24:00-04:00",
+    "signal_price": 30687.0,
+    "signal_tf_field": "1m",
+    "delta_sec": 0.0,
+    "atr": 41.464285714285715,
+    "sideways": false,
+    "efficiency": 0.37174721189591076,
+    "overlap": 0.6383493868320488,
+    "range_position": 0.8034623217922607,
+    "stops": {
+      "5": 30504.426785714284,
+      "10": 30504.426785714284,
+      "20": 30500.426785714284
+    },
+    "mfe_h": 144.25,
+    "mae_h": 61.25,
+    "mfe_n": {
+      "1": 15.25,
+      "2": 26.75,
+      "3": 26.75,
+      "6": 112.5
+    },
+    "post": null,
+    "class": "",
+    "sys5": {
+      "s1": [
+        35.75,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        35.75,
+        "HORIZON_8H"
+      ],
+      "s3": [
+        35.75,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        35.75,
+        "HORIZON_8H"
+      ],
+      "entry_how": "IMMEDIATE"
+    },
+    "sys10": {
+      "s1": [
+        35.75,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        35.75,
+        "HORIZON_8H"
+      ],
+      "s3": [
+        35.75,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        35.75,
+        "HORIZON_8H"
+      ],
+      "entry_how": "IMMEDIATE"
+    },
+    "sys20": {
+      "s1": [
+        35.75,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        35.75,
+        "HORIZON_8H"
+      ],
+      "s3": [
+        35.75,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        35.75,
+        "HORIZON_8H"
+      ],
+      "entry_how": "IMMEDIATE"
+    }
+  },
+  {
+    "id": "thu_1627",
+    "et": "2026-09-24 16:27",
+    "side": "SHORT",
+    "status": "COMPLETE",
+    "entry": 30671.75,
+    "exit": 30672.75,
+    "pnl": -20.0,
+    "stop_pts": null,
+    "signal_time": "2026-09-24T16:27:00-04:00",
+    "signal_price": 30672.5,
+    "signal_tf_field": "1m",
+    "delta_sec": 0.0,
+    "atr": 19.982142857142858,
+    "sideways": false,
+    "efficiency": 0.4799482535575679,
+    "overlap": 0.7759858484732267,
+    "range_position": 0.056133056133056136,
+    "stops": {
+      "5": 30735.249107142856,
+      "10": 30791.999107142856,
+      "20": 30791.999107142856
+    },
+    "mfe_h": 9.5,
+    "mae_h": 142.75,
+    "mfe_n": {
+      "1": 9.5,
+      "2": 9.5,
+      "3": 9.5,
+      "6": 9.5
+    },
+    "post": {
+      "post_mfe": 9.5,
+      "post_mae": 142.75,
+      "recover_min": 1.0,
+      "t_025": 1.0,
+      "t_050": 2.0,
+      "t_1": null,
+      "t_2": null
+    },
+    "class": "TRUE_FAILURE",
+    "sys5": {
+      "s1": [
+        -63.49910714285579,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        -63.49910714285579,
+        "STRUCT_STOP"
+      ],
+      "s3": [
+        -63.49910714285579,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        -63.49910714285579,
+        "STRUCT_STOP"
+      ],
+      "entry_how": "IMMEDIATE"
+    },
+    "sys10": {
+      "s1": [
+        -120.24910714285579,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        -120.24910714285579,
+        "STRUCT_STOP"
+      ],
+      "s3": [
+        -120.24910714285579,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        -120.24910714285579,
+        "STRUCT_STOP"
+      ],
+      "entry_how": "IMMEDIATE"
+    },
+    "sys20": {
+      "s1": [
+        -120.24910714285579,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        -120.24910714285579,
+        "STRUCT_STOP"
+      ],
+      "s3": [
+        -120.24910714285579,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        -120.24910714285579,
+        "STRUCT_STOP"
+      ],
+      "entry_how": "IMMEDIATE"
+    }
+  },
+  {
+    "id": "fri_1224",
+    "et": "2026-09-25 12:24",
+    "side": "LONG",
+    "status": "ESTIMATED",
+    "entry": 30858.75,
+    "exit": 30868.5,
+    "pnl": 195.0,
+    "stop_pts": 80.25,
+    "signal_time": "2026-09-25T12:24:00-04:00",
+    "signal_price": 30859.75,
+    "signal_tf_field": "1m",
+    "delta_sec": 0.0,
+    "atr": 42.92857142857143,
+    "sideways": true,
+    "efficiency": 0.16950082281952825,
+    "overlap": 0.6732469014090409,
+    "range_position": 0.6345062429057888,
+    "stops": {
+      "5": 30892.35357142857,
+      "10": 30729.10357142857,
+      "20": 30729.10357142857
+    },
+    "mfe_h": 76.25,
+    "mae_h": 13.75,
+    "mfe_n": {
+      "1": 57.25,
+      "2": 68.75,
+      "3": 72.75,
+      "6": 73.75
+    },
+    "post": null,
+    "class": "",
+    "sys5": {
+      "s1": [
+        0.0,
+        "STOP_ALREADY_THROUGH"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        0.0,
+        "STOP_ALREADY_THROUGH"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys10": {
+      "s1": [
+        59.0,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        59.0,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys20": {
+      "s1": [
+        59.0,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        59.0,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    }
+  },
+  {
+    "id": "fri_1630",
+    "et": "2026-09-25 16:30",
+    "side": "SHORT",
+    "status": "COMPLETE",
+    "entry": 30897.75,
+    "exit": 30910.75,
+    "pnl": -260.0,
+    "stop_pts": 13.0,
+    "signal_time": "2026-09-25T16:30:00-04:00",
+    "signal_price": 30897.5,
+    "signal_tf_field": "1m",
+    "delta_sec": 0.0,
+    "atr": 13.785714285714286,
+    "sideways": true,
+    "efficiency": 0.13253012048192772,
+    "overlap": 0.794840383996206,
+    "range_position": 0.5777777777777777,
+    "stops": {
+      "5": 30900.439285714285,
+      "10": 30906.689285714285,
+      "20": 30935.689285714285
+    },
+    "mfe_h": 0.25,
+    "mae_h": 24.25,
+    "mfe_n": {
+      "1": 0.25,
+      "2": 0.25,
+      "3": 0.25,
+      "6": 0.25
+    },
+    "post": {
+      "post_mfe": 0.0,
+      "post_mae": 24.25,
+      "recover_min": null,
+      "t_025": null,
+      "t_050": null,
+      "t_1": null,
+      "t_2": null
+    },
+    "class": "TRUE_FAILURE",
+    "sys5": {
+      "s1": [
+        -2.689285714284779,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -2.689285714284779,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys10": {
+      "s1": [
+        -8.939285714284779,
+        "STRUCT_STOP"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -8.939285714284779,
+        "STRUCT_STOP"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    },
+    "sys20": {
+      "s1": [
+        -20.0,
+        "HORIZON_8H"
+      ],
+      "s2": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "s3": [
+        -20.0,
+        "HORIZON_8H"
+      ],
+      "s4": [
+        0.0,
+        "CANCEL_NO_CONFIRMATION"
+      ],
+      "entry_how": "CANCEL"
+    }
+  }
+]

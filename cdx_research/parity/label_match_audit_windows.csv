@@ -1,0 +1,37 @@
+label_id,screenshot_id,direction,confidence,original_time_et,matched_time_et,delta_minutes,open,high,low,close,volume,source,match_status,notes
+L001,s01_20260921_2211,LONG,MEDIUM,2026-09-21 22:13:00,,,,,,,,NONE,UNMATCHED,no recovered 1m series
+L002,s01_20260921_2211,SHORT,MEDIUM,2026-09-21 22:25:00,,,,,,,,NONE,UNMATCHED,no recovered 1m series
+L003,s02_20260921_0708,SHORT,LOW,2026-09-21 06:33:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L004,s02_20260921_0708,LONG,LOW,2026-09-21 06:52:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L005,s03_20260921_0046,SHORT,MEDIUM,2026-09-21 01:42:00,,,,,,,,NONE,UNMATCHED,no recovered 1m series
+L006,s05_20260917_2027,LONG,MEDIUM,2026-09-17 20:08:00,,,,,,,,NONE,UNMATCHED,no recovered 1m series
+L007,s06_20260917_1523,LONG,MEDIUM,2026-09-17 14:38:00,,,,,,,,NONE,UNMATCHED,no recovered 1m series
+L008,s07_20260917_1237,SHORT,MEDIUM,2026-09-17 11:48:00,,,,,,,,NONE,UNMATCHED,no recovered 1m series
+L009,s07_20260917_1237,SHORT,MEDIUM,2026-09-17 12:52:00,,,,,,,,NONE,UNMATCHED,no recovered 1m series
+L010,s08_20260916_2329,SHORT,LOW,2026-09-16 21:08:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L011,s09_20260915_1851,LONG,LOW,2026-09-15 15:20:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L012,s09_20260915_1851,SHORT,LOW,2026-09-15 15:45:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L013,s09_20260915_1851,LONG,LOW,2026-09-15 16:10:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L014,s09_20260915_1851,SHORT,LOW,2026-09-15 18:20:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L015,s10_20260914_2227,SHORT,LOW,2026-09-14 20:50:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L016,s10_20260914_2227,SHORT,LOW,2026-09-14 21:40:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L017,s10_20260914_2227,LONG,LOW,2026-09-14 22:50:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L018,s11_20260911_1346,LONG,LOW,2026-09-11 08:20:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L019,s11_20260911_1346,LONG,LOW,2026-09-11 08:50:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L020,s11_20260911_1346,LONG,LOW,2026-09-11 09:10:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L021,s11_20260911_1346,SHORT,LOW,2026-09-11 09:25:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L022,s11_20260911_1346,LONG,LOW,2026-09-11 09:40:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L023,s11_20260911_1346,SHORT,LOW,2026-09-11 10:00:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L024,s11_20260911_1346,SHORT,LOW,2026-09-11 10:30:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L025,s11_20260911_1346,LONG,LOW,2026-09-11 11:30:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L026,s11_20260911_1346,SHORT,LOW,2026-09-11 12:40:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L027,s11_20260911_1346,LONG,LOW,2026-09-11 13:05:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L028,s12_20260909_1045,SHORT,LOW,2026-09-09 08:20:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L029,s12_20260909_1045,LONG,LOW,2026-09-09 09:50:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L030,s12_20260909_1045,SHORT,LOW,2026-09-09 10:10:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L031,s12_20260909_1045,SHORT,LOW,2026-09-09 10:20:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L032,s12_20260909_1045,SHORT,LOW,2026-09-09 10:50:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L033,s12_20260909_1045,SHORT,LOW,2026-09-09 11:40:00,,,,,,,,NONE,UNMATCHED,LOW unmatched; no recovered 1m series
+L034,s13_20260906_2006,LONG,MEDIUM,2026-09-06 20:08:00,,,,,,,,NONE,UNMATCHED,no recovered 1m series
+L035,s13_20260906_2006,SHORT,MEDIUM,2026-09-06 20:22:00,,,,,,,,NONE,UNMATCHED,no recovered 1m series
+L036,s13_20260906_2006,SHORT,MEDIUM,2026-09-06 20:35:00,,,,,,,,NONE,UNMATCHED,no recovered 1m series

@@ -1,0 +1,4 @@
+features/*.parquet
+__pycache__/
+data/*.csv
+data/rejected_not_used/*.csv

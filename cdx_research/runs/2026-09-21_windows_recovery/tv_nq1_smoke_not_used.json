@@ -1,0 +1,30 @@
+{
+  "present": true,
+  "rows": 883,
+  "first_et": "2026-09-21 07:18:00-04:00",
+  "last_et": "2026-09-21 23:00:00-04:00",
+  "volume": false,
+  "used_for_parity": false,
+  "medium_labels_in_window": 2,
+  "hits": [
+    {
+      "label": "s01 LONG 22:13",
+      "status": "EXACT_ON_TV_NQ1",
+      "open": 30874.25,
+      "high": 30874.75,
+      "low": 30871.0,
+      "close": 30872.75,
+      "label_price": 30866.5
+    },
+    {
+      "label": "s01 SHORT 22:25",
+      "status": "EXACT_ON_TV_NQ1",
+      "open": 30880.0,
+      "high": 30881.0,
+      "low": 30877.75,
+      "close": 30880.5,
+      "label_price": 30892.0
+    }
+  ],
+  "reason_unused": "Not Databento and not NinjaTrader; 883 bars (~15h) cannot satisfy 7/10 MEDIUM gate"
+}

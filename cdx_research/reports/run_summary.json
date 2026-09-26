@@ -1,0 +1,18 @@
+{
+  "verdict": "CDX_RE_INSUFFICIENT_INFORMATION",
+  "screenshots": 12,
+  "labels": 36,
+  "high": 0,
+  "medium": 10,
+  "low": 26,
+  "longs": 15,
+  "shorts": 21,
+  "ohlcv_min": "2017-10-01 17:00:00-05:00",
+  "ohlcv_max": "2026-09-02 10:48:00-05:00",
+  "matched_bars": 0,
+  "out_of_range": 36,
+  "feature_rows": 4141,
+  "candidate_v1_fires_in_smoke_window": 2,
+  "causality": "PASS",
+  "htf_table_used": false
+}

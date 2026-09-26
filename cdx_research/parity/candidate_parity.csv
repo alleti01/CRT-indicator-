@@ -1,0 +1,2 @@
+candidate,usable_labels,exact,pm1,pm2,missed,extra,wrong_direction,precision,recall,f1,extras_per_day,notes
+existing_v1,0,,,,,,n/a,n/a,n/a,n/a,not scored — 0 MEDIUM labels matched to OHLCV

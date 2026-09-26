@@ -1,0 +1,4 @@
+split,confidence,cdx_signals,exact,near_pm1,missed,extra,wrong_direction,exact_recall,precision,f1,rth_signals,overnight_signals,notes
+discovery,HIGH,0,0,0,0,0,0,,, ,0,0,no HIGH-confidence timestamps (no crosshair minute on signal bar)
+discovery,HIGH+MEDIUM,10,0,0,10,n/a,0,0.0,n/a,n/a,3,7,all 10 unmatched: NQ 1m research file ends 2026-09-02
+discovery,ALL,36,0,0,36,n/a,0,0.0,n/a,n/a,15,21,do not score extras; reconstruction not applied to CDX dates

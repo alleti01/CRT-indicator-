@@ -1,0 +1,13 @@
+{
+  "schema_version": "cdx-notify-1",
+  "strategy": "CDX_V3_CONFLUENCE",
+  "event": "SIGNAL_SHORT",
+  "condition": "Sell - Signals + Confluences",
+  "symbol": "{{ticker}}",
+  "timeframe": "{{interval}}",
+  "signal_time_utc": "{{timenow}}",
+  "signal_bar_time_utc": "{{time}}",
+  "signal_price": "{{close}}",
+  "exchange": "{{exchange}}",
+  "note": "NOTIFY_ONLY_DO_NOT_SEND_TO_PHASE74_WEBHOOK"
+}

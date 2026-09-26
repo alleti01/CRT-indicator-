@@ -1,0 +1,27 @@
+{
+  "prior_verdict": "CDX_RE_INSUFFICIENT_INFORMATION",
+  "this_run_verdict": "CDX_RE_DATA_EXTENSION_FAIL",
+  "generated_at_utc": "2026-09-22T03:44:04.317746+00:00",
+  "DATABENTO_API_KEY_PRESENT": false,
+  "DATABENTO_AUTH": "NOT_ATTEMPTED",
+  "path_used": "NONE",
+  "continuity": "N/A",
+  "canonical_databento_modified": false,
+  "separate_cdx_dataset": false,
+  "gate": {
+    "medium_labels": 10,
+    "exact": 0,
+    "plus_minus_1": 0,
+    "ambiguous": 0,
+    "unmatched": 10,
+    "aligned": 0,
+    "gate_pass": false,
+    "long_matched": 0,
+    "short_matched": 0
+  },
+  "old_data_end": "2026-09-02 10:48:00-05:00 America/Chicago",
+  "new_data_end": "unchanged",
+  "tv_used": false,
+  "v1_scored": false,
+  "production_modified": false
+}

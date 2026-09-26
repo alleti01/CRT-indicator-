@@ -1,0 +1,3649 @@
+{
+  "score": {
+    "A": {
+      "n": 11,
+      "realized_n": 11,
+      "open_n": 0,
+      "wins": 2,
+      "losses": 9,
+      "points": -53.5,
+      "dollars": -1070.0,
+      "mark_points": 0.0,
+      "avg": -4.86,
+      "median": -8.75,
+      "gross_w": 27.0,
+      "gross_l": -80.5,
+      "pf": 0.335,
+      "maxdd": 53.5,
+      "largest_win": 19.0,
+      "largest_loss": -14.25,
+      "max_streak": 5
+    },
+    "B": {
+      "n": 11,
+      "realized_n": 11,
+      "open_n": 0,
+      "wins": 3,
+      "losses": 8,
+      "points": -134.86,
+      "dollars": -2697.18,
+      "mark_points": 0,
+      "avg": -12.26,
+      "median": -12.14,
+      "gross_w": 111.5,
+      "gross_l": -246.36,
+      "pf": 0.453,
+      "maxdd": 197.61,
+      "largest_win": 68.0,
+      "largest_loss": -73.78,
+      "max_streak": 5
+    },
+    "C": {
+      "n": 11,
+      "realized_n": 11,
+      "open_n": 0,
+      "wins": 3,
+      "losses": 8,
+      "points": -77.7,
+      "dollars": -1554.05,
+      "mark_points": 0,
+      "avg": -7.06,
+      "median": -12.14,
+      "gross_w": 182.5,
+      "gross_l": -260.2,
+      "pf": 0.701,
+      "maxdd": 139.45,
+      "largest_win": 81.5,
+      "largest_loss": -64.0,
+      "max_streak": 4
+    },
+    "D": {
+      "n": 11,
+      "realized_n": 11,
+      "open_n": 0,
+      "wins": 0,
+      "losses": 11,
+      "points": -174.97,
+      "dollars": -3499.36,
+      "mark_points": 0,
+      "avg": -15.91,
+      "median": -10.0,
+      "gross_w": 0,
+      "gross_l": -174.97,
+      "pf": 0.0,
+      "maxdd": 174.97,
+      "largest_win": -2.69,
+      "largest_loss": -51.42,
+      "max_streak": 11
+    },
+    "E": {
+      "n": 11,
+      "realized_n": 11,
+      "open_n": 0,
+      "wins": 0,
+      "losses": 11,
+      "points": -219.05,
+      "dollars": -4380.91,
+      "mark_points": 0,
+      "avg": -19.91,
+      "median": -12.14,
+      "gross_w": 0,
+      "gross_l": -219.05,
+      "pf": 0.0,
+      "maxdd": 219.05,
+      "largest_win": -4.0,
+      "largest_loss": -53.17,
+      "max_streak": 11
+    },
+    "F": {
+      "n": 11,
+      "realized_n": 11,
+      "open_n": 0,
+      "wins": 3,
+      "losses": 8,
+      "points": -126.84,
+      "dollars": -2536.85,
+      "mark_points": 0,
+      "avg": -11.53,
+      "median": -3.5,
+      "gross_w": 110.41,
+      "gross_l": -237.25,
+      "pf": 0.465,
+      "maxdd": 197.61,
+      "largest_win": 93.5,
+      "largest_loss": -73.78,
+      "max_streak": 5
+    },
+    "G": {
+      "n": 11,
+      "realized_n": 11,
+      "open_n": 0,
+      "wins": 2,
+      "losses": 8,
+      "points": -127.96,
+      "dollars": -2559.28,
+      "mark_points": 0,
+      "avg": -11.63,
+      "median": -8.94,
+      "gross_w": 123.13,
+      "gross_l": -251.1,
+      "pf": 0.49,
+      "maxdd": 200.32,
+      "largest_win": 102.5,
+      "largest_loss": -64.0,
+      "max_streak": 4
+    },
+    "H": {
+      "n": 11,
+      "realized_n": 11,
+      "open_n": 0,
+      "wins": 2,
+      "losses": 9,
+      "points": -3.15,
+      "dollars": -62.94,
+      "mark_points": 0,
+      "avg": -0.29,
+      "median": -8.5,
+      "gross_w": 104.0,
+      "gross_l": -107.15,
+      "pf": 0.971,
+      "maxdd": 79.61,
+      "largest_win": 93.5,
+      "largest_loss": -26.5,
+      "max_streak": 5
+    },
+    "I": {
+      "n": 11,
+      "realized_n": 11,
+      "open_n": 0,
+      "wins": 1,
+      "losses": 10,
+      "points": -54.27,
+      "dollars": -1085.39,
+      "mark_points": 0,
+      "avg": -4.93,
+      "median": -9.25,
+      "gross_w": 102.5,
+      "gross_l": -156.77,
+      "pf": 0.654,
+      "maxdd": 139.73,
+      "largest_win": 102.5,
+      "largest_loss": -47.04,
+      "max_streak": 7
+    }
+  },
+  "names": {
+    "A": "LIVE_BOT",
+    "B": "STRUCT_5",
+    "C": "STRUCT_10",
+    "D": "STRUCT_5_EARLY",
+    "E": "STRUCT_10_EARLY",
+    "F": "STRUCT_5_RATCHET",
+    "G": "STRUCT_10_RATCHET",
+    "H": "FULL_ADAPTIVE_5",
+    "I": "FULL_ADAPTIVE_10"
+  },
+  "causal_checks": 500,
+  "causal_mismatches": 0,
+  "trades": [
+    {
+      "id": "tue_1512",
+      "et": "2026-09-22 15:12",
+      "side": "LONG",
+      "status": "INCOMPLETE",
+      "entry": 31002.5,
+      "exit": null,
+      "pts": null,
+      "atr": 12.392857142857142,
+      "stops": {
+        "5": 30970.880357142858,
+        "10": 30965.380357142858
+      },
+      "runs": {
+        "B": {
+          "points": 36.75,
+          "R": 1.1623,
+          "reason": "REVERSAL",
+          "open": false,
+          "mfe": 46.75,
+          "mfe_R": 1.4785,
+          "events": [
+            {
+              "t": "2026-09-22T19:34:00+00:00",
+              "name": "RUNNER_ON",
+              "mfe": 33.75
+            }
+          ],
+          "price": 31039.25,
+          "time": "2026-09-22T19:37:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-22T19:26:00+00:00",
+            "1": "2026-09-22T19:33:00+00:00",
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": true,
+          "initial_R": 31.619642857142026
+        },
+        "C": {
+          "points": 36.75,
+          "R": 0.99,
+          "reason": "REVERSAL",
+          "open": false,
+          "mfe": 46.75,
+          "mfe_R": 1.2594,
+          "events": [
+            {
+              "t": "2026-09-22T19:35:00+00:00",
+              "name": "RUNNER_ON",
+              "mfe": 40.5
+            }
+          ],
+          "price": 31039.25,
+          "time": "2026-09-22T19:37:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-22T19:26:00+00:00",
+            "1": "2026-09-22T19:34:00+00:00",
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": true,
+          "initial_R": 37.119642857142026
+        },
+        "D": {
+          "points": 0.0,
+          "R": 0.0,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 63.0,
+          "mfe_R": 1.9924,
+          "events": [],
+          "price": 31002.5,
+          "time": "2026-09-22T20:45:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-22T19:26:00+00:00",
+            "1": "2026-09-22T19:33:00+00:00",
+            "1.5": "2026-09-22T19:50:00+00:00",
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 31.619642857142026
+        },
+        "E": {
+          "points": 0.0,
+          "R": 0.0,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 63.0,
+          "mfe_R": 1.6972,
+          "events": [],
+          "price": 31002.5,
+          "time": "2026-09-22T20:45:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-22T19:26:00+00:00",
+            "1": "2026-09-22T19:34:00+00:00",
+            "1.5": "2026-09-22T19:53:00+00:00",
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 37.119642857142026
+        },
+        "F": {
+          "points": 7.9049,
+          "R": 0.25,
+          "reason": "RATCHET_STOP",
+          "open": false,
+          "mfe": 63.0,
+          "mfe_R": 1.9924,
+          "events": [
+            {
+              "t": "2026-09-22T19:27:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 20.5
+            },
+            {
+              "t": "2026-09-22T19:34:00+00:00",
+              "name": "RATCHET_2",
+              "mfe": 33.75
+            },
+            {
+              "t": "2026-09-22T19:51:00+00:00",
+              "name": "RATCHET_3",
+              "mfe": 47.5
+            }
+          ],
+          "price": 31010.404910714286,
+          "time": "2026-09-22T20:21:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-22T19:26:00+00:00",
+            "1": "2026-09-22T19:33:00+00:00",
+            "1.5": "2026-09-22T19:50:00+00:00",
+            "2": null
+          },
+          "level": 3,
+          "runner": false,
+          "initial_R": 31.619642857142026
+        },
+        "G": {
+          "points": 9.2799,
+          "R": 0.25,
+          "reason": "RATCHET_STOP",
+          "open": false,
+          "mfe": 63.0,
+          "mfe_R": 1.6972,
+          "events": [
+            {
+              "t": "2026-09-22T19:27:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 20.5
+            },
+            {
+              "t": "2026-09-22T19:35:00+00:00",
+              "name": "RATCHET_2",
+              "mfe": 40.5
+            },
+            {
+              "t": "2026-09-22T19:54:00+00:00",
+              "name": "RATCHET_3",
+              "mfe": 61.75
+            }
+          ],
+          "price": 31011.779910714286,
+          "time": "2026-09-22T20:21:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-22T19:26:00+00:00",
+            "1": "2026-09-22T19:34:00+00:00",
+            "1.5": "2026-09-22T19:53:00+00:00",
+            "2": null
+          },
+          "level": 3,
+          "runner": false,
+          "initial_R": 37.119642857142026
+        },
+        "H": {
+          "points": 7.9049,
+          "R": 0.25,
+          "reason": "RATCHET_STOP",
+          "open": false,
+          "mfe": 63.0,
+          "mfe_R": 1.9924,
+          "events": [
+            {
+              "t": "2026-09-22T19:27:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 20.5
+            },
+            {
+              "t": "2026-09-22T19:34:00+00:00",
+              "name": "RATCHET_2",
+              "mfe": 33.75
+            },
+            {
+              "t": "2026-09-22T19:51:00+00:00",
+              "name": "RATCHET_3",
+              "mfe": 47.5
+            }
+          ],
+          "price": 31010.404910714286,
+          "time": "2026-09-22T20:21:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-22T19:26:00+00:00",
+            "1": "2026-09-22T19:33:00+00:00",
+            "1.5": "2026-09-22T19:50:00+00:00",
+            "2": null
+          },
+          "level": 3,
+          "runner": false,
+          "initial_R": 31.619642857142026
+        },
+        "I": {
+          "points": 9.2799,
+          "R": 0.25,
+          "reason": "RATCHET_STOP",
+          "open": false,
+          "mfe": 63.0,
+          "mfe_R": 1.6972,
+          "events": [
+            {
+              "t": "2026-09-22T19:27:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 20.5
+            },
+            {
+              "t": "2026-09-22T19:35:00+00:00",
+              "name": "RATCHET_2",
+              "mfe": 40.5
+            },
+            {
+              "t": "2026-09-22T19:54:00+00:00",
+              "name": "RATCHET_3",
+              "mfe": 61.75
+            }
+          ],
+          "price": 31011.779910714286,
+          "time": "2026-09-22T20:21:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-22T19:26:00+00:00",
+            "1": "2026-09-22T19:34:00+00:00",
+            "1.5": "2026-09-22T19:53:00+00:00",
+            "2": null
+          },
+          "level": 3,
+          "runner": false,
+          "initial_R": 37.119642857142026
+        }
+      },
+      "shadow_mfe": {
+        "5": {
+          "mfe": 92.25,
+          "mfe_R": 2.9174902580900977,
+          "stopped": true
+        },
+        "10": {
+          "mfe": 92.25,
+          "mfe_R": 2.4852071005917717,
+          "stopped": true
+        }
+      },
+      "retr": {
+        "5": {
+          "0.5": {
+            "giveback_R": 2.3798497769244427,
+            "below_entry": true
+          },
+          "1.0": {
+            "giveback_R": 2.3798497769244427,
+            "below_entry": true
+          },
+          "1.5": {
+            "giveback_R": 2.3798497769244427,
+            "below_entry": true
+          },
+          "2.0": {
+            "giveback_R": 2.3798497769244427,
+            "below_entry": true
+          }
+        },
+        "10": {
+          "0.5": {
+            "giveback_R": 2.0272285563092773,
+            "below_entry": true
+          },
+          "1.0": {
+            "giveback_R": 2.0272285563092773,
+            "below_entry": true
+          },
+          "1.5": {
+            "giveback_R": 2.0272285563092773,
+            "below_entry": true
+          },
+          "2.0": {
+            "giveback_R": 0.12796459325540288,
+            "below_entry": false
+          }
+        }
+      }
+    },
+    {
+      "id": "wed_0104",
+      "et": "2026-09-23 01:04",
+      "side": "SHORT",
+      "status": "COMPLETE",
+      "entry": 31025.5,
+      "exit": 31030.0,
+      "pts": -4.5,
+      "atr": 7.196428571428571,
+      "stops": {
+        "5": 31051.60982142857,
+        "10": 31052.60982142857
+      },
+      "runs": {
+        "B": {
+          "points": -26.1098,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 6.5,
+          "mfe_R": 0.2489,
+          "events": [],
+          "price": 31051.60982142857,
+          "time": "2026-09-23T06:03:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 26.109821428570285
+        },
+        "C": {
+          "points": -27.1098,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 6.5,
+          "mfe_R": 0.2398,
+          "events": [],
+          "price": 31052.60982142857,
+          "time": "2026-09-23T06:03:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 27.109821428570285
+        },
+        "D": {
+          "points": -10.0,
+          "R": -0.383,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 0.25,
+          "mfe_R": 0.0096,
+          "events": [],
+          "price": 31035.5,
+          "time": "2026-09-23T05:11:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 26.109821428570285
+        },
+        "E": {
+          "points": -10.0,
+          "R": -0.3689,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 0.25,
+          "mfe_R": 0.0092,
+          "events": [],
+          "price": 31035.5,
+          "time": "2026-09-23T05:11:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 27.109821428570285
+        },
+        "F": {
+          "points": -26.1098,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 6.5,
+          "mfe_R": 0.2489,
+          "events": [],
+          "price": 31051.60982142857,
+          "time": "2026-09-23T06:03:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 26.109821428570285
+        },
+        "G": {
+          "points": -27.1098,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 6.5,
+          "mfe_R": 0.2398,
+          "events": [],
+          "price": 31052.60982142857,
+          "time": "2026-09-23T06:03:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 27.109821428570285
+        },
+        "H": {
+          "points": -10.0,
+          "R": -0.383,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 0.25,
+          "mfe_R": 0.0096,
+          "events": [],
+          "price": 31035.5,
+          "time": "2026-09-23T05:11:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 26.109821428570285
+        },
+        "I": {
+          "points": -10.0,
+          "R": -0.3689,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 0.25,
+          "mfe_R": 0.0092,
+          "events": [],
+          "price": 31035.5,
+          "time": "2026-09-23T05:11:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 27.109821428570285
+        }
+      },
+      "shadow_mfe": {
+        "5": {
+          "mfe": 6.5,
+          "mfe_R": 0.24894846629963815,
+          "stopped": true
+        },
+        "10": {
+          "mfe": 6.5,
+          "mfe_R": 0.23976550406746064,
+          "stopped": true
+        }
+      },
+      "retr": {
+        "5": {
+          "0.5": null,
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        },
+        "10": {
+          "0.5": null,
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        }
+      }
+    },
+    {
+      "id": "wed_0207",
+      "et": "2026-09-23 02:07",
+      "side": "LONG",
+      "status": "COMPLETE",
+      "entry": 31051.75,
+      "exit": 31044.75,
+      "pts": -7.0,
+      "atr": 12.803571428571429,
+      "stops": {
+        "5": 31026.10982142857,
+        "10": 31020.35982142857
+      },
+      "runs": {
+        "B": {
+          "points": 33.0,
+          "R": 1.287,
+          "reason": "REVERSAL",
+          "open": false,
+          "mfe": 43.0,
+          "mfe_R": 1.6771,
+          "events": [
+            {
+              "t": "2026-09-23T06:35:00+00:00",
+              "name": "RUNNER_ON",
+              "mfe": 25.75
+            }
+          ],
+          "price": 31084.75,
+          "time": "2026-09-23T06:41:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-23T06:32:00+00:00",
+            "1": "2026-09-23T06:34:00+00:00",
+            "1.5": "2026-09-23T06:40:00+00:00",
+            "2": null
+          },
+          "level": 0,
+          "runner": true,
+          "initial_R": 25.640178571429715
+        },
+        "C": {
+          "points": 33.0,
+          "R": 1.0513,
+          "reason": "REVERSAL",
+          "open": false,
+          "mfe": 43.0,
+          "mfe_R": 1.3699,
+          "events": [
+            {
+              "t": "2026-09-23T06:37:00+00:00",
+              "name": "RUNNER_ON",
+              "mfe": 37.0
+            }
+          ],
+          "price": 31084.75,
+          "time": "2026-09-23T06:41:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-23T06:32:00+00:00",
+            "1": "2026-09-23T06:36:00+00:00",
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": true,
+          "initial_R": 31.390178571429715
+        },
+        "D": {
+          "points": -4.0,
+          "R": -0.156,
+          "reason": "EXIT_NO_PROGRESS",
+          "open": false,
+          "mfe": 7.0,
+          "mfe_R": 0.273,
+          "events": [],
+          "price": 31047.75,
+          "time": "2026-09-23T06:23:00+00:00",
+          "early": false,
+          "prog": true,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 25.640178571429715
+        },
+        "E": {
+          "points": -4.0,
+          "R": -0.1274,
+          "reason": "EXIT_NO_PROGRESS",
+          "open": false,
+          "mfe": 7.0,
+          "mfe_R": 0.223,
+          "events": [],
+          "price": 31047.75,
+          "time": "2026-09-23T06:23:00+00:00",
+          "early": false,
+          "prog": true,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 31.390178571429715
+        },
+        "F": {
+          "points": 6.41,
+          "R": 0.25,
+          "reason": "RATCHET_STOP",
+          "open": false,
+          "mfe": 43.0,
+          "mfe_R": 1.6771,
+          "events": [
+            {
+              "t": "2026-09-23T06:33:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 21.25
+            },
+            {
+              "t": "2026-09-23T06:35:00+00:00",
+              "name": "RATCHET_2",
+              "mfe": 25.75
+            },
+            {
+              "t": "2026-09-23T06:41:00+00:00",
+              "name": "RATCHET_3",
+              "mfe": 43.0
+            }
+          ],
+          "price": 31058.160044642857,
+          "time": "2026-09-23T06:47:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-23T06:32:00+00:00",
+            "1": "2026-09-23T06:34:00+00:00",
+            "1.5": "2026-09-23T06:40:00+00:00",
+            "2": null
+          },
+          "level": 3,
+          "runner": false,
+          "initial_R": 25.640178571429715
+        },
+        "G": {
+          "points": 0.0,
+          "R": 0.0,
+          "reason": "RATCHET_STOP",
+          "open": false,
+          "mfe": 43.0,
+          "mfe_R": 1.3699,
+          "events": [
+            {
+              "t": "2026-09-23T06:33:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 21.25
+            },
+            {
+              "t": "2026-09-23T06:37:00+00:00",
+              "name": "RATCHET_2",
+              "mfe": 37.0
+            }
+          ],
+          "price": 31051.75,
+          "time": "2026-09-23T06:58:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-23T06:32:00+00:00",
+            "1": "2026-09-23T06:36:00+00:00",
+            "1.5": null,
+            "2": null
+          },
+          "level": 2,
+          "runner": false,
+          "initial_R": 31.390178571429715
+        },
+        "H": {
+          "points": -4.0,
+          "R": -0.156,
+          "reason": "EXIT_NO_PROGRESS",
+          "open": false,
+          "mfe": 7.0,
+          "mfe_R": 0.273,
+          "events": [],
+          "price": 31047.75,
+          "time": "2026-09-23T06:23:00+00:00",
+          "early": false,
+          "prog": true,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 25.640178571429715
+        },
+        "I": {
+          "points": -4.0,
+          "R": -0.1274,
+          "reason": "EXIT_NO_PROGRESS",
+          "open": false,
+          "mfe": 7.0,
+          "mfe_R": 0.223,
+          "events": [],
+          "price": 31047.75,
+          "time": "2026-09-23T06:23:00+00:00",
+          "early": false,
+          "prog": true,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 31.390178571429715
+        }
+      },
+      "shadow_mfe": {
+        "5": {
+          "mfe": 43.0,
+          "mfe_R": 1.6770554027230509,
+          "stopped": true
+        },
+        "10": {
+          "mfe": 43.0,
+          "mfe_R": 1.3698552208663495,
+          "stopped": true
+        }
+      },
+      "retr": {
+        "5": {
+          "0.5": {
+            "giveback_R": 0.185256120068244,
+            "below_entry": false
+          },
+          "1.0": {
+            "giveback_R": 0.185256120068244,
+            "below_entry": false
+          },
+          "1.5": {
+            "giveback_R": 0.1657554758505341,
+            "below_entry": false
+          },
+          "2.0": null
+        },
+        "10": {
+          "0.5": {
+            "giveback_R": 0.1513212162584921,
+            "below_entry": false
+          },
+          "1.0": {
+            "giveback_R": 0.1353926671786508,
+            "below_entry": false
+          },
+          "1.5": null,
+          "2.0": null
+        }
+      }
+    },
+    {
+      "id": "wed_1056",
+      "et": "2026-09-23 10:56",
+      "side": "LONG",
+      "status": "INCOMPLETE",
+      "entry": 30810.5,
+      "exit": null,
+      "pts": null,
+      "atr": 40.839285714285715,
+      "stops": {
+        "5": 30684.958035714284,
+        "10": 30640.708035714284
+      },
+      "runs": {
+        "B": {
+          "points": -62.0,
+          "R": -0.4939,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 17.25,
+          "mfe_R": 0.1374,
+          "events": [],
+          "price": 30748.5,
+          "time": "2026-09-23T15:56:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 125.54196428571595
+        },
+        "C": {
+          "points": -62.0,
+          "R": -0.3652,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 17.25,
+          "mfe_R": 0.1016,
+          "events": [],
+          "price": 30748.5,
+          "time": "2026-09-23T15:56:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 169.79196428571595
+        },
+        "D": {
+          "points": -11.0,
+          "R": -0.0876,
+          "reason": "EXIT_NO_PROGRESS",
+          "open": false,
+          "mfe": 17.25,
+          "mfe_R": 0.1374,
+          "events": [],
+          "price": 30799.5,
+          "time": "2026-09-23T15:11:00+00:00",
+          "early": false,
+          "prog": true,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 125.54196428571595
+        },
+        "E": {
+          "points": -11.0,
+          "R": -0.0648,
+          "reason": "EXIT_NO_PROGRESS",
+          "open": false,
+          "mfe": 17.25,
+          "mfe_R": 0.1016,
+          "events": [],
+          "price": 30799.5,
+          "time": "2026-09-23T15:11:00+00:00",
+          "early": false,
+          "prog": true,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 169.79196428571595
+        },
+        "F": {
+          "points": -62.0,
+          "R": -0.4939,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 17.25,
+          "mfe_R": 0.1374,
+          "events": [],
+          "price": 30748.5,
+          "time": "2026-09-23T15:56:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 125.54196428571595
+        },
+        "G": {
+          "points": -62.0,
+          "R": -0.3652,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 17.25,
+          "mfe_R": 0.1016,
+          "events": [],
+          "price": 30748.5,
+          "time": "2026-09-23T15:56:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 169.79196428571595
+        },
+        "H": {
+          "points": -11.0,
+          "R": -0.0876,
+          "reason": "EXIT_NO_PROGRESS",
+          "open": false,
+          "mfe": 17.25,
+          "mfe_R": 0.1374,
+          "events": [],
+          "price": 30799.5,
+          "time": "2026-09-23T15:11:00+00:00",
+          "early": false,
+          "prog": true,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 125.54196428571595
+        },
+        "I": {
+          "points": -11.0,
+          "R": -0.0648,
+          "reason": "EXIT_NO_PROGRESS",
+          "open": false,
+          "mfe": 17.25,
+          "mfe_R": 0.1016,
+          "events": [],
+          "price": 30799.5,
+          "time": "2026-09-23T15:11:00+00:00",
+          "early": false,
+          "prog": true,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 169.79196428571595
+        }
+      },
+      "shadow_mfe": {
+        "5": {
+          "mfe": 17.25,
+          "mfe_R": 0.13740425441122947,
+          "stopped": true
+        },
+        "10": {
+          "mfe": 17.25,
+          "mfe_R": 0.1015949139440587,
+          "stopped": true
+        }
+      },
+      "retr": {
+        "5": {
+          "0.5": null,
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        },
+        "10": {
+          "0.5": null,
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        }
+      }
+    },
+    {
+      "id": "thu_0139",
+      "et": "2026-09-24 01:39",
+      "side": "LONG",
+      "status": "COMPLETE",
+      "entry": 30691.25,
+      "exit": 30682.5,
+      "pts": -8.75,
+      "atr": 12.839285714285714,
+      "stops": {
+        "5": 30679.108035714286,
+        "10": 30679.108035714286
+      },
+      "runs": {
+        "B": {
+          "points": -12.142,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 7.25,
+          "mfe_R": 0.5971,
+          "events": [],
+          "price": 30679.108035714286,
+          "time": "2026-09-24T05:45:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:41:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 12.141964285714494
+        },
+        "C": {
+          "points": -12.142,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 7.25,
+          "mfe_R": 0.5971,
+          "events": [],
+          "price": 30679.108035714286,
+          "time": "2026-09-24T05:45:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:41:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 12.141964285714494
+        },
+        "D": {
+          "points": -12.142,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 7.25,
+          "mfe_R": 0.5971,
+          "events": [],
+          "price": 30679.108035714286,
+          "time": "2026-09-24T05:45:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:41:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 12.141964285714494
+        },
+        "E": {
+          "points": -12.142,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 7.25,
+          "mfe_R": 0.5971,
+          "events": [],
+          "price": 30679.108035714286,
+          "time": "2026-09-24T05:45:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:41:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 12.141964285714494
+        },
+        "F": {
+          "points": -3.0355,
+          "R": -0.25,
+          "reason": "RATCHET_STOP",
+          "open": false,
+          "mfe": 7.25,
+          "mfe_R": 0.5971,
+          "events": [
+            {
+              "t": "2026-09-24T05:42:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 7.25
+            }
+          ],
+          "price": 30688.21450892857,
+          "time": "2026-09-24T05:42:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:41:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 1,
+          "runner": false,
+          "initial_R": 12.141964285714494
+        },
+        "G": {
+          "points": -3.0355,
+          "R": -0.25,
+          "reason": "RATCHET_STOP",
+          "open": false,
+          "mfe": 7.25,
+          "mfe_R": 0.5971,
+          "events": [
+            {
+              "t": "2026-09-24T05:42:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 7.25
+            }
+          ],
+          "price": 30688.21450892857,
+          "time": "2026-09-24T05:42:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:41:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 1,
+          "runner": false,
+          "initial_R": 12.141964285714494
+        },
+        "H": {
+          "points": -3.0355,
+          "R": -0.25,
+          "reason": "RATCHET_STOP",
+          "open": false,
+          "mfe": 7.25,
+          "mfe_R": 0.5971,
+          "events": [
+            {
+              "t": "2026-09-24T05:42:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 7.25
+            }
+          ],
+          "price": 30688.21450892857,
+          "time": "2026-09-24T05:42:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:41:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 1,
+          "runner": false,
+          "initial_R": 12.141964285714494
+        },
+        "I": {
+          "points": -3.0355,
+          "R": -0.25,
+          "reason": "RATCHET_STOP",
+          "open": false,
+          "mfe": 7.25,
+          "mfe_R": 0.5971,
+          "events": [
+            {
+              "t": "2026-09-24T05:42:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 7.25
+            }
+          ],
+          "price": 30688.21450892857,
+          "time": "2026-09-24T05:42:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:41:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 1,
+          "runner": false,
+          "initial_R": 12.141964285714494
+        }
+      },
+      "shadow_mfe": {
+        "5": {
+          "mfe": 7.25,
+          "mfe_R": 0.5971027281417649,
+          "stopped": true
+        },
+        "10": {
+          "mfe": 7.25,
+          "mfe_R": 0.5971027281417649,
+          "stopped": true
+        }
+      },
+      "retr": {
+        "5": {
+          "0.5": {
+            "giveback_R": 0.3706154864328196,
+            "below_entry": false
+          },
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        },
+        "10": {
+          "0.5": {
+            "giveback_R": 0.3706154864328196,
+            "below_entry": false
+          },
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        }
+      }
+    },
+    {
+      "id": "thu_0151",
+      "et": "2026-09-24 01:51",
+      "side": "SHORT",
+      "status": "COMPLETE",
+      "entry": 30658.0,
+      "exit": 30668.5,
+      "pts": -10.5,
+      "atr": 13.392857142857142,
+      "stops": {
+        "5": 30709.41964285714,
+        "10": 30711.16964285714
+      },
+      "runs": {
+        "B": {
+          "points": 68.0,
+          "R": 1.3225,
+          "reason": "REVERSAL",
+          "open": false,
+          "mfe": 78.0,
+          "mfe_R": 1.5169,
+          "events": [
+            {
+              "t": "2026-09-24T06:02:00+00:00",
+              "name": "RUNNER_ON",
+              "mfe": 62.0
+            }
+          ],
+          "price": 30590.0,
+          "time": "2026-09-24T06:03:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:57:00+00:00",
+            "1": "2026-09-24T06:01:00+00:00",
+            "1.5": "2026-09-24T06:02:00+00:00",
+            "2": null
+          },
+          "level": 0,
+          "runner": true,
+          "initial_R": 51.4196428571413
+        },
+        "C": {
+          "points": 68.0,
+          "R": 1.2789,
+          "reason": "REVERSAL",
+          "open": false,
+          "mfe": 78.0,
+          "mfe_R": 1.467,
+          "events": [
+            {
+              "t": "2026-09-24T06:02:00+00:00",
+              "name": "RUNNER_ON",
+              "mfe": 62.0
+            }
+          ],
+          "price": 30590.0,
+          "time": "2026-09-24T06:03:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:57:00+00:00",
+            "1": "2026-09-24T06:01:00+00:00",
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": true,
+          "initial_R": 53.1696428571413
+        },
+        "D": {
+          "points": -51.4196,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 288.0,
+          "mfe_R": 5.601,
+          "events": [],
+          "price": 30709.41964285714,
+          "time": "2026-09-24T16:17:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:57:00+00:00",
+            "1": "2026-09-24T06:01:00+00:00",
+            "1.5": "2026-09-24T06:02:00+00:00",
+            "2": "2026-09-24T06:53:00+00:00"
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 51.4196428571413
+        },
+        "E": {
+          "points": -53.1696,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 288.0,
+          "mfe_R": 5.4166,
+          "events": [],
+          "price": 30711.16964285714,
+          "time": "2026-09-24T16:17:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:57:00+00:00",
+            "1": "2026-09-24T06:01:00+00:00",
+            "1.5": "2026-09-24T06:03:00+00:00",
+            "2": "2026-09-24T06:56:00+00:00"
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 53.1696428571413
+        },
+        "F": {
+          "points": 93.5,
+          "R": 1.8184,
+          "reason": "REVERSAL",
+          "open": false,
+          "mfe": 103.5,
+          "mfe_R": 2.0128,
+          "events": [
+            {
+              "t": "2026-09-24T05:58:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 28.5
+            },
+            {
+              "t": "2026-09-24T06:02:00+00:00",
+              "name": "RATCHET_2",
+              "mfe": 62.0
+            },
+            {
+              "t": "2026-09-24T06:03:00+00:00",
+              "name": "RATCHET_3",
+              "mfe": 78.0
+            },
+            {
+              "t": "2026-09-24T06:54:00+00:00",
+              "name": "RUNNER_ON",
+              "mfe": 103.5
+            }
+          ],
+          "price": 30564.5,
+          "time": "2026-09-24T06:55:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:57:00+00:00",
+            "1": "2026-09-24T06:01:00+00:00",
+            "1.5": "2026-09-24T06:02:00+00:00",
+            "2": "2026-09-24T06:53:00+00:00"
+          },
+          "level": 3,
+          "runner": true,
+          "initial_R": 51.4196428571413
+        },
+        "G": {
+          "points": 102.5,
+          "R": 1.9278,
+          "reason": "REVERSAL",
+          "open": false,
+          "mfe": 112.5,
+          "mfe_R": 2.1159,
+          "events": [
+            {
+              "t": "2026-09-24T05:58:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 28.5
+            },
+            {
+              "t": "2026-09-24T06:02:00+00:00",
+              "name": "RATCHET_2",
+              "mfe": 62.0
+            },
+            {
+              "t": "2026-09-24T06:04:00+00:00",
+              "name": "RATCHET_3",
+              "mfe": 84.5
+            },
+            {
+              "t": "2026-09-24T06:57:00+00:00",
+              "name": "RUNNER_ON",
+              "mfe": 112.5
+            }
+          ],
+          "price": 30555.5,
+          "time": "2026-09-24T06:57:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:57:00+00:00",
+            "1": "2026-09-24T06:01:00+00:00",
+            "1.5": "2026-09-24T06:03:00+00:00",
+            "2": "2026-09-24T06:56:00+00:00"
+          },
+          "level": 3,
+          "runner": true,
+          "initial_R": 53.1696428571413
+        },
+        "H": {
+          "points": 93.5,
+          "R": 1.8184,
+          "reason": "REVERSAL",
+          "open": false,
+          "mfe": 103.5,
+          "mfe_R": 2.0128,
+          "events": [
+            {
+              "t": "2026-09-24T05:58:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 28.5
+            },
+            {
+              "t": "2026-09-24T06:02:00+00:00",
+              "name": "RATCHET_2",
+              "mfe": 62.0
+            },
+            {
+              "t": "2026-09-24T06:03:00+00:00",
+              "name": "RATCHET_3",
+              "mfe": 78.0
+            },
+            {
+              "t": "2026-09-24T06:54:00+00:00",
+              "name": "RUNNER_ON",
+              "mfe": 103.5
+            }
+          ],
+          "price": 30564.5,
+          "time": "2026-09-24T06:55:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:57:00+00:00",
+            "1": "2026-09-24T06:01:00+00:00",
+            "1.5": "2026-09-24T06:02:00+00:00",
+            "2": "2026-09-24T06:53:00+00:00"
+          },
+          "level": 3,
+          "runner": true,
+          "initial_R": 51.4196428571413
+        },
+        "I": {
+          "points": 102.5,
+          "R": 1.9278,
+          "reason": "REVERSAL",
+          "open": false,
+          "mfe": 112.5,
+          "mfe_R": 2.1159,
+          "events": [
+            {
+              "t": "2026-09-24T05:58:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 28.5
+            },
+            {
+              "t": "2026-09-24T06:02:00+00:00",
+              "name": "RATCHET_2",
+              "mfe": 62.0
+            },
+            {
+              "t": "2026-09-24T06:04:00+00:00",
+              "name": "RATCHET_3",
+              "mfe": 84.5
+            },
+            {
+              "t": "2026-09-24T06:57:00+00:00",
+              "name": "RUNNER_ON",
+              "mfe": 112.5
+            }
+          ],
+          "price": 30555.5,
+          "time": "2026-09-24T06:57:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T05:57:00+00:00",
+            "1": "2026-09-24T06:01:00+00:00",
+            "1.5": "2026-09-24T06:03:00+00:00",
+            "2": "2026-09-24T06:56:00+00:00"
+          },
+          "level": 3,
+          "runner": true,
+          "initial_R": 53.1696428571413
+        }
+      },
+      "shadow_mfe": {
+        "5": {
+          "mfe": 288.0,
+          "mfe_R": 5.600972391040281,
+          "stopped": true
+        },
+        "10": {
+          "mfe": 288.0,
+          "mfe_R": 5.416624685138697,
+          "stopped": true
+        }
+      },
+      "retr": {
+        "5": {
+          "0.5": {
+            "giveback_R": 2.2656711234590023,
+            "below_entry": false
+          },
+          "1.0": {
+            "giveback_R": 2.2656711234590023,
+            "below_entry": false
+          },
+          "1.5": {
+            "giveback_R": 2.2656711234590023,
+            "below_entry": false
+          },
+          "2.0": {
+            "giveback_R": 2.2656711234590023,
+            "below_entry": false
+          }
+        },
+        "10": {
+          "0.5": {
+            "giveback_R": 2.191099916037008,
+            "below_entry": false
+          },
+          "1.0": {
+            "giveback_R": 2.191099916037008,
+            "below_entry": false
+          },
+          "1.5": {
+            "giveback_R": 2.191099916037008,
+            "below_entry": false
+          },
+          "2.0": {
+            "giveback_R": 2.191099916037008,
+            "below_entry": false
+          }
+        }
+      }
+    },
+    {
+      "id": "thu_0703",
+      "et": "2026-09-24 07:03",
+      "side": "LONG",
+      "status": "COMPLETE",
+      "entry": 30488.75,
+      "exit": 30478.0,
+      "pts": -10.75,
+      "atr": 23.446428571428573,
+      "stops": {
+        "5": 30470.57767857143,
+        "10": 30419.57767857143
+      },
+      "runs": {
+        "B": {
+          "points": -18.1723,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 1.5,
+          "mfe_R": 0.0825,
+          "events": [],
+          "price": 30470.57767857143,
+          "time": "2026-09-24T11:09:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 18.172321428570285
+        },
+        "C": {
+          "points": -36.0,
+          "R": -0.5204,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 24.0,
+          "mfe_R": 0.347,
+          "events": [],
+          "price": 30452.75,
+          "time": "2026-09-24T12:03:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 69.17232142857029
+        },
+        "D": {
+          "points": -18.1723,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 1.5,
+          "mfe_R": 0.0825,
+          "events": [],
+          "price": 30470.57767857143,
+          "time": "2026-09-24T11:09:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 18.172321428570285
+        },
+        "E": {
+          "points": -14.5,
+          "R": -0.2096,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 1.5,
+          "mfe_R": 0.0217,
+          "events": [],
+          "price": 30474.25,
+          "time": "2026-09-24T11:11:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 69.17232142857029
+        },
+        "F": {
+          "points": -18.1723,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 1.5,
+          "mfe_R": 0.0825,
+          "events": [],
+          "price": 30470.57767857143,
+          "time": "2026-09-24T11:09:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 18.172321428570285
+        },
+        "G": {
+          "points": -36.0,
+          "R": -0.5204,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 24.0,
+          "mfe_R": 0.347,
+          "events": [],
+          "price": 30452.75,
+          "time": "2026-09-24T12:03:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 69.17232142857029
+        },
+        "H": {
+          "points": -18.1723,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 1.5,
+          "mfe_R": 0.0825,
+          "events": [],
+          "price": 30470.57767857143,
+          "time": "2026-09-24T11:09:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 18.172321428570285
+        },
+        "I": {
+          "points": -14.5,
+          "R": -0.2096,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 1.5,
+          "mfe_R": 0.0217,
+          "events": [],
+          "price": 30474.25,
+          "time": "2026-09-24T11:11:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 69.17232142857029
+        }
+      },
+      "shadow_mfe": {
+        "5": {
+          "mfe": 1.5,
+          "mfe_R": 0.08254311403724786,
+          "stopped": true
+        },
+        "10": {
+          "mfe": 510.75,
+          "mfe_R": 7.383733687865572,
+          "stopped": false
+        }
+      },
+      "retr": {
+        "5": {
+          "0.5": null,
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        },
+        "10": {
+          "0.5": {
+            "giveback_R": 2.8985582073755207,
+            "below_entry": false
+          },
+          "1.0": {
+            "giveback_R": 2.8985582073755207,
+            "below_entry": false
+          },
+          "1.5": {
+            "giveback_R": 2.8985582073755207,
+            "below_entry": false
+          },
+          "2.0": {
+            "giveback_R": 2.8985582073755207,
+            "below_entry": false
+          }
+        }
+      }
+    },
+    {
+      "id": "thu_0803",
+      "et": "2026-09-24 08:03",
+      "side": "SHORT",
+      "status": "COMPLETE",
+      "entry": 30455.0,
+      "exit": 30436.0,
+      "pts": 19.0,
+      "atr": 20.892857142857142,
+      "stops": {
+        "5": 30462.29464285714,
+        "10": 30502.04464285714
+      },
+      "runs": {
+        "B": {
+          "points": 10.5,
+          "R": 1.4394,
+          "reason": "REVERSAL",
+          "open": false,
+          "mfe": 20.5,
+          "mfe_R": 2.8103,
+          "events": [
+            {
+              "t": "2026-09-24T12:05:00+00:00",
+              "name": "RUNNER_ON",
+              "mfe": 20.5
+            }
+          ],
+          "price": 30444.5,
+          "time": "2026-09-24T12:05:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T12:04:00+00:00",
+            "1": "2026-09-24T12:04:00+00:00",
+            "1.5": "2026-09-24T12:04:00+00:00",
+            "2": "2026-09-24T12:04:00+00:00"
+          },
+          "level": 0,
+          "runner": true,
+          "initial_R": 7.294642857141298
+        },
+        "C": {
+          "points": -47.0446,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 20.75,
+          "mfe_R": 0.4411,
+          "events": [],
+          "price": 30502.04464285714,
+          "time": "2026-09-24T12:21:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 47.0446428571413
+        },
+        "D": {
+          "points": -7.2946,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 20.75,
+          "mfe_R": 2.8446,
+          "events": [],
+          "price": 30462.29464285714,
+          "time": "2026-09-24T12:09:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T12:04:00+00:00",
+            "1": "2026-09-24T12:04:00+00:00",
+            "1.5": "2026-09-24T12:04:00+00:00",
+            "2": "2026-09-24T12:04:00+00:00"
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 7.294642857141298
+        },
+        "E": {
+          "points": -47.0446,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 20.75,
+          "mfe_R": 0.4411,
+          "events": [],
+          "price": 30502.04464285714,
+          "time": "2026-09-24T12:21:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 47.0446428571413
+        },
+        "F": {
+          "points": 10.5,
+          "R": 1.4394,
+          "reason": "REVERSAL",
+          "open": false,
+          "mfe": 20.5,
+          "mfe_R": 2.8103,
+          "events": [
+            {
+              "t": "2026-09-24T12:05:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 20.5
+            },
+            {
+              "t": "2026-09-24T12:05:00+00:00",
+              "name": "RATCHET_2",
+              "mfe": 20.5
+            },
+            {
+              "t": "2026-09-24T12:05:00+00:00",
+              "name": "RATCHET_3",
+              "mfe": 20.5
+            },
+            {
+              "t": "2026-09-24T12:05:00+00:00",
+              "name": "RUNNER_ON",
+              "mfe": 20.5
+            }
+          ],
+          "price": 30444.5,
+          "time": "2026-09-24T12:05:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T12:04:00+00:00",
+            "1": "2026-09-24T12:04:00+00:00",
+            "1.5": "2026-09-24T12:04:00+00:00",
+            "2": "2026-09-24T12:04:00+00:00"
+          },
+          "level": 3,
+          "runner": true,
+          "initial_R": 7.294642857141298
+        },
+        "G": {
+          "points": -47.0446,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 20.75,
+          "mfe_R": 0.4411,
+          "events": [],
+          "price": 30502.04464285714,
+          "time": "2026-09-24T12:21:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 47.0446428571413
+        },
+        "H": {
+          "points": 10.5,
+          "R": 1.4394,
+          "reason": "REVERSAL",
+          "open": false,
+          "mfe": 20.5,
+          "mfe_R": 2.8103,
+          "events": [
+            {
+              "t": "2026-09-24T12:05:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 20.5
+            },
+            {
+              "t": "2026-09-24T12:05:00+00:00",
+              "name": "RATCHET_2",
+              "mfe": 20.5
+            },
+            {
+              "t": "2026-09-24T12:05:00+00:00",
+              "name": "RATCHET_3",
+              "mfe": 20.5
+            },
+            {
+              "t": "2026-09-24T12:05:00+00:00",
+              "name": "RUNNER_ON",
+              "mfe": 20.5
+            }
+          ],
+          "price": 30444.5,
+          "time": "2026-09-24T12:05:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T12:04:00+00:00",
+            "1": "2026-09-24T12:04:00+00:00",
+            "1.5": "2026-09-24T12:04:00+00:00",
+            "2": "2026-09-24T12:04:00+00:00"
+          },
+          "level": 3,
+          "runner": true,
+          "initial_R": 7.294642857141298
+        },
+        "I": {
+          "points": -47.0446,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 20.75,
+          "mfe_R": 0.4411,
+          "events": [],
+          "price": 30502.04464285714,
+          "time": "2026-09-24T12:21:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 47.0446428571413
+        }
+      },
+      "shadow_mfe": {
+        "5": {
+          "mfe": 20.75,
+          "mfe_R": 2.8445532435746594,
+          "stopped": true
+        },
+        "10": {
+          "mfe": 20.75,
+          "mfe_R": 0.44107041184286905,
+          "stopped": true
+        }
+      },
+      "retr": {
+        "5": {
+          "0.5": {
+            "giveback_R": 0.5826193390454122,
+            "below_entry": false
+          },
+          "1.0": {
+            "giveback_R": 0.5826193390454122,
+            "below_entry": false
+          },
+          "1.5": {
+            "giveback_R": 0.5826193390454122,
+            "below_entry": false
+          },
+          "2.0": {
+            "giveback_R": 0.5826193390454122,
+            "below_entry": false
+          }
+        },
+        "10": {
+          "0.5": null,
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        }
+      }
+    },
+    {
+      "id": "thu_0821",
+      "et": "2026-09-24 08:21",
+      "side": "LONG",
+      "status": "COMPLETE",
+      "entry": 30501.75,
+      "exit": 30491.0,
+      "pts": -10.75,
+      "atr": 20.589285714285715,
+      "stops": {
+        "5": 30427.970535714285,
+        "10": 30419.220535714285
+      },
+      "runs": {
+        "B": {
+          "points": -73.7795,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 4.0,
+          "mfe_R": 0.0542,
+          "events": [],
+          "price": 30427.970535714285,
+          "time": "2026-09-24T12:37:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 73.77946428571522
+        },
+        "C": {
+          "points": 81.5,
+          "R": 0.9875,
+          "reason": "REVERSAL",
+          "open": false,
+          "mfe": 91.5,
+          "mfe_R": 1.1087,
+          "events": [
+            {
+              "t": "2026-09-24T13:38:00+00:00",
+              "name": "RUNNER_ON",
+              "mfe": 91.5
+            }
+          ],
+          "price": 30583.25,
+          "time": "2026-09-24T13:38:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T13:33:00+00:00",
+            "1": "2026-09-24T13:37:00+00:00",
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": true,
+          "initial_R": 82.52946428571522
+        },
+        "D": {
+          "points": -26.5,
+          "R": -0.3592,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 4.0,
+          "mfe_R": 0.0542,
+          "events": [],
+          "price": 30475.25,
+          "time": "2026-09-24T12:29:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 73.77946428571522
+        },
+        "E": {
+          "points": -26.5,
+          "R": -0.3211,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 4.0,
+          "mfe_R": 0.0485,
+          "events": [],
+          "price": 30475.25,
+          "time": "2026-09-24T12:29:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 82.52946428571522
+        },
+        "F": {
+          "points": -73.7795,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 4.0,
+          "mfe_R": 0.0542,
+          "events": [],
+          "price": 30427.970535714285,
+          "time": "2026-09-24T12:37:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 73.77946428571522
+        },
+        "G": {
+          "points": 20.6324,
+          "R": 0.25,
+          "reason": "RATCHET_STOP",
+          "open": false,
+          "mfe": 138.0,
+          "mfe_R": 1.6721,
+          "events": [
+            {
+              "t": "2026-09-24T13:34:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 43.0
+            },
+            {
+              "t": "2026-09-24T13:38:00+00:00",
+              "name": "RATCHET_2",
+              "mfe": 91.5
+            },
+            {
+              "t": "2026-09-24T14:29:00+00:00",
+              "name": "RATCHET_3",
+              "mfe": 136.75
+            }
+          ],
+          "price": 30522.38236607143,
+          "time": "2026-09-24T15:10:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T13:33:00+00:00",
+            "1": "2026-09-24T13:37:00+00:00",
+            "1.5": "2026-09-24T14:28:00+00:00",
+            "2": null
+          },
+          "level": 3,
+          "runner": false,
+          "initial_R": 82.52946428571522
+        },
+        "H": {
+          "points": -26.5,
+          "R": -0.3592,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 4.0,
+          "mfe_R": 0.0542,
+          "events": [],
+          "price": 30475.25,
+          "time": "2026-09-24T12:29:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 73.77946428571522
+        },
+        "I": {
+          "points": -26.5,
+          "R": -0.3211,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 4.0,
+          "mfe_R": 0.0485,
+          "events": [],
+          "price": 30475.25,
+          "time": "2026-09-24T12:29:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 82.52946428571522
+        }
+      },
+      "shadow_mfe": {
+        "5": {
+          "mfe": 4.0,
+          "mfe_R": 0.05421562813887845,
+          "stopped": true
+        },
+        "10": {
+          "mfe": 497.75,
+          "mfe_R": 6.031179340711582,
+          "stopped": false
+        }
+      },
+      "retr": {
+        "5": {
+          "0.5": null,
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        },
+        "10": {
+          "0.5": {
+            "giveback_R": 2.4294353748119986,
+            "below_entry": false
+          },
+          "1.0": {
+            "giveback_R": 2.4294353748119986,
+            "below_entry": false
+          },
+          "1.5": {
+            "giveback_R": 2.4294353748119986,
+            "below_entry": false
+          },
+          "2.0": {
+            "giveback_R": 2.4294353748119986,
+            "below_entry": false
+          }
+        }
+      }
+    },
+    {
+      "id": "thu_1130",
+      "et": "2026-09-24 11:30",
+      "side": "SHORT",
+      "status": "COMPLETE",
+      "entry": 30512.75,
+      "exit": 30527.0,
+      "pts": -14.25,
+      "atr": 29.339285714285715,
+      "stops": {
+        "5": 30559.216964285715,
+        "10": 30574.216964285715
+      },
+      "runs": {
+        "B": {
+          "points": -46.467,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 10.25,
+          "mfe_R": 0.2206,
+          "events": [],
+          "price": 30559.216964285715,
+          "time": "2026-09-24T15:53:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 46.46696428571522
+        },
+        "C": {
+          "points": -61.467,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 10.25,
+          "mfe_R": 0.1668,
+          "events": [],
+          "price": 30574.216964285715,
+          "time": "2026-09-24T16:16:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 61.46696428571522
+        },
+        "D": {
+          "points": -25.0,
+          "R": -0.538,
+          "reason": "EXIT_NO_PROGRESS",
+          "open": false,
+          "mfe": 10.25,
+          "mfe_R": 0.2206,
+          "events": [],
+          "price": 30537.75,
+          "time": "2026-09-24T15:47:00+00:00",
+          "early": false,
+          "prog": true,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 46.46696428571522
+        },
+        "E": {
+          "points": -25.0,
+          "R": -0.4067,
+          "reason": "EXIT_NO_PROGRESS",
+          "open": false,
+          "mfe": 10.25,
+          "mfe_R": 0.1668,
+          "events": [],
+          "price": 30537.75,
+          "time": "2026-09-24T15:47:00+00:00",
+          "early": false,
+          "prog": true,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 61.46696428571522
+        },
+        "F": {
+          "points": -46.467,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 10.25,
+          "mfe_R": 0.2206,
+          "events": [],
+          "price": 30559.216964285715,
+          "time": "2026-09-24T15:53:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 46.46696428571522
+        },
+        "G": {
+          "points": -61.467,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 10.25,
+          "mfe_R": 0.1668,
+          "events": [],
+          "price": 30574.216964285715,
+          "time": "2026-09-24T16:16:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 61.46696428571522
+        },
+        "H": {
+          "points": -25.0,
+          "R": -0.538,
+          "reason": "EXIT_NO_PROGRESS",
+          "open": false,
+          "mfe": 10.25,
+          "mfe_R": 0.2206,
+          "events": [],
+          "price": 30537.75,
+          "time": "2026-09-24T15:47:00+00:00",
+          "early": false,
+          "prog": true,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 46.46696428571522
+        },
+        "I": {
+          "points": -25.0,
+          "R": -0.4067,
+          "reason": "EXIT_NO_PROGRESS",
+          "open": false,
+          "mfe": 10.25,
+          "mfe_R": 0.1668,
+          "events": [],
+          "price": 30537.75,
+          "time": "2026-09-24T15:47:00+00:00",
+          "early": false,
+          "prog": true,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 61.46696428571522
+        }
+      },
+      "shadow_mfe": {
+        "5": {
+          "mfe": 10.25,
+          "mfe_R": 0.22058682243528946,
+          "stopped": true
+        },
+        "10": {
+          "mfe": 10.25,
+          "mfe_R": 0.16675624246473608,
+          "stopped": true
+        }
+      },
+      "retr": {
+        "5": {
+          "0.5": null,
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        },
+        "10": {
+          "0.5": null,
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        }
+      }
+    },
+    {
+      "id": "thu_1224",
+      "et": "2026-09-24 12:24",
+      "side": "LONG",
+      "status": "COMPLETE",
+      "entry": 30683.25,
+      "exit": 30691.25,
+      "pts": 8.0,
+      "atr": 41.464285714285715,
+      "stops": {
+        "5": 30504.426785714284,
+        "10": 30504.426785714284
+      },
+      "runs": {
+        "B": {
+          "points": -3.5,
+          "R": -0.0196,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 144.25,
+          "mfe_R": 0.8067,
+          "events": [],
+          "price": 30679.75,
+          "time": "2026-09-24T17:44:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T16:41:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 178.82321428571595
+        },
+        "C": {
+          "points": -3.5,
+          "R": -0.0196,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 144.25,
+          "mfe_R": 0.8067,
+          "events": [],
+          "price": 30679.75,
+          "time": "2026-09-24T17:44:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T16:41:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 178.82321428571595
+        },
+        "D": {
+          "points": -9.25,
+          "R": -0.0517,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 26.75,
+          "mfe_R": 0.1496,
+          "events": [],
+          "price": 30674.0,
+          "time": "2026-09-24T16:32:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 178.82321428571595
+        },
+        "E": {
+          "points": -9.25,
+          "R": -0.0517,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 26.75,
+          "mfe_R": 0.1496,
+          "events": [],
+          "price": 30674.0,
+          "time": "2026-09-24T16:32:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 178.82321428571595
+        },
+        "F": {
+          "points": -3.5,
+          "R": -0.0196,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 144.25,
+          "mfe_R": 0.8067,
+          "events": [
+            {
+              "t": "2026-09-24T16:42:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 94.5
+            }
+          ],
+          "price": 30679.75,
+          "time": "2026-09-24T17:44:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T16:41:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 1,
+          "runner": false,
+          "initial_R": 178.82321428571595
+        },
+        "G": {
+          "points": -3.5,
+          "R": -0.0196,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 144.25,
+          "mfe_R": 0.8067,
+          "events": [
+            {
+              "t": "2026-09-24T16:42:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 94.5
+            }
+          ],
+          "price": 30679.75,
+          "time": "2026-09-24T17:44:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-24T16:41:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 1,
+          "runner": false,
+          "initial_R": 178.82321428571595
+        },
+        "H": {
+          "points": -9.25,
+          "R": -0.0517,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 26.75,
+          "mfe_R": 0.1496,
+          "events": [],
+          "price": 30674.0,
+          "time": "2026-09-24T16:32:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 178.82321428571595
+        },
+        "I": {
+          "points": -9.25,
+          "R": -0.0517,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 26.75,
+          "mfe_R": 0.1496,
+          "events": [],
+          "price": 30674.0,
+          "time": "2026-09-24T16:32:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 178.82321428571595
+        }
+      },
+      "shadow_mfe": {
+        "5": {
+          "mfe": 316.25,
+          "mfe_R": 1.7685064059675693,
+          "stopped": false
+        },
+        "10": {
+          "mfe": 316.25,
+          "mfe_R": 1.7685064059675693,
+          "stopped": false
+        }
+      },
+      "retr": {
+        "5": {
+          "0.5": {
+            "giveback_R": 1.1212190810956446,
+            "below_entry": true
+          },
+          "1.0": {
+            "giveback_R": 0.3313328207227778,
+            "below_entry": false
+          },
+          "1.5": {
+            "giveback_R": 0.3313328207227778,
+            "below_entry": false
+          },
+          "2.0": null
+        },
+        "10": {
+          "0.5": {
+            "giveback_R": 1.1212190810956446,
+            "below_entry": true
+          },
+          "1.0": {
+            "giveback_R": 0.3313328207227778,
+            "below_entry": false
+          },
+          "1.5": {
+            "giveback_R": 0.3313328207227778,
+            "below_entry": false
+          },
+          "2.0": null
+        }
+      }
+    },
+    {
+      "id": "thu_1627",
+      "et": "2026-09-24 16:27",
+      "side": "SHORT",
+      "status": "COMPLETE",
+      "entry": 30671.75,
+      "exit": 30672.75,
+      "pts": -1.0,
+      "atr": 19.982142857142858,
+      "stops": {
+        "5": 30735.249107142856,
+        "10": 30791.999107142856
+      },
+      "runs": {
+        "B": {
+          "points": -63.4991,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 9.5,
+          "mfe_R": 0.1496,
+          "events": [],
+          "price": 30735.249107142856,
+          "time": "2026-09-24T20:59:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 63.49910714285579
+        },
+        "C": {
+          "points": -64.0,
+          "R": -0.5322,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 9.5,
+          "mfe_R": 0.079,
+          "events": [],
+          "price": 30735.75,
+          "time": "2026-09-24T22:01:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 120.24910714285579
+        },
+        "D": {
+          "points": -8.5,
+          "R": -0.1339,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 9.5,
+          "mfe_R": 0.1496,
+          "events": [],
+          "price": 30680.25,
+          "time": "2026-09-24T20:35:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 63.49910714285579
+        },
+        "E": {
+          "points": -8.5,
+          "R": -0.0707,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 9.5,
+          "mfe_R": 0.079,
+          "events": [],
+          "price": 30680.25,
+          "time": "2026-09-24T20:35:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 120.24910714285579
+        },
+        "F": {
+          "points": -63.4991,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 9.5,
+          "mfe_R": 0.1496,
+          "events": [],
+          "price": 30735.249107142856,
+          "time": "2026-09-24T20:59:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 63.49910714285579
+        },
+        "G": {
+          "points": -64.0,
+          "R": -0.5322,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 9.5,
+          "mfe_R": 0.079,
+          "events": [],
+          "price": 30735.75,
+          "time": "2026-09-24T22:01:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 120.24910714285579
+        },
+        "H": {
+          "points": -8.5,
+          "R": -0.1339,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 9.5,
+          "mfe_R": 0.1496,
+          "events": [],
+          "price": 30680.25,
+          "time": "2026-09-24T20:35:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 63.49910714285579
+        },
+        "I": {
+          "points": -8.5,
+          "R": -0.0707,
+          "reason": "EXIT_EARLY_FAILURE",
+          "open": false,
+          "mfe": 9.5,
+          "mfe_R": 0.079,
+          "events": [],
+          "price": 30680.25,
+          "time": "2026-09-24T20:35:00+00:00",
+          "early": true,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 120.24910714285579
+        }
+      },
+      "shadow_mfe": {
+        "5": {
+          "mfe": 9.5,
+          "mfe_R": 0.1496084028178156,
+          "stopped": true
+        },
+        "10": {
+          "mfe": 9.5,
+          "mfe_R": 0.07900266559745854,
+          "stopped": true
+        }
+      },
+      "retr": {
+        "5": {
+          "0.5": null,
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        },
+        "10": {
+          "0.5": null,
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        }
+      }
+    },
+    {
+      "id": "fri_1224",
+      "et": "2026-09-25 12:24",
+      "side": "LONG",
+      "status": "ESTIMATED",
+      "entry": 30858.75,
+      "exit": 30868.5,
+      "pts": 9.75,
+      "atr": 42.92857142857143,
+      "stops": {
+        "5": 30892.35357142857,
+        "10": 30729.10357142857
+      },
+      "runs": {
+        "B": {
+          "points": 0.0,
+          "reason": "STOP_THROUGH_AT_ENTRY",
+          "open": false,
+          "mfe": 0.0,
+          "R": 33.60357142857174,
+          "events": [],
+          "price": 30858.75,
+          "time": "2026-09-25 16:24:00+00:00"
+        },
+        "C": {
+          "points": -6.5,
+          "R": -0.0501,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 73.75,
+          "mfe_R": 0.5689,
+          "events": [],
+          "price": 30852.25,
+          "time": "2026-09-25T19:35:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-25T16:30:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 129.64642857142826
+        },
+        "D": {
+          "points": 0.0,
+          "reason": "STOP_THROUGH_AT_ENTRY",
+          "open": false,
+          "mfe": 0.0,
+          "R": 33.60357142857174,
+          "events": [],
+          "price": 30858.75,
+          "time": "2026-09-25 16:24:00+00:00"
+        },
+        "E": {
+          "points": -6.5,
+          "R": -0.0501,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 73.75,
+          "mfe_R": 0.5689,
+          "events": [],
+          "price": 30852.25,
+          "time": "2026-09-25T19:35:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-25T16:30:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 129.64642857142826
+        },
+        "F": {
+          "points": 0.0,
+          "reason": "STOP_THROUGH_AT_ENTRY",
+          "open": false,
+          "mfe": 0.0,
+          "R": 33.60357142857174,
+          "events": [],
+          "price": 30858.75,
+          "time": "2026-09-25 16:24:00+00:00"
+        },
+        "G": {
+          "points": -6.5,
+          "R": -0.0501,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 73.75,
+          "mfe_R": 0.5689,
+          "events": [
+            {
+              "t": "2026-09-25T16:31:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 68.75
+            }
+          ],
+          "price": 30852.25,
+          "time": "2026-09-25T19:35:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-25T16:30:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 1,
+          "runner": false,
+          "initial_R": 129.64642857142826
+        },
+        "H": {
+          "points": 0.0,
+          "reason": "STOP_THROUGH_AT_ENTRY",
+          "open": false,
+          "mfe": 0.0,
+          "R": 33.60357142857174,
+          "events": [],
+          "price": 30858.75,
+          "time": "2026-09-25 16:24:00+00:00"
+        },
+        "I": {
+          "points": -6.5,
+          "R": -0.0501,
+          "reason": "MAX_HOLD_60M",
+          "open": false,
+          "mfe": 73.75,
+          "mfe_R": 0.5689,
+          "events": [
+            {
+              "t": "2026-09-25T16:31:00+00:00",
+              "name": "RATCHET_1",
+              "mfe": 68.75
+            }
+          ],
+          "price": 30852.25,
+          "time": "2026-09-25T19:35:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": "2026-09-25T16:30:00+00:00",
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 1,
+          "runner": false,
+          "initial_R": 129.64642857142826
+        }
+      },
+      "shadow_mfe": {
+        "5": {
+          "mfe": 0.0,
+          "mfe_R": 0.0,
+          "stopped": true
+        },
+        "10": {
+          "mfe": 76.25,
+          "mfe_R": 0.5881380678218245,
+          "stopped": false
+        }
+      },
+      "retr": {
+        "5": {
+          "0.5": null,
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        },
+        "10": {
+          "0.5": {
+            "giveback_R": 0.6189912123632972,
+            "below_entry": true
+          },
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        }
+      }
+    },
+    {
+      "id": "fri_1630",
+      "et": "2026-09-25 16:30",
+      "side": "SHORT",
+      "status": "COMPLETE",
+      "entry": 30897.75,
+      "exit": 30910.75,
+      "pts": -13.0,
+      "atr": 13.785714285714286,
+      "stops": {
+        "5": 30900.439285714285,
+        "10": 30906.689285714285
+      },
+      "runs": {
+        "B": {
+          "points": -2.6893,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 0.0,
+          "mfe_R": 0.0,
+          "events": [],
+          "price": 30900.439285714285,
+          "time": "2026-09-25T20:31:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 2.689285714284779
+        },
+        "C": {
+          "points": -8.9393,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 0.25,
+          "mfe_R": 0.028,
+          "events": [],
+          "price": 30906.689285714285,
+          "time": "2026-09-25T20:32:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 8.939285714284779
+        },
+        "D": {
+          "points": -2.6893,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 0.0,
+          "mfe_R": 0.0,
+          "events": [],
+          "price": 30900.439285714285,
+          "time": "2026-09-25T20:31:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 2.689285714284779
+        },
+        "E": {
+          "points": -8.9393,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 0.25,
+          "mfe_R": 0.028,
+          "events": [],
+          "price": 30906.689285714285,
+          "time": "2026-09-25T20:32:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 8.939285714284779
+        },
+        "F": {
+          "points": -2.6893,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 0.0,
+          "mfe_R": 0.0,
+          "events": [],
+          "price": 30900.439285714285,
+          "time": "2026-09-25T20:31:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 2.689285714284779
+        },
+        "G": {
+          "points": -8.9393,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 0.25,
+          "mfe_R": 0.028,
+          "events": [],
+          "price": 30906.689285714285,
+          "time": "2026-09-25T20:32:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 8.939285714284779
+        },
+        "H": {
+          "points": -2.6893,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 0.0,
+          "mfe_R": 0.0,
+          "events": [],
+          "price": 30900.439285714285,
+          "time": "2026-09-25T20:31:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 2.689285714284779
+        },
+        "I": {
+          "points": -8.9393,
+          "R": -1.0,
+          "reason": "STRUCT_STOP",
+          "open": false,
+          "mfe": 0.25,
+          "mfe_R": 0.028,
+          "events": [],
+          "price": 30906.689285714285,
+          "time": "2026-09-25T20:32:00+00:00",
+          "early": false,
+          "prog": false,
+          "seen": {
+            "0.5": null,
+            "1": null,
+            "1.5": null,
+            "2": null
+          },
+          "level": 0,
+          "runner": false,
+          "initial_R": 8.939285714284779
+        }
+      },
+      "shadow_mfe": {
+        "5": {
+          "mfe": 0.0,
+          "mfe_R": 0.0,
+          "stopped": true
+        },
+        "10": {
+          "mfe": 0.25,
+          "mfe_R": 0.02796644027167692,
+          "stopped": true
+        }
+      },
+      "retr": {
+        "5": {
+          "0.5": null,
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        },
+        "10": {
+          "0.5": null,
+          "1.0": null,
+          "1.5": null,
+          "2.0": null
+        }
+      }
+    }
+  ]
+}

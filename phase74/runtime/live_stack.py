@@ -6,7 +6,7 @@ import uuid
 from dataclasses import replace
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
 from phase74.execution.slippage_router import SlippageSimRouter
 from phase73.logging.decision_logger import DecisionLogger
@@ -23,14 +23,31 @@ from phase74.execution.paper_broker import PaperBrokerAdapter
 from phase74.journal.trade_journal import TradeJournal, TradeJournalEntry
 from phase74.latency.tracker import LatencyTracker
 from phase74.market_data.live_provider import StreamLiveDataProvider
-from phase74.quality.day_halt import PropDayHalt
-from phase74.quality.gates import QualityGateConfig, evaluate_quality_gates
+from phase74.quality.day_halt import (
+    PropDayHalt,
+    new_entries_blocked_session,
+    seed_day_halt_from_paper_trades,
+)
+from phase74.quality.gates import QualityDecision, QualityGateConfig, evaluate_quality_gates
 from phase74.quality.logger import QualitySkipLogger
+from phase74.quality.range_lock import RangeLock, RangeLockConfig, seed_from_paper_trades
 from phase74.quality.trail import TrailOverlay, TrailOverlayConfig
 from phase74.safety.daily_session import DailySessionSafety
+from phase73.execution.positions import PositionBook, PositionSnapshot
 from phase73.risk.reconciliation import reconcile as p73_reconcile
 
 log = logging.getLogger("phase74.stack")
+
+
+def _keep_winner_past_hour(reason: str, mgmt, bar) -> bool:
+    """A one-hour time stop does not apply once the trade is green."""
+    if reason != "MAX_HOLD_60M" or mgmt is None or bar is None:
+        return False
+    if mgmt.side == "LONG":
+        return float(bar.close) > float(mgmt.entry_price)
+    if mgmt.side == "SHORT":
+        return float(bar.close) < float(mgmt.entry_price)
+    return False
 
 # Opposite TAKE parks Phase73 in REVERSAL_WATCH_* and then on_bar ignores the stop.
 # Auto-reverse is off, so snap back to the live side and keep managing.
@@ -43,19 +60,33 @@ _REVERSAL_WATCH_RESUME = {
 class LiveStack:
     """Dress-rehearsal runtime: live data + secure webhook + paper/local sim + shadow mode."""
 
-    def __init__(self, cfg: Phase74Config, market_data: StreamLiveDataProvider) -> None:
+    def __init__(
+        self,
+        cfg: Phase74Config,
+        market_data: StreamLiveDataProvider,
+        execution_adapter: Optional[Any] = None,
+    ) -> None:
         ok, errs = verify_phase73_freeze()
         if not ok:
             raise RuntimeError(f"PHASE73_ENGINE_FREEZE_FAILED: {errs}")
 
         self.cfg = cfg
         self.market_data = market_data
+        self.execution_adapter = execution_adapter
         self.webhook_status = "NOT_STARTED"
         self._latency_samples: list[float] = []
         self._active_trade_id: str | None = None
         self._active_entry_atr: float = 0.0
+        self._active_entry_risk: float = 0.0
+        self._stop_points = float(cfg.section("risk").get("stop_points", 0) or 0)
+        self._wick_target: float | None = None
         qg = cfg.section("quality_gates")
         self._quality_enabled = bool(qg.get("enabled", False))
+        self._filter_signals = bool(qg.get("filter_signals", True))
+        self._cdx_repeat_seconds = int(qg.get("cdx_repeat_seconds", 0) or 0)
+        self._last_cdx_direction: str | None = None
+        self._last_cdx_time: datetime | None = None
+        self._allow_globex_entries = bool(qg.get("allow_globex_entries", False))
         self._quality_cfg = QualityGateConfig.from_dict(qg)
         self._quality_log = QualitySkipLogger(cfg.log_dir) if self._quality_enabled else None
         self._day_halt = (
@@ -71,10 +102,23 @@ class LiveStack:
             if self._quality_enabled
             else None
         )
+        if self._day_halt is not None:
+            seed_day_halt_from_paper_trades(
+                self._day_halt,
+                cfg.log_dir / "paper_trades.csv",
+                audit_path=cfg.log_dir.parent.parent / "phase85" / "logs" / "audit.jsonl",
+            )
         to = cfg.section("trail_overlay")
         self._trail_enabled = bool(to.get("enabled", False))
         self._trail_cfg = TrailOverlayConfig.from_dict(to)
         self._trail: TrailOverlay | None = None
+        rl = cfg.section("range_lock")
+        self.range_lock = RangeLock(
+            RangeLockConfig.from_dict(rl),
+            path=cfg.log_dir / "range_lock.json",
+        )
+        self._trade_hi: float | None = None
+        self._trade_lo: float | None = None
 
         p73 = cfg.to_phase73_config()
         log_dir = cfg.log_dir
@@ -108,6 +152,7 @@ class LiveStack:
             persistence=StatePersistence(state_path),
         )
         self._patch_engine_broker_submit()
+        seed_from_paper_trades(self.range_lock, cfg.log_dir / "paper_trades.csv")
 
     def _with_live_atr(self, signal: PineSignal) -> PineSignal:
         """Prefer NT-computed ATR over Pine webhook placeholder (often 1.0)."""
@@ -134,6 +179,8 @@ class LiveStack:
                 self.engine.pending_signal = None
                 return {"ok": True, "shadow": True, "action": action}
             if not self._pre_entry_checks(signal):
+                self.engine.state = TraderState.FLAT
+                self.engine.pending_signal = None
                 return {"ok": False, "reason": "PRE_ENTRY_BLOCKED"}
             bar = self.market_data.latest_bar()
             if bar is None:
@@ -143,6 +190,8 @@ class LiveStack:
                 return {"ok": False, "reason": "ORDER_IDEMPOTENT_DUPLICATE"}
             signal = self._with_live_atr(signal)
             result = original_execute(signal, state_before, take_action)
+            if result.get("ok") and self.engine.mgmt is not None:
+                self._apply_fixed_stop()
             if result.get("ok") and result.get("fill_price") is not None:
                 from phase73.execution.orders import Order, OrderSide
 
@@ -150,7 +199,7 @@ class LiveStack:
                 order = Order.new(action_name, side, 1, self.cfg.symbol, signal.signal_id)
                 self.broker.submit(order, result["fill_price"])
                 self.idempotency.record(signal.signal_id, action_name, order_id=order.order_id)
-                risk = self.engine.cfg.stop_atr * signal.atr
+                risk = self._active_entry_risk or self.engine.cfg.stop_atr * signal.atr
                 slip = self.broker.record_slippage(signal.signal_price, result["fill_price"], risk)
                 trade_id = str(uuid.uuid4())
                 self._active_trade_id = trade_id
@@ -178,23 +227,35 @@ class LiveStack:
                     self._trail = TrailOverlay(self._trail_cfg)
                     self._trail.hide_m0_target(self.engine.mgmt)
                     self.engine.book.internal.target_price = self.engine.mgmt.target_price
+                fill_px = float(result["fill_price"])
+                self._trade_hi = fill_px
+                self._trade_lo = fill_px
+                rejected = self._route_nt_entry(signal, fill_px)
+                if rejected:
+                    self._void_rejected_paper_entry(trade_id)
+                    log.warning("void paper entry NT rejected reason=%s signal=%s", rejected, signal.signal_id)
+                    return {"ok": False, "reason": rejected}
             return result
 
         def execute_exit(state_before, exit_dec, bar):
             trade_id = self._active_trade_id
             entry_atr = self._active_entry_atr
             mgmt = self.engine.mgmt
+            if _keep_winner_past_hour(getattr(exit_dec, "reason", ""), mgmt, bar):
+                log.info("hold past 60m while in profit close=%s", getattr(bar, "close", None))
+                return {"ok": True, "holding": True}
             result = original_exit(state_before, exit_dec, bar)
             if result.get("ok"):
                 self.broker.broker_position.side = "FLAT"
                 if trade_id and mgmt:
                     exit_px = float(exit_dec.exit_price or bar.close)
-                    risk = self.engine.cfg.stop_atr * entry_atr
+                    risk = self._active_entry_risk or self.engine.cfg.stop_atr * entry_atr
                     move = (exit_px - mgmt.entry_price) if mgmt.side == "LONG" else (mgmt.entry_price - exit_px)
                     gross_r = move / risk if risk > 0 else 0.0
                     hold_min = (bar.timestamp - mgmt.entry_time).total_seconds() / 60.0
                     extra = {
                         "banked_2r5": bool(self._trail.banked) if self._trail else False,
+                        "breakeven_armed": bool(self._trail.breakeven_armed) if self._trail else False,
                         "locked_r": self._trail_cfg.lock_stop_r if self._trail and self._trail.banked else "",
                     }
                     self.journal.close_trade(
@@ -210,18 +271,56 @@ class LiveStack:
                         extra=extra,
                     )
                     if self._day_halt is not None:
-                        self._day_halt.record_closed(gross_r, atr=entry_atr)
+                        self._day_halt.record_closed(
+                            gross_r, bar.timestamp, dollars=move * 20.0
+                        )
+                    self._expand_trade_range(bar)
+                    arm_stop_only = self.range_lock.cfg.arm_on == "stop"
+                    if self._trade_hi is not None and self._trade_lo is not None:
+                        if not arm_stop_only or gross_r <= 0:
+                            self.range_lock.arm(self._trade_hi, self._trade_lo, bar.timestamp)
+                    self._trade_hi = None
+                    self._trade_lo = None
                     self._trail = None
+                    self._wick_target = None
                     self._active_trade_id = None
                     self._active_entry_atr = 0.0
+                    self._active_entry_risk = 0.0
+                    self._route_nt_flatten()
             return result
 
         self.engine._execute_entry = execute_entry  # type: ignore[method-assign]
         self.engine._execute_exit = execute_exit  # type: ignore[method-assign]
 
+    def _expand_trade_range(self, bar) -> None:
+        if bar is None:
+            return
+        hi = float(bar.high)
+        lo = float(bar.low)
+        self._trade_hi = hi if self._trade_hi is None else max(self._trade_hi, hi)
+        self._trade_lo = lo if self._trade_lo is None else min(self._trade_lo, lo)
+
+    def _cdx_repeat_reason(self, signal: PineSignal) -> str:
+        if self._cdx_repeat_seconds <= 0 or self._last_cdx_direction is None or self._last_cdx_time is None:
+            return ""
+        if signal.direction != self._last_cdx_direction:
+            return ""
+        age = (signal.signal_time_utc - self._last_cdx_time).total_seconds()
+        if 0 <= age < self._cdx_repeat_seconds:
+            return "SKIP_CDX_REPEAT"
+        return ""
+
+    def _remember_cdx(self, signal: PineSignal) -> None:
+        self._last_cdx_direction = signal.direction
+        self._last_cdx_time = signal.signal_time_utc
+
     def _pre_entry_checks(self, signal: PineSignal) -> bool:
-        if self._day_halt is not None and self._day_halt.should_halt_new_entries():
+        if self._day_halt is not None and self._day_halt.should_halt_new_entries(signal.signal_time_utc):
             log.warning("%s", self._day_halt.reason)
+            return False
+        blocked = self._nt_entry_block_reason()
+        if blocked:
+            log.warning("NT entry blocked reason=%s signal=%s", blocked, signal.signal_id)
             return False
         if self.cfg.kill_switch or self.daily.should_halt(int(self.cfg.section("safety").get("max_consecutive_errors", 5))):
             log.warning("HALT_NEW_ENTRIES")
@@ -241,6 +340,161 @@ class LiveStack:
         if not self.cfg.trading_enabled and not self.cfg.shadow_mode:
             return False
         return True
+
+    def _apply_fixed_stop(self) -> None:
+        """Use a fixed point stop. R multiples stay on that distance."""
+        points = self._stop_points
+        mgmt = self.engine.mgmt
+        if points <= 0 or mgmt is None:
+            return
+        target_r = self._trail_cfg.profit_cap_r or float(self.engine.cfg.target_r)
+        if mgmt.side == "LONG":
+            mgmt.stop_price = mgmt.entry_price - points
+            mgmt.target_price = mgmt.entry_price + target_r * points
+        elif mgmt.side == "SHORT":
+            mgmt.stop_price = mgmt.entry_price + points
+            mgmt.target_price = mgmt.entry_price - target_r * points
+        else:
+            return
+        mgmt.risk = points
+        self._active_entry_risk = points
+        self._apply_wick_stop()
+        for snap in (self.engine.book.internal, self.engine.book.desired, self.engine.book.broker):
+            if snap.side == mgmt.side:
+                snap.stop_price = mgmt.stop_price
+                snap.target_price = mgmt.target_price
+
+    def _apply_wick_stop(self) -> None:
+        """Stop mirrors the first unswept wick. The entry candle is not part of that stop."""
+        mgmt = self.engine.mgmt
+        if mgmt is None:
+            return
+        recent = list(self.market_data.recent_bars(2000))
+        if not recent:
+            self._wick_target = None
+            return
+        from phase74.quality.wick_targets import wick_targets
+
+        found = wick_targets(mgmt.side, mgmt.entry_price, recent, recent[-1].timestamp)
+        if found is None:
+            self._wick_target = None
+            log.info("wick target missing, fixed stop remains %.2f", self._stop_points)
+            return
+        target, second = found
+        risk = abs(target - mgmt.entry_price)
+        if risk <= 0:
+            self._wick_target = None
+            return
+        if mgmt.side == "LONG":
+            mgmt.stop_price = mgmt.entry_price - risk
+        else:
+            mgmt.stop_price = mgmt.entry_price + risk
+        mgmt.target_price = target
+        mgmt.risk = risk
+        self._active_entry_risk = risk
+        self._wick_target = target
+        log.info(
+            "wick stop side=%s risk=%.2f stop=%.2f tp1=%.2f tp2=%s",
+            mgmt.side,
+            risk,
+            mgmt.stop_price,
+            target,
+            "" if second is None else f"{second:.2f}",
+        )
+
+    def _nt_entry_block_reason(self) -> str:
+        """Block a new paper trade while NinjaTrader still has this position open."""
+        adapter = self.execution_adapter
+        if adapter is None:
+            return ""
+        try:
+            routing = bool(adapter.cfg.routing_enabled())
+        except AttributeError:
+            return ""
+        if not routing or not getattr(adapter.transport, "authenticated", False):
+            return ""
+        from phase85.execution.gates import blocks_new_entries
+        from phase85.execution.state_machine import ExecutionState
+
+        if not blocks_new_entries(adapter.state):
+            return ""
+        if adapter.state != ExecutionState.HALTED:
+            adapter.query_position()
+        if not blocks_new_entries(adapter.state):
+            return ""
+        return "REJECT_POSITION_OPEN"
+
+    def _void_rejected_paper_entry(self, trade_id: str | None) -> None:
+        """Drop a paper fill NinjaTrader refused so it cannot become a halt loss."""
+        if trade_id:
+            self.journal._open.pop(trade_id, None)
+        self.engine.mgmt = None
+        self.engine.book = PositionBook()
+        self.engine.state = TraderState.FLAT
+        self.engine.pending_signal = None
+        self.broker.broker_position = PositionSnapshot()
+        self._trail = None
+        self._wick_target = None
+        self._trade_hi = None
+        self._trade_lo = None
+        self._active_trade_id = None
+        self._active_entry_atr = 0.0
+        self._active_entry_risk = 0.0
+        self.engine.persist()
+
+    def _route_nt_entry(self, signal: PineSignal, fill_price: float) -> str:
+        """Send the entry. Return a reject reason, or empty when the order was accepted or not routed."""
+        adapter = self.execution_adapter
+        if adapter is None:
+            return ""
+        try:
+            routing = bool(adapter.cfg.routing_enabled())
+        except AttributeError:
+            routing = False
+        if not routing:
+            log.info("NT execution skip: routing disabled")
+            return ""
+        if not getattr(adapter.transport, "authenticated", False):
+            log.warning("NT execution skip: CRTExecutionBridge not connected")
+            return ""
+        from phase85.execution.intent import ExecutionIntent
+        from phase85.execution.state_machine import ExecutionState
+
+        now = datetime.now(timezone.utc)
+        intent = ExecutionIntent(
+            side=signal.direction,
+            quantity=1,
+            instrument=str(adapter.cfg.expected_contract or "MNQ 12-26"),
+            command_id=str(uuid.uuid4()),
+            event_id=signal.signal_id,
+            signal_id=signal.signal_id,
+            expected_entry=float(fill_price),
+            signal_atr=float(self._active_entry_risk or self._stop_points or signal.atr),
+            signal_time=signal.signal_time_utc,
+            webhook_received=now,
+            decision_time=now,
+            phase73_decision="TAKE",
+        )
+        result = adapter.request_entry(intent)
+        log.info("NT execution entry allowed=%s reason=%s", result.allowed, result.reason)
+        if not result.allowed:
+            return result.reason or "NT_REJECTED"
+        for ev in result.events or []:
+            if ev.event in {"COMMAND_REJECTED", "ORDER_REJECTED"}:
+                return ev.reason or ev.event
+        if getattr(adapter, "state", None) == ExecutionState.FILLED_UNPROTECTED:
+            prot = adapter.place_protection()
+            log.info("NT execution protect allowed=%s reason=%s", prot.allowed, prot.reason)
+        return ""
+
+    def _route_nt_flatten(self) -> None:
+        adapter = self.execution_adapter
+        if adapter is None:
+            return
+        if getattr(adapter, "side", "FLAT") == "FLAT":
+            return
+        result = adapter.flatten()
+        log.info("NT execution flatten allowed=%s reason=%s", result.allowed, result.reason)
 
     def _release_reversal_watch(self) -> None:
         if self.engine.cfg.auto_reverse_enabled:
@@ -263,7 +517,31 @@ class LiveStack:
             return {"ok": False, "reason": reason.value}
         if signal.pine_hash != self.cfg.pine_hash:
             return {"ok": False, "reason": "SIGNAL_HASH_MISMATCH"}
-        if self._quality_enabled:
+        globex_block = new_entries_blocked_session(
+            signal.signal_time_utc,
+            allow_globex_entries=self._allow_globex_entries,
+        )
+        if globex_block:
+            if self._quality_log is not None:
+                self._quality_log.log(
+                    QualityDecision(decision="SKIP", reason=globex_block),
+                    signal_id=signal.signal_id,
+                    direction=signal.direction,
+                )
+            log.info("quality skip signal=%s reason=%s", signal.signal_id, globex_block)
+            return {"ok": False, "reason": globex_block, "quality": globex_block}
+        repeat = self._cdx_repeat_reason(signal)
+        if repeat:
+            if self._quality_log is not None:
+                self._quality_log.log(
+                    QualityDecision(decision="SKIP", reason=repeat),
+                    signal_id=signal.signal_id,
+                    direction=signal.direction,
+                )
+            log.info("quality skip signal=%s reason=%s", signal.signal_id, repeat)
+            return {"ok": False, "reason": repeat, "quality": repeat}
+        self._remember_cdx(signal)
+        if self._quality_enabled and self._filter_signals:
             lookback = self._quality_cfg.lookback_bars
             bars = list(self.market_data.recent_bars(lookback))
             try:
@@ -278,7 +556,22 @@ class LiveStack:
             if qdec.decision == "SKIP":
                 log.info("quality skip signal=%s reason=%s", signal.signal_id, qdec.reason)
                 return {"ok": False, "reason": qdec.reason, "quality": qdec.reason}
-        if self._day_halt is not None and self._day_halt.should_halt_new_entries():
+        bar = self.market_data.latest_bar()
+        if bar is not None:
+            lock_reason = self.range_lock.evaluate(float(bar.close), signal.signal_time_utc)
+            if lock_reason:
+                qdec = QualityDecision(
+                    decision="SKIP",
+                    reason=lock_reason,
+                    close=float(bar.close),
+                    range_low=float(self.range_lock.low or 0.0),
+                    range_high=float(self.range_lock.high or 0.0),
+                )
+                if self._quality_log is not None:
+                    self._quality_log.log(qdec, signal_id=signal.signal_id, direction=signal.direction)
+                log.info("quality skip signal=%s reason=%s", signal.signal_id, lock_reason)
+                return {"ok": False, "reason": lock_reason, "quality": lock_reason}
+        if self._day_halt is not None and self._day_halt.should_halt_new_entries(signal.signal_time_utc):
             log.warning("%s signal=%s", self._day_halt.reason, signal.signal_id)
             return {"ok": False, "reason": self._day_halt.reason}
         tracker.decision_at = datetime.now(timezone.utc)
@@ -293,10 +586,42 @@ class LiveStack:
         return result
 
     def on_bar(self) -> dict[str, Any]:
+        if self.execution_adapter is not None:
+            try:
+                healthy = self.market_data.health().state.value == "DATA_HEALTHY"
+                self.execution_adapter.mark_data_healthy(healthy)
+            except AttributeError:
+                pass
         if self.broker.health().value == "DISCONNECTED" and self.engine.book.internal.side != "FLAT":
             self.engine.events.log_error({"critical": "BROKER_DISCONNECT_ACTIVE"})
         self._release_reversal_watch()
         bar = self.market_data.latest_bar()
+        mgmt = self.engine.mgmt
+        if (
+            bar is not None
+            and mgmt is not None
+            and bar.timestamp <= mgmt.entry_time
+        ):
+            log.info("entry candle stays outside the stop close=%s", bar.close)
+            return {"ok": True, "holding": True}
+        if (
+            bar is not None
+            and mgmt is not None
+            and self._wick_target is not None
+            and self.engine.state in (TraderState.LONG_ACTIVE, TraderState.SHORT_ACTIVE)
+        ):
+            hit = (
+                mgmt.side == "LONG" and bar.high >= self._wick_target
+            ) or (
+                mgmt.side == "SHORT" and bar.low <= self._wick_target
+            )
+            if hit:
+                from phase73.trader.management import ExitDecision
+
+                exit_dec = ExitDecision(TraderAction.EXIT_PROFIT, "WICK_TARGET", self._wick_target)
+                return self.engine._execute_exit(self.engine.state.value, exit_dec, bar)
+        if self._trade_hi is not None:
+            self._expand_trade_range(bar)
         if (
             self._trail is not None
             and self.engine.mgmt is not None

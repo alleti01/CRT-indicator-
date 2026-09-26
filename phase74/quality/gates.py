@@ -1,4 +1,4 @@
-"""Pre-fill quality gates: chop, no-trend, false-break, late-move."""
+"""Pre-fill quality gates: chop, no-trend, false-break, late-move, recent-body continuation."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -16,6 +16,8 @@ class QualityGateConfig:
     late_move_atr: float = 1.0
     no_trend_atr: float = 0.5
     max_atr_points: float = 15.0
+    pa_lookback_bars: int = 4
+    pa_min_bodies: int = 3
 
     @classmethod
     def from_dict(cls, raw: dict) -> QualityGateConfig:
@@ -27,6 +29,8 @@ class QualityGateConfig:
             late_move_atr=float(raw.get("late_move_atr", 1.0)),
             no_trend_atr=float(raw.get("no_trend_atr", 0.5)),
             max_atr_points=float(raw.get("max_atr_points", 15.0)),
+            pa_lookback_bars=int(raw.get("pa_lookback_bars", 4)),
+            pa_min_bodies=int(raw.get("pa_min_bodies", 3)),
         )
 
 
@@ -74,9 +78,10 @@ def evaluate_quality_gates(
         prior_high = max(b.high for b in prior)
         prior_low = min(b.low for b in prior)
         if direction == "LONG":
-            close_through = close >= prior_high
+            close_through = close > prior_high
         else:
-            close_through = close <= prior_low
+            close_through = close < prior_low
+    pa_agree = _recent_bodies_agree(window, direction, cfg.pa_lookback_bars, cfg.pa_min_bodies)
 
     base = QualityDecision(
         decision="TAKE",
@@ -94,7 +99,7 @@ def evaluate_quality_gates(
     if box <= 0 or box < cfg.chop_box_atr * atr:
         return QualityDecision(**{**base.__dict__, "decision": "SKIP", "reason": "SKIP_CHOP"})
 
-    if not close_through:
+    if not close_through and not pa_agree:
         if abs(progress) < cfg.no_trend_atr * atr:
             return QualityDecision(**{**base.__dict__, "decision": "SKIP", "reason": "SKIP_NO_TREND"})
         edge = cfg.false_break_edge_atr * atr
@@ -115,3 +120,23 @@ def evaluate_quality_gates(
         return QualityDecision(**{**base.__dict__, "decision": "SKIP", "reason": "SKIP_ATR_CAP"})
 
     return base
+
+
+def _body_in_direction(bar: Bar, direction: str) -> bool:
+    if direction == "SHORT":
+        return bar.close < bar.open
+    return bar.close > bar.open
+
+
+def _recent_bodies_agree(
+    window: Sequence[Bar],
+    direction: str,
+    lookback: int,
+    min_bodies: int,
+) -> bool:
+    if lookback < 1 or min_bodies < 1 or min_bodies > lookback:
+        return False
+    recent = list(window)[-lookback:]
+    if len(recent) < lookback:
+        return False
+    return sum(1 for b in recent if _body_in_direction(b, direction)) >= min_bodies

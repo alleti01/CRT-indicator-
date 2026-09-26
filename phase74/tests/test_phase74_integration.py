@@ -34,7 +34,9 @@ def p74_cfg(**mode) -> Phase74Config:
     raw.setdefault("persistence", {})["state_file"] = str(Path(raw["logging"]["log_dir"]) / "state.json")
     raw["persistence"]["idempotency_file"] = str(Path(raw["logging"]["log_dir"]) / "idempotency.jsonl")
     raw.setdefault("quality_gates", {})["enabled"] = False
+    raw["quality_gates"]["allow_globex_entries"] = True
     raw.setdefault("trail_overlay", {})["enabled"] = False
+    raw.setdefault("range_lock", {})["enabled"] = False
     return Phase74Config(raw=raw)
 
 
@@ -62,6 +64,24 @@ class Phase74IntegrationTests(unittest.TestCase):
         p = make_test_signal().to_dict()
         self.assertTrue(recv.handle_payload(p, headers={}, query_token="secret")[0])
         self.assertFalse(recv.handle_payload(p, headers={}, query_token="wrong")[0])
+        td.cleanup()
+
+    def test_leading_space_in_tv_timestamp_is_accepted(self):
+        cfg = load_phase74_config().to_phase73_config()
+        td = tempfile.TemporaryDirectory()
+        recv = SecureWebhookReceiver(
+            cfg,
+            "secret",
+            lambda s, r, t: None,
+            deduplicator=__import__(
+                "phase73.webhook.deduplicator", fromlist=["SignalDeduplicator"]
+            ).SignalDeduplicator(Path(td.name) / "ids.jsonl"),
+        )
+        p = make_test_signal().to_dict()
+        p["signal_time_utc"] = " " + p["signal_time_utc"]
+        p["signal_bar_time_utc"] = " " + p["signal_bar_time_utc"]
+        ok, reason, detail = recv.handle_payload(p, headers={"Authorization": "Bearer secret"})
+        self.assertTrue(ok, (reason, detail))
         td.cleanup()
 
     def test_p74_03_stale_webhook(self):

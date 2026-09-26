@@ -54,6 +54,8 @@
   },
   "quality_gates": {
     "enabled": true,
+    "filter_signals": false,
+    "cdx_repeat_seconds": 300,
     "lookback_bars": 20,
     "chop_box_atr": 2.0,
     "false_break_percentile": 0.15,
@@ -61,19 +63,32 @@
     "late_move_atr": 1.0,
     "no_trend_atr": 0.5,
     "max_atr_points": 18.0,
+    "pa_lookback_bars": 4,
+    "pa_min_bodies": 3,
     "nq_point_value": 20.0,
-    "day_max_losers": 4,
+    "day_max_losers": 2,
     "day_max_loss_dollars": 400.0,
-    "day_max_winners": 2,
+    "day_max_winners": 1,
     "day_big_win_dollars": 1000.0,
     "day_giveback_arm_dollars": 400.0,
-    "day_giveback_dollars": 300.0
+    "day_giveback_dollars": 300.0,
+    "allow_globex_entries": true
+  },
+  "risk": {
+    "stop_points": 14.25
   },
   "trail_overlay": {
     "enabled": true,
     "bank_trigger_r": 2.5,
     "lock_stop_r": 2.0,
-    "trail_atr": 1.0
+    "trail_atr": 1.0,
+    "profit_cap_r": 3.0,
+    "reversal_trail_points": 10.0,
+    "point_value": 20.0
+  },
+  "range_lock": {
+    "enabled": false,
+    "arm_on": "any"
   },
   "safety": {
     "daily_loss_limit": 500.0,

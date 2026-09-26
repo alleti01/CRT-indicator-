@@ -5,6 +5,7 @@ import json
 import os
 import re
 import socket
+import tempfile
 import threading
 import time
 import unittest
@@ -255,6 +256,41 @@ class TestNinjaTraderLiveProvider(unittest.TestCase):
         self.assertEqual(self.provider.health().state, DataHealth.DATA_MISSING)
         self.assertEqual(self.provider.health().detail, "DATA_DISCONNECTED")
 
+    def test_lifetime_gap_counter_does_not_block_healthy_tape(self):
+        df = _synthetic_bars(30)
+        self.client.connect()
+        for bar in _bars_from_df(df, count=20):
+            self.client.send_bar(bar)
+            time.sleep(0.003)
+        self.assertEqual(self.provider.health().state, DataHealth.DATA_HEALTHY)
+        self.provider._cache.gap_bars = 99
+        self.assertEqual(self.provider.health().state, DataHealth.DATA_HEALTHY)
+
+    def test_recent_window_gap_is_data_gap(self):
+        df = _synthetic_bars(40)
+        self.client.connect()
+        bars = _bars_from_df(df, count=20)
+        for bar in bars[:16]:
+            self.client.send_bar(bar)
+            time.sleep(0.003)
+        self.client.send_bar(bars[19])
+        time.sleep(0.01)
+        self.assertEqual(self.provider.health().state, DataHealth.DATA_GAP)
+
+    def test_contract_change_resets_cache(self):
+        df = _synthetic_bars(20)
+        self.client.connect()
+        for bar in _bars_from_df(df, count=16):
+            self.client.send_bar(bar)
+            time.sleep(0.003)
+        self.assertIsNotNone(self.provider.latest_bar())
+        self.provider._cache.gap_bars = 5
+        self.provider._handle_authenticated("NQ 12-26")
+        self.assertEqual(self.provider.contract_identity, "NQ 12-26")
+        self.assertIsNone(self.provider.latest_bar())
+        self.assertEqual(self.provider._cache.gap_bars, 0)
+        self.assertFalse(self.provider.atr_ready)
+
     def test_restart_requires_reauth(self):
         df = _synthetic_bars(40)
         self.client.connect()
@@ -271,6 +307,28 @@ class TestNinjaTraderLiveProvider(unittest.TestCase):
             time.sleep(0.005)
         self.assertTrue(self.provider.atr_ready)
         client2.close()
+
+    def test_seed_closed_bars_makes_atr_ready(self):
+        df = _synthetic_bars(20)
+        bars = _bars_from_df(df, count=20)
+        n = self.provider.seed_closed_bars(bars)
+        self.assertEqual(n, 20)
+        self.assertTrue(self.provider.atr_ready)
+
+    def test_load_closed_bars_csv_reads_logger_rows(self):
+        from phase74.market_data.ninjatrader_live import load_closed_bars_csv
+
+        td = Path(tempfile.mkdtemp())
+        path = td / "bars.csv"
+        path.write_text(
+            "timestamp_utc,open,high,low,close,volume,atr,market_data_health\n"
+            "2026-09-22T13:00:00+00:00,1,2,0,1.5,10,1.0,DATA_HEALTHY\n"
+            "2026-09-22T13:01:00+00:00,1.5,3,1,2.0,11,1.1,DATA_HEALTHY\n",
+            encoding="utf-8",
+        )
+        bars = load_closed_bars_csv(path, limit=2)
+        self.assertEqual(len(bars), 2)
+        self.assertEqual(bars[-1].close, 2.0)
 
     def test_contract_mismatch_fail_closed(self):
         self.provider.disconnect()

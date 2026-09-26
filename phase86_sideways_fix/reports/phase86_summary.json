@@ -1,0 +1,199 @@
+{
+  "week": {
+    "n": 18,
+    "original_takes": 15,
+    "new_takes": 14,
+    "losers_blocked": 0,
+    "winners_blocked": 1,
+    "winner_retention": 0.875,
+    "original_R": 9.4432,
+    "new_R": 7.4432,
+    "net_R_delta": -2.0,
+    "original_usd": 996.08,
+    "new_usd": 769.65,
+    "blocked_winner_R": 2.0,
+    "blocked_loser_R": 0,
+    "blocked_winners": [
+      "2026-09-18 08:56 ET SHORT"
+    ],
+    "blocked_losers": []
+  },
+  "larger": {
+    "baseline": {
+      "n": 37,
+      "wins": 15,
+      "losses": 22,
+      "AvgR": 0.3477,
+      "TotalR": 12.8658,
+      "PF": 1.5848,
+      "MaxDD": -7.5,
+      "win_rate": 0.4054,
+      "LONG": {
+        "n": 19,
+        "wins": 7,
+        "losses": 12,
+        "AvgR": 0.2561,
+        "TotalR": 4.8658,
+        "PF": 1.4055,
+        "MaxDD": -4.0,
+        "win_rate": 0.3684
+      },
+      "SHORT": {
+        "n": 18,
+        "wins": 8,
+        "losses": 10,
+        "AvgR": 0.4444,
+        "TotalR": 8.0,
+        "PF": 1.8,
+        "MaxDD": -4.5,
+        "win_rate": 0.4444
+      },
+      "RTH": {
+        "n": 13,
+        "wins": 5,
+        "losses": 8,
+        "AvgR": 0.2006,
+        "TotalR": 2.6076,
+        "PF": 1.3259,
+        "MaxDD": -4.0,
+        "win_rate": 0.3846
+      },
+      "overnight": {
+        "n": 24,
+        "wins": 10,
+        "losses": 14,
+        "AvgR": 0.4274,
+        "TotalR": 10.2582,
+        "PF": 1.7327,
+        "MaxDD": -4.0,
+        "win_rate": 0.4167
+      }
+    },
+    "candidate": {
+      "n": 32,
+      "wins": 12,
+      "losses": 20,
+      "AvgR": 0.2458,
+      "TotalR": 7.8658,
+      "PF": 1.3933,
+      "MaxDD": -5.5,
+      "win_rate": 0.375,
+      "LONG": {
+        "n": 19,
+        "wins": 7,
+        "losses": 12,
+        "AvgR": 0.2561,
+        "TotalR": 4.8658,
+        "PF": 1.4055,
+        "MaxDD": -4.0,
+        "win_rate": 0.3684
+      },
+      "SHORT": {
+        "n": 13,
+        "wins": 5,
+        "losses": 8,
+        "AvgR": 0.2308,
+        "TotalR": 3.0,
+        "PF": 1.375,
+        "MaxDD": -3.0,
+        "win_rate": 0.3846
+      },
+      "RTH": {
+        "n": 13,
+        "wins": 5,
+        "losses": 8,
+        "AvgR": 0.2006,
+        "TotalR": 2.6076,
+        "PF": 1.3259,
+        "MaxDD": -4.0,
+        "win_rate": 0.3846
+      },
+      "overnight": {
+        "n": 19,
+        "wins": 7,
+        "losses": 12,
+        "AvgR": 0.2767,
+        "TotalR": 5.2582,
+        "PF": 1.4382,
+        "MaxDD": -3.0,
+        "win_rate": 0.3684
+      }
+    },
+    "rejected": {
+      "n": 5,
+      "wins": 3,
+      "losses": 2,
+      "AvgR": 1.0,
+      "TotalR": 5.0,
+      "PF": 3.5,
+      "MaxDD": -2.0,
+      "win_rate": 0.6
+    },
+    "retention": 0.8649,
+    "costs": {
+      "baseline_0tick": {
+        "n": 37,
+        "wins": 15,
+        "losses": 22,
+        "AvgR": 0.3477,
+        "TotalR": 12.8658,
+        "PF": 1.5848,
+        "MaxDD": -7.5,
+        "win_rate": 0.4054
+      },
+      "candidate_0tick": {
+        "n": 32,
+        "wins": 12,
+        "losses": 20,
+        "AvgR": 0.2458,
+        "TotalR": 7.8658,
+        "PF": 1.3933,
+        "MaxDD": -5.5,
+        "win_rate": 0.375
+      },
+      "baseline_1tick": {
+        "n": 37,
+        "wins": 15,
+        "losses": 22,
+        "AvgR": 0.3135,
+        "TotalR": 11.5996,
+        "PF": 1.5109,
+        "MaxDD": -7.7798,
+        "win_rate": 0.4054
+      },
+      "candidate_1tick": {
+        "n": 32,
+        "wins": 12,
+        "losses": 20,
+        "AvgR": 0.2124,
+        "TotalR": 6.7962,
+        "PF": 1.3292,
+        "MaxDD": -5.7179,
+        "win_rate": 0.375
+      },
+      "baseline_2tick": {
+        "n": 37,
+        "wins": 15,
+        "losses": 22,
+        "AvgR": 0.2793,
+        "TotalR": 10.3335,
+        "PF": 1.4415,
+        "MaxDD": -8.0597,
+        "win_rate": 0.4054
+      },
+      "candidate_2tick": {
+        "n": 32,
+        "wins": 12,
+        "losses": 20,
+        "AvgR": 0.179,
+        "TotalR": 5.7265,
+        "PF": 1.2691,
+        "MaxDD": -5.9358,
+        "win_rate": 0.375
+      }
+    }
+  },
+  "rth_changed": 0,
+  "causality_mismatches": 0,
+  "causality_samples": 500
+}

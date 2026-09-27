@@ -1,5 +1,6 @@
 # Local TradingView window geometry (this PC only)
 cdx_vision/config/windows_chart.json
+cdx_vision/debug/
 
 .env.*
 !.env.example

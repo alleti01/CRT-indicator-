@@ -25,7 +25,8 @@ _LINES = (
 def synthetic_label_image() -> Image.Image:
     image = Image.new("RGB", (640, 220), "white")
     draw = ImageDraw.Draw(image)
-    font = ImageFont.load_default()
+    font_path = Path(r"C:\Windows\Fonts\arial.ttf")
+    font = ImageFont.truetype(str(font_path), 36) if font_path.is_file() else ImageFont.load_default()
     y = 20
     for line in _LINES:
         draw.text((20, y), line, fill="black", font=font)

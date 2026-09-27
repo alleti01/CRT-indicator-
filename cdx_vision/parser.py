@@ -10,6 +10,7 @@ TICK = Decimal("0.25")
 _PRICE = re.compile(r"(?<!\d)(\d{4,6}(?:\.\d{1,2})?)(?!\d)")
 _LABELS = (
     ("CDX ENTRY", "ENTRY"),
+    ("ENTRY", "ENTRY"),
     ("CDX LONG", "LONG"),
     ("CDX SHORT", "SHORT"),
     ("TP1", "TP1"),
@@ -17,6 +18,7 @@ _LABELS = (
     ("TPI", "TP1"),
     ("TP 1", "TP1"),
     ("TP 2", "TP2"),
+    ("$L", "SL"),
     ("SL", "SL"),
 )
 
@@ -53,7 +55,8 @@ def parse_tokens(tokens: list[OCRToken], tick: Decimal = TICK) -> tuple[list[Par
     """Return parsed levels and a direction seen in the text, if any."""
     levels: list[ParsedLevel] = []
     direction = ""
-    for token in tokens:
+    used: set[int] = set()
+    for index, token in enumerate(tokens):
         label = normalize_label(token.text)
         if label == "LONG":
             direction = direction or "LONG"
@@ -62,17 +65,41 @@ def parse_tokens(tokens: list[OCRToken], tick: Decimal = TICK) -> tuple[list[Par
         if label not in {"ENTRY", "SL", "TP1", "TP2"}:
             continue
         price = parse_price(token.text, tick)
+        source = token
+        if price is None:
+            price, source = _price_to_the_right(tokens, token, tick, used)
         if price is None:
             continue
+        used.add(id(source))
         levels.append(
             ParsedLevel(
-                raw_text=token.text,
+                raw_text=token.text if source is token else f"{token.text} {source.text}",
                 normalized_label=label,
                 price=price,
                 x1=token.x1,
-                y1=token.y1,
-                x2=token.x2,
-                y2=token.y2,
+                y1=min(token.y1, source.y1),
+                x2=max(token.x2, source.x2),
+                y2=max(token.y2, source.y2),
             )
         )
     return levels, direction
+
+
+def _price_to_the_right(tokens: list[OCRToken], label: OCRToken, tick: Decimal, used: set[int]) -> tuple[Decimal | None, OCRToken]:
+    best: tuple[float, Decimal, OCRToken] | None = None
+    label_mid = (label.y1 + label.y2) / 2
+    for token in tokens:
+        if id(token) in used or token.x1 < label.x1:
+            continue
+        price = parse_price(token.text, tick)
+        if price is None or normalize_label(token.text):
+            continue
+        mid = (token.y1 + token.y2) / 2
+        if abs(mid - label_mid) > max(24, (label.y2 - label.y1) * 1.5):
+            continue
+        distance = token.x1 - label.x2
+        if best is None or distance < best[0]:
+            best = (distance, price, token)
+    if best is None:
+        return None, label
+    return best[1], best[2]

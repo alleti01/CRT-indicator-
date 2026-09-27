@@ -1,5 +1,6 @@
-# Credentials and local environment configuration
-.env
+# Local TradingView window geometry (this PC only)
+cdx_vision/config/windows_chart.json
+
 .env.*
 !.env.example
 

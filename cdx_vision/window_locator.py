@@ -70,12 +70,16 @@ def _process_name(hwnd: int) -> str:
     return ""
 
 
-_BROWSER_PROCESSES = {"chrome.exe", "msedge.exe", "firefox.exe", "brave.exe"}
+_TRADINGVIEW_PROCESS = "tradingview.exe"
 
 
-def list_browser_windows() -> list[WindowInfo]:
+def list_tradingview_windows() -> list[WindowInfo]:
+    """Visible windows owned by the TradingView desktop app only."""
     hits = []
     for window in list_windows(""):
-        if _process_name(window.hwnd) in _BROWSER_PROCESSES and window.width > 400 and window.height > 300:
-            hits.append(window)
+        if _process_name(window.hwnd) != _TRADINGVIEW_PROCESS:
+            continue
+        if window.width < 400 or window.height < 300:
+            continue
+        hits.append(window)
     return hits

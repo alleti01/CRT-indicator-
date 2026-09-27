@@ -41,9 +41,9 @@ def _run(config: VisionConfig, request: VisionCaptureRequest) -> None:
     try:
         if _bridge is None:
             _bridge = VisionBridge(config)
-        from cdx_vision.window_locator import list_windows
+        from cdx_vision.window_locator import list_tradingview_windows
 
-        windows = list_windows(config.window_title_pattern)
+        windows = list_tradingview_windows()
         if not windows:
             _bridge.process_frames(request, [], window_title="")
             return

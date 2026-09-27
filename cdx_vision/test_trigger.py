@@ -1,4 +1,4 @@
-"""Run the shadow worker against the live chart. Does not place an order."""
+"""Run the shadow worker against the live chart. --price is the webhook fallback, not a fake visual entry."""
 from __future__ import annotations
 
 import argparse
@@ -14,7 +14,7 @@ from cdx_vision.models import VisionCaptureRequest
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--side", default="SHORT")
-    parser.add_argument("--price", default="")
+    parser.add_argument("--price", default="", help="Webhook fallback entry. Not a visual entry.")
     args = parser.parse_args()
     price = Decimal(args.price) if args.price else None
     now = datetime.now(timezone.utc)
@@ -29,6 +29,10 @@ def main() -> int:
     print("source=TEST")
     print("signal_id", result.signal_id)
     print("status", result.state.value)
+    print("VISION ENTRY", result.visual_entry if result.visual_entry is not None else "NOT FOUND")
+    print("WEBHOOK ENTRY", result.webhook_entry if result.webhook_entry is not None else "N/A")
+    print("NATIVE ENTRY", result.entry if result.entry is not None else "MISSING")
+    print("ACTIVE ENTRY SOURCE", result.entry_source or "MISSING")
     print("stop", result.stop)
     print("tp1", result.tp1)
     print("tp2", result.tp2)

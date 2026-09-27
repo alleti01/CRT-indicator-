@@ -7,10 +7,49 @@ from cdx_vision.models import CDXLevelCandidate, ParsedLevel, Reason
 from cdx_vision.parser import on_tick
 
 
+def ordered(direction: str, entry: Decimal, stop: Decimal, tp1: Decimal, tp2: Decimal) -> bool:
+    if direction == "LONG":
+        return stop < entry < tp1 < tp2
+    if direction == "SHORT":
+        return stop > entry > tp1 > tp2
+    return False
+
+
 def _near(price: Decimal, reference: Decimal | None, bound: Decimal) -> bool:
     if reference is None:
         return True
     return abs(price - reference) <= bound
+
+
+def _candidate(
+    *,
+    direction: str,
+    entry: Decimal,
+    source: str,
+    stop: ParsedLevel,
+    tp1: ParsedLevel,
+    tp2: ParsedLevel,
+    visual: Decimal | None,
+    webhook: Decimal | None,
+    fill: Decimal | None,
+    reason: str,
+    unstable: bool,
+) -> CDXLevelCandidate:
+    bundle = (stop, tp1, tp2)
+    return CDXLevelCandidate(
+        direction_seen=direction,
+        entry=entry,
+        entry_source=source,
+        stop=stop.price,
+        tp1=tp1.price,
+        tp2=tp2.price,
+        levels=bundle,
+        visual_entry=visual,
+        webhook_entry=webhook,
+        actual_fill=fill,
+        entry_unstable=unstable,
+        entry_reason=reason,
+    )
 
 
 def build_candidates(
@@ -20,6 +59,7 @@ def build_candidates(
     webhook_price: Decimal | None,
     tick: Decimal,
     sanity_points: Decimal,
+    actual_fill: Decimal | None = None,
 ) -> tuple[list[CDXLevelCandidate], list[str]]:
     reasons: list[str] = []
     by_label: dict[str, list[ParsedLevel]] = {}
@@ -36,52 +76,97 @@ def build_candidates(
         return [], reasons
 
     entries = by_label.get("ENTRY", [])
+    distinct: list[Decimal] = []
+    for level in entries:
+        if level.price not in distinct:
+            distinct.append(level.price)
+    visual: Decimal | None = distinct[0] if len(distinct) == 1 else None
+    recorded_visual = visual
+    unstable = len(distinct) > 1
+    if visual is not None and webhook_price is not None and abs(visual - webhook_price) > sanity_points:
+        # Keep the read for the ledger, but do not use it as the native entry.
+        recorded_visual = visual
+        visual = None
+        unstable = False
+        mismatch_drop = True
+    else:
+        mismatch_drop = False
+
     candidates: list[CDXLevelCandidate] = []
-    # Pair each SL with the nearest TP1 and TP2 by vertical center.
     for stop in by_label["SL"]:
-        tp1 = min(by_label["TP1"], key=lambda item: abs(item.cy - stop.cy) if hasattr(item, "cy") else abs(((item.y1 + item.y2) / 2) - ((stop.y1 + stop.y2) / 2)))
-        tp2 = min(by_label["TP2"], key=lambda item: abs(((item.y1 + item.y2) / 2) - ((stop.y1 + stop.y2) / 2)))
-        entry_level = None
-        entry_source = "VISION"
-        if entries:
-            entry_level = min(entries, key=lambda item: abs(((item.y1 + item.y2) / 2) - ((stop.y1 + stop.y2) / 2)))
-            entry = entry_level.price
-        elif webhook_price is not None:
-            entry = webhook_price
-            entry_source = "WEBHOOK"
-        else:
-            reasons.append(Reason.VISION_ENTRY_NOT_FOUND.value)
-            continue
-        bundle = (stop, tp1, tp2) if entry_level is None else (entry_level, stop, tp1, tp2)
+        mid = (stop.y1 + stop.y2) / 2
+        tp1 = min(by_label["TP1"], key=lambda item: abs(((item.y1 + item.y2) / 2) - mid))
+        tp2 = min(by_label["TP2"], key=lambda item: abs(((item.y1 + item.y2) / 2) - mid))
         for piece in (stop, tp1, tp2):
             if not on_tick(piece.price, tick):
                 reasons.append(Reason.VISION_OFF_TICK.value)
-        if not on_tick(entry, tick):
-            reasons.append(Reason.VISION_OFF_TICK.value)
-        ref = webhook_price or entry
-        if not all(_near(piece.price, ref, sanity_points) for piece in (stop, tp1, tp2)) or not _near(entry, ref, sanity_points):
+        if not all(_near(piece.price, webhook_price or visual, sanity_points) for piece in (stop, tp1, tp2)):
             reasons.append(Reason.VISION_SANITY_FAIL.value)
             continue
-        if webhook_direction == "LONG":
-            ordered = entry > stop.price and tp1.price > entry and tp2.price > tp1.price
-        elif webhook_direction == "SHORT":
-            ordered = stop.price > entry and entry > tp1.price and tp1.price > tp2.price
-        else:
-            ordered = False
-        if not ordered:
+
+        use_visual = visual
+        if use_visual is not None and not on_tick(use_visual, tick):
+            use_visual = None
+        if use_visual is not None and not ordered(webhook_direction, use_visual, stop.price, tp1.price, tp2.price):
+            use_visual = None
+        if use_visual is not None:
+            candidates.append(
+                _candidate(
+                    direction=webhook_direction,
+                    entry=use_visual,
+                    source="VISION",
+                    stop=stop,
+                    tp1=tp1,
+                    tp2=tp2,
+                    visual=use_visual,
+                    webhook=webhook_price,
+                    fill=actual_fill,
+                    reason="",
+                    unstable=False,
+                )
+            )
+            continue
+
+        fallback_price = webhook_price if webhook_price is not None else actual_fill
+        fallback_source = "WEBHOOK" if webhook_price is not None else ("FILL" if actual_fill is not None else "")
+        if fallback_price is None or not fallback_source:
+            if mismatch_drop:
+                reasons.append(Reason.VISION_ENTRY_WEBHOOK_MISMATCH.value)
+            elif unstable:
+                reasons.append(Reason.VISION_ENTRY_UNSTABLE.value)
+            reasons.append(Reason.VISION_REJECT_ENTRY_UNAVAILABLE.value)
+            continue
+        if not on_tick(fallback_price, tick) or not ordered(webhook_direction, fallback_price, stop.price, tp1.price, tp2.price):
             reasons.append(Reason.VISION_INVALID_ORDERING.value)
             continue
+        if not _near(fallback_price, webhook_price or fallback_price, sanity_points):
+            reasons.append(Reason.VISION_SANITY_FAIL.value)
+            continue
+        if mismatch_drop:
+            reason = Reason.VISION_ENTRY_WEBHOOK_MISMATCH.value
+        elif unstable:
+            reason = Reason.VISION_ENTRY_UNSTABLE.value
+        elif fallback_source == "WEBHOOK":
+            reason = Reason.VISION_ENTRY_NOT_FOUND_WEBHOOK_FALLBACK.value
+        else:
+            reason = ""
         candidates.append(
-            CDXLevelCandidate(
-                direction_seen=webhook_direction,
-                entry=entry,
-                entry_source=entry_source,
-                stop=stop.price,
-                tp1=tp1.price,
-                tp2=tp2.price,
-                levels=tuple(bundle),
+            _candidate(
+                direction=webhook_direction,
+                entry=fallback_price,
+                source=fallback_source,
+                stop=stop,
+                tp1=tp1,
+                tp2=tp2,
+                visual=recorded_visual if mismatch_drop else None,
+                webhook=webhook_price,
+                fill=actual_fill,
+                reason=reason,
+                unstable=unstable,
             )
         )
+    if not candidates and Reason.VISION_REJECT_ENTRY_UNAVAILABLE.value not in reasons and not entries and webhook_price is None and actual_fill is None:
+        reasons.append(Reason.VISION_REJECT_ENTRY_UNAVAILABLE.value)
     return candidates, reasons
 
 

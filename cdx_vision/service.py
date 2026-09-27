@@ -36,6 +36,7 @@ class VisionBridge:
         *,
         now: datetime | None = None,
         window_title: str = "",
+        window_bounds: str = "",
     ) -> VisionResult:
         now = now or datetime.now(timezone.utc)
         if request.signal_id in self._done:
@@ -48,6 +49,9 @@ class VisionBridge:
             state=VisionState.IDLE,
             direction=request.direction,
             webhook_received_at=request.webhook_received_at,
+            webhook_entry=request.webhook_price,
+            actual_fill=request.actual_fill,
+            entry_source="MISSING",
         )
         self._transition(request.signal_id, VisionState.CAPTURE_REQUESTED)
         if not self.config.enabled:
@@ -64,6 +68,7 @@ class VisionBridge:
         result.capture_started_at = now
         result.frame_count = len(frames)
         result.window_title = window_title
+        result.window_bounds = window_bounds
         self._transition(request.signal_id, VisionState.PARSING)
         parsed = []
         parse_reasons: list[str] = []
@@ -74,6 +79,7 @@ class VisionBridge:
                 webhook_price=request.webhook_price,
                 tick=self.config.tick,
                 sanity_points=self.config.sanity_points,
+                actual_fill=request.actual_fill,
             )
             parsed.append(candidate)
             parse_reasons.extend(reasons)
@@ -90,11 +96,21 @@ class VisionBridge:
         if self.config.require_consensus:
             result.agreeing_frame_count = 2
         result.entry = chosen.entry
+        result.native_entry = chosen.entry
         result.entry_source = chosen.entry_source
+        result.visual_entry = chosen.visual_entry
+        result.webhook_entry = request.webhook_price
+        result.actual_fill = request.actual_fill
         result.stop = chosen.stop
         result.tp1 = chosen.tp1
         result.tp2 = chosen.tp2
-        return self._finish(request, result, VisionState.VISION_CONFIRMED, [Reason.VISION_CONFIRMED.value], now)
+        if (
+            chosen.visual_entry is not None
+            and request.webhook_price is not None
+            and abs(chosen.visual_entry - request.webhook_price) > self.config.entry_mismatch_points
+        ):
+            reasons = list(dict.fromkeys([*reasons, Reason.VISION_ENTRY_WEBHOOK_MISMATCH.value]))
+        return self._finish(request, result, VisionState.VISION_CONFIRMED, reasons, now)
 
     def _finish(self, request: VisionCaptureRequest, result: VisionResult, state: VisionState, reasons: list[str], now: datetime) -> VisionResult:
         result.state = state

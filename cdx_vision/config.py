@@ -21,6 +21,7 @@ class VisionConfig:
     save_debug_images: bool = False
     timeout_seconds: float = 5.0
     sanity_points: Decimal = Decimal("500")
+    entry_mismatch_points: Decimal = Decimal("100")
     tick: Decimal = Decimal("0.25")
     window_title_pattern: str = "TradingView"
     root: Path = Path("cdx_vision")
@@ -36,6 +37,7 @@ class VisionConfig:
             save_debug_images=_flag("CDX_VISION_SAVE_DEBUG_IMAGES", "false"),
             timeout_seconds=float(os.environ.get("CDX_VISION_TIMEOUT_SECONDS", "5")),
             sanity_points=Decimal(os.environ.get("CDX_VISION_SANITY_POINTS", "500")),
+            entry_mismatch_points=Decimal(os.environ.get("CDX_VISION_ENTRY_MISMATCH_POINTS", "100")),
         )
 
     def may_route_orders(self) -> bool:

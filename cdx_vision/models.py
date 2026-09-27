@@ -28,6 +28,10 @@ class Reason(str, Enum):
     VISION_TIMEOUT = "VISION_TIMEOUT"
     VISION_NO_CDX_TEXT = "VISION_NO_CDX_TEXT"
     VISION_ENTRY_NOT_FOUND = "VISION_ENTRY_NOT_FOUND"
+    VISION_ENTRY_NOT_FOUND_WEBHOOK_FALLBACK = "VISION_ENTRY_NOT_FOUND_WEBHOOK_FALLBACK"
+    VISION_ENTRY_UNSTABLE = "VISION_ENTRY_UNSTABLE"
+    VISION_ENTRY_WEBHOOK_MISMATCH = "VISION_ENTRY_WEBHOOK_MISMATCH"
+    VISION_REJECT_ENTRY_UNAVAILABLE = "VISION_REJECT_ENTRY_UNAVAILABLE"
     VISION_SL_NOT_FOUND = "VISION_SL_NOT_FOUND"
     VISION_TP1_NOT_FOUND = "VISION_TP1_NOT_FOUND"
     VISION_TP2_NOT_FOUND = "VISION_TP2_NOT_FOUND"
@@ -51,6 +55,7 @@ class VisionCaptureRequest:
     ticker: str
     webhook_received_at: datetime
     webhook_price: Decimal | None = None
+    actual_fill: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -90,6 +95,11 @@ class CDXLevelCandidate:
     tp1: Decimal
     tp2: Decimal
     levels: tuple[ParsedLevel, ...]
+    visual_entry: Decimal | None = None
+    webhook_entry: Decimal | None = None
+    actual_fill: Decimal | None = None
+    entry_unstable: bool = False
+    entry_reason: str = ""
 
 
 @dataclass
@@ -100,6 +110,11 @@ class VisionResult:
     direction: str = ""
     entry: Decimal | None = None
     entry_source: str = ""
+    visual_entry: Decimal | None = None
+    webhook_entry: Decimal | None = None
+    actual_fill: Decimal | None = None
+    native_entry: Decimal | None = None
+    entry_raw: str = ""
     stop: Decimal | None = None
     tp1: Decimal | None = None
     tp2: Decimal | None = None

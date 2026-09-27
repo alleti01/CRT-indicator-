@@ -10,6 +10,7 @@ TICK = Decimal("0.25")
 _PRICE = re.compile(r"(?<!\d)(\d{4,6}(?:\.\d{1,2})?)(?!\d)")
 _LABELS = (
     ("CDX ENTRY", "ENTRY"),
+    ("CDXENTRY", "ENTRY"),
     ("ENTRY", "ENTRY"),
     ("CDX LONG", "LONG"),
     ("CDX SHORT", "SHORT"),
@@ -41,6 +42,11 @@ def parse_price(text: str, tick: Decimal = TICK) -> Decimal | None:
     if price <= 0 or not on_tick(price, tick):
         return None
     return price
+
+
+def folded_is_bare_cdx(text: str) -> bool:
+    """A lone CDX token can be the entry label when ENTRY was split off."""
+    return " ".join(text.upper().split()) == "CDX"
 
 
 def normalize_label(text: str) -> str:

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from cdx_vision.config import VisionConfig
 from cdx_vision.consensus import consensus
+from cdx_vision.entry_read import read_visual_entry
 from cdx_vision.levels import frame_candidate
 from cdx_vision.models import Reason, VisionCaptureRequest, VisionState
 from cdx_vision.ocr import TesseractOcr, chart_crop, preprocess
@@ -30,7 +31,11 @@ def load_roi() -> tuple[float, float, float, float]:
     return tuple(float(v) for v in roi)  # type: ignore[return-value]
 
 
-def run_shadow_job(request: VisionCaptureRequest, config: VisionConfig | None = None) -> object:
+def run_shadow_job(
+    request: VisionCaptureRequest,
+    config: VisionConfig | None = None,
+    debug_dir: Path | None = None,
+) -> object:
     """Capture, OCR, validate, and append a ledger row. Never places an order."""
     config = config or VisionConfig(enabled=True, shadow_only=True, execution_enabled=False)
     bridge = VisionBridge(config)
@@ -51,6 +56,7 @@ def run_shadow_job(request: VisionCaptureRequest, config: VisionConfig | None = 
     roi = load_roi()
     frames = []
     method = ""
+    entry_raw: list[str] = []
     started = time.perf_counter()
     for delay in _DELAYS:
         if delay:
@@ -62,7 +68,17 @@ def run_shadow_job(request: VisionCaptureRequest, config: VisionConfig | None = 
             continue
         method = shot.method
         crop = chart_crop(shot.image, roi)
-        tokens = engine.recognize(preprocess(crop, scale=3))
+        tokens = list(engine.recognize(preprocess(crop, scale=3)))
+        observed = read_visual_entry(
+            engine,
+            shot.image,
+            roi,
+            tokens,
+            scale=3,
+            debug_dir=debug_dir if not frames else None,
+        )
+        tokens.extend(observed.tokens)
+        entry_raw.extend(observed.raw)
         frames.append(tokens)
         parsed = [
             frame_candidate(
@@ -71,13 +87,21 @@ def run_shadow_job(request: VisionCaptureRequest, config: VisionConfig | None = 
                 webhook_price=request.webhook_price,
                 tick=config.tick,
                 sanity_points=config.sanity_points,
+                actual_fill=request.actual_fill,
             )[0]
             for frame in frames
         ]
         chosen, _reasons, _unstable = consensus(parsed)
         if chosen is not None:
             break
-    result = bridge.process_frames(request, frames, now=datetime.now(timezone.utc), window_title=window.title)
+    result = bridge.process_frames(
+        request,
+        frames,
+        now=datetime.now(timezone.utc),
+        window_title=window.title,
+        window_bounds=method or "NONE",
+    )
+    result.entry_raw = " | ".join(entry_raw)
     result.window_bounds = method or "NONE"
     if not frames:
         result.reasons = [Reason.VISION_CAPTURE_INVALID.value]

@@ -15,6 +15,7 @@ def frame_candidate(
     webhook_price: Decimal | None,
     tick: Decimal,
     sanity_points: Decimal,
+    actual_fill: Decimal | None = None,
 ) -> tuple[CDXLevelCandidate | None, list[str]]:
     levels, seen = parse_tokens(tokens, tick)
     if direction_conflict(webhook_direction, seen):
@@ -27,6 +28,7 @@ def frame_candidate(
         webhook_price=webhook_price,
         tick=tick,
         sanity_points=sanity_points,
+        actual_fill=actual_fill,
     )
     if not candidates:
         return None, reasons or [Reason.VISION_NO_CDX_TEXT.value]

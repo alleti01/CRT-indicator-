@@ -1,1 +1,4 @@
-signal_id,timestamp,direction,fill_price,cdx_entry,cdx_stop,cdx_tp1,cdx_tp2,cdx_stop_points,bot_stop,bot_stop_points,cdx_stop_hit,bot_stop_hit,reached_cdx_tp1,reached_cdx_tp2,vision_status
+signal_id,timestamp,direction,fill_price,cdx_entry,cdx_stop,cdx_tp1,cdx_tp2,cdx_stop_points,bot_stop,bot_stop_points,cdx_stop_hit,bot_stop_hit,reached_cdx_tp1,reached_cdx_tp2,vision_status,cdx_visual_entry,webhook_entry,actual_fill,cdx_native_entry,entry_source,native_r_points,native_r_source,tp1_R,tp2_R,visual_vs_webhook_points,fill_vs_visual_points,fill_vs_webhook_points,absolute_fill_vs_visual_points,reason_codes
+TEST_21330526a111,2026-09-27T21:56:33.369186+00:00,SHORT,,30909.50,30947.00,30872.00,30845.00,37.50,,,,,,,VISION_CONFIRMED
+PROBE_e02e7b44,2026-09-27T18:15:24.715595-04:00,SHORT,,,,,,,,,,,,,VISION_REJECTED,,,,,MISSING,,,,,,,,,VISION_NO_CONSENSUS|VISION_NO_CDX_TEXT
+FIXTURE_ENTRY_VISION,2026-09-27T22:17:06.851135+00:00,SHORT,,30909.50,30947.00,30872.00,30845.00,37.50,,,,,,,VISION_CONFIRMED,30909.50,30910.25,,30909.50,VISION,37.50,VISION,1,1.72,0.75,,,,VISION_CONFIRMED

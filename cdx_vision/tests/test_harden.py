@@ -83,13 +83,14 @@ class SelectorTests(unittest.TestCase):
         self.assertEqual(result.tp1, Decimal("30872.00"))
         self.assertEqual(result.tp2, Decimal("30845.00"))
 
-    def test_old_trade_is_not_selected_when_price_points_at_it_but_it_is_left(self) -> None:
-        tokens = _trade("old", 40, "29747.00", "29709.50", "29672.00", "29645.00")
+    def test_only_visible_trade_is_kept_when_empty_space_is_to_its_right(self) -> None:
+        tokens = _trade("only", 280, "30947.00", "30909.50", "30872.00", "30845.00")
         tokens.append(_at("30818.25", 1100, 300))
-        result = _run([tokens, tokens], price="29709.50")
-        self.assertFalse(result.confirmed)
-        self.assertIn("VISION_REJECT_STALE_TRADE_LEVELS", result.reasons)
-        self.assertIsNone(result.stop)
+        result = _run([tokens, tokens], price="30909.50")
+        self.assertTrue(result.confirmed)
+        self.assertEqual(result.entry_source, "VISION")
+        self.assertEqual(result.stop, Decimal("30947.00"))
+        self.assertEqual(result.visual_entry, Decimal("30909.50"))
 
     def test_two_current_sets_are_ambiguous(self) -> None:
         tokens = _trade("a", 800, "30947.00", "30909.50", "30872.00", "30845.00")

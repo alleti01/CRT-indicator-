@@ -19,8 +19,9 @@ Live run against the open TradingView app:
 - First capture: current levels not visible.
 - Focus succeeded.
 - Ctrl+Right was sent 3 times, which is the maximum.
-- After those pans the chart still had no confirmed Entry / SL / TP1 / TP2.
-- Result: `VISION_LEVELS_NOT_VISIBLE_AFTER_NAVIGATION`.
+- That pan moved the chart onto the short. The labels were then left of the old right-hand search box, so the first pass still rejected them.
+- The search box was widened, and a lone visible trade is no longer discarded for sitting left of empty space.
+- The next read, with no further pan, confirmed Entry 30909.50, SL 30947.00, TP1 30872.00, TP2 30845.00, source VISION.
 - Order calls: 0.
 
 The running bot was not switched to `CDX_VISION_ENABLED=true`, and auto-right stays off unless that test command or the env flag is set.

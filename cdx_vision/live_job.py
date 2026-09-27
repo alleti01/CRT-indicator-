@@ -27,7 +27,7 @@ _DELAYS = (0.25, 0.5, 1.0)
 def load_roi() -> tuple[float, float, float, float]:
     path = Path("cdx_vision/config/windows_chart.json")
     if not path.exists():
-        return (0.15, 0.10, 0.80, 0.90)
+        return (0.18, 0.10, 0.78, 0.88)
     data = json.loads(path.read_text(encoding="utf-8"))
     roi = data.get("ocr_roi") or [0.15, 0.10, 0.80, 0.90]
     return tuple(float(v) for v in roi)  # type: ignore[return-value]

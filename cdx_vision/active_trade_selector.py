@@ -79,11 +79,12 @@ def classify(
 ) -> list[CandidateVerdict]:
     width = pane_width(tokens, candidates)
     markers = [(normalize_label(token.text), token) for token in tokens if normalize_label(token.text) in {"LONG", "SHORT"}]
+    centers = [cluster_x(candidate) for candidate in candidates]
     verdicts: list[CandidateVerdict] = []
-    for candidate in candidates:
-        center = cluster_x(candidate)
+    for candidate, center in zip(candidates, centers):
         fraction = center / width if width else 0.0
-        if fraction < STALE_X_FRACTION:
+        newer_on_the_right = any(other > center + AMBIGUITY_X_GAP for other in centers)
+        if newer_on_the_right and fraction < STALE_X_FRACTION:
             status = "STALE"
         elif _direction_conflict(candidate, markers, webhook_direction):
             status = "DIRECTION_CONFLICT"

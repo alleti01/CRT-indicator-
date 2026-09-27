@@ -21,6 +21,16 @@ from phase74.latency.tracker import LatencyTracker
 log = logging.getLogger("phase74.webhook")
 
 
+def _shadow_cdx_levels(signal, received_at) -> None:
+    """Optional shadow read of chart labels. Disabled by default. Never places an order."""
+    try:
+        from cdx_vision.shadow_hook import enqueue_shadow
+
+        enqueue_shadow(signal, received_at)
+    except Exception:
+        log.exception("cdx vision shadow failed closed")
+
+
 class RateLimiter:
     def __init__(self, max_per_minute: int = 60) -> None:
         self.max_per_minute = max_per_minute
@@ -120,6 +130,7 @@ class SecureWebhookReceiver:
 
         log.info("webhook valid signal_id=%s event=%s", result.signal.signal_id, result.signal.event)
         self.on_signal(result.signal, WebhookReason.WEBHOOK_VALID, tracker)
+        _shadow_cdx_levels(result.signal, received_at)
         return True, WebhookReason.WEBHOOK_VALID, ""
 
     def handle_ledger_payload(

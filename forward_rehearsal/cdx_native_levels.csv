@@ -1,0 +1,1 @@
+signal_id,timestamp,direction,fill_price,cdx_entry,cdx_stop,cdx_tp1,cdx_tp2,cdx_stop_points,bot_stop,bot_stop_points,cdx_stop_hit,bot_stop_hit,reached_cdx_tp1,reached_cdx_tp2,vision_status

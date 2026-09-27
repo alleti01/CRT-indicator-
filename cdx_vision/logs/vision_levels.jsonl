@@ -1,0 +1,1 @@
+{"schema_version":"1.0","signal_id":"bootstrap","ticker":"NQ","webhook_direction":"","validation_status":"IDLE","reason_codes":["VISION_DISABLED"],"note":"Ledger starts empty of trade reads. This row marks the file as append-only from first boot."}

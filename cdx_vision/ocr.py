@@ -40,3 +40,33 @@ class TokenOcr(OcrEngine):
         tokens = self.frames[self.calls]
         self.calls += 1
         return tokens
+
+
+class TesseractOcr(OcrEngine):
+    """Local Tesseract only. No network calls."""
+
+    def __init__(self, executable: str, psm: int = 11) -> None:
+        self.executable = executable
+        self.psm = psm
+
+    def recognize(self, image: Image.Image) -> list[OCRToken]:
+        import pytesseract
+        from pytesseract import Output
+
+        pytesseract.pytesseract.tesseract_cmd = self.executable
+        data = pytesseract.image_to_data(
+            image,
+            output_type=Output.DICT,
+            config=f"--psm {self.psm}",
+        )
+        tokens: list[OCRToken] = []
+        texts = data.get("text") or []
+        for i, text in enumerate(texts):
+            cleaned = (text or "").strip()
+            if not cleaned:
+                continue
+            x, y = int(data["left"][i]), int(data["top"][i])
+            w, h = int(data["width"][i]), int(data["height"][i])
+            tokens.append(OCRToken(cleaned, x, y, x + w, y + h))
+        return tokens
+

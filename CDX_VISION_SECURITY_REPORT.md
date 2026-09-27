@@ -1,6 +1,6 @@
 # CDX vision security
 
-Screenshots are not uploaded. There is no cloud vision call.
+Screenshots are not uploaded. There is no cloud vision call. OCR is local Tesseract only, and only after `tesseract.exe` is installed.
 
 Debug images are off unless `CDX_VISION_SAVE_DEBUG_IMAGES=true`. The capture helper, when used, is limited to a window whose title contains `TradingView`, then a normalized chart crop. It does not walk the whole desktop.
 

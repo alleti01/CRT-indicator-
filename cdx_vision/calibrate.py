@@ -1,20 +1,29 @@
-"""List TradingView windows and write a normalized ROI config. No credentials."""
+"""List chart windows and save a normalized ROI. Does not guess among several browsers."""
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
-from cdx_vision.window_locator import list_windows
+from cdx_vision.window_locator import list_browser_windows, list_windows
 
 
 def main() -> int:
-    windows = list_windows("TradingView")
+    titled = list_windows("TradingView")
     path = Path("cdx_vision/config/windows_chart.json")
     path.parent.mkdir(parents=True, exist_ok=True)
-    if not windows:
-        print("VISION_WINDOW_NOT_FOUND")
+    if len(titled) == 1:
+        chosen = titled[0]
+    elif len(titled) > 1:
+        print("AMBIGUOUS")
+        for window in titled:
+            print(window.title)
+        return 3
+    else:
+        browsers = list_browser_windows()
+        print("CALIBRATION_PENDING_TRADINGVIEW")
+        for window in browsers:
+            print(window.title)
         return 2
-    chosen = windows[0]
     payload = {
         "window_title_pattern": "TradingView",
         "window_title": chosen.title,

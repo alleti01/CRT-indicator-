@@ -266,6 +266,16 @@ def main() -> int:
         path = str(wh.get("path", "/webhook"))
         recv.start(host, port, path)
         stack.webhook_status = "LISTENING"
+        from cdx_vision.config import VisionConfig
+
+        vision = VisionConfig.from_env()
+        print(f"CDX_VISION_ENABLED={str(vision.enabled).lower()}", flush=True)
+        print(f"CDX_VISION_SHADOW_ONLY={str(vision.shadow_only).lower()}", flush=True)
+        print(f"CDX_VISION_EXECUTION_ENABLED={str(vision.execution_enabled).lower()}", flush=True)
+        print(f"CDX_VISION_AUTO_RIGHT_ENABLED={str(vision.auto_right_enabled).lower()}", flush=True)
+        print("TRADINGVIEW_TARGET=TradingView.exe", flush=True)
+        if vision.enabled and not vision.may_route_orders():
+            print("CDX_VISION_WORKER_STARTED", flush=True)
         print(f"Ledger logger: http://{host}:{port}/webhook/ledger?token=<secret>")
         print(f"  -> {cfg.log_dir / 'ledger_alerts.jsonl'}")
         print(f"  -> {cfg.log_dir / 'ledger_alerts.csv'}")

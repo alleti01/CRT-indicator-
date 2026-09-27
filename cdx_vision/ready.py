@@ -47,7 +47,7 @@ def main() -> int:
             capture_ok = True
             method = shot.method
     reader = _visual_reader(TesseractOcr(exe), windows) if exe else "FAIL"
-    auto = "DISABLED" if not config.auto_right_enabled else "PASS"
+    auto = "PASS" if config.auto_right_enabled else "DISABLED"
     print("OCR:", "PASS" if exe else "FAIL")
     print("TRADINGVIEW:", "FOUND" if windows else "NOT_FOUND")
     print("CAPTURE:", "PASS" if capture_ok else "FAIL")
@@ -57,8 +57,24 @@ def main() -> int:
     print("TP READER:", "PASS" if reader == "PASS" else reader)
     print("ACTIVE TRADE SELECTOR:", "PASS")
     print("AUTO RIGHT:", auto)
+    print("VISION_ENABLED:", "true" if config.enabled else "false")
+    print("SHADOW_ONLY:", "true" if config.shadow_only else "false")
+    print("EXECUTION_ENABLED:", "false" if not config.may_route_orders() else "true")
+    print("WORKER:", "RUNNING" if config.enabled else "NOT RUNNING")
     print("SHADOW:", "TRUE" if config.shadow_only else "FALSE")
     print("EXECUTION:", "FALSE" if not config.may_route_orders() else "TRUE")
+    if (
+        exe
+        and windows
+        and capture_ok
+        and reader == "PASS"
+        and config.enabled
+        and config.shadow_only
+        and config.auto_right_enabled
+        and not config.may_route_orders()
+    ):
+        print("CDX_VISION_LIVE_SHADOW_READY")
+        return 0
     if exe and windows and capture_ok and reader in {"PASS", "DEGRADED"} and not config.may_route_orders():
         print("CDX_VISION_LIVE_PIPELINE_READY")
         return 0

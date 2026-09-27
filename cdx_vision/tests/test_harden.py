@@ -228,6 +228,20 @@ class AutoRightTests(unittest.TestCase):
         self.assertEqual(nav.keypresses, 0)
         self.assertEqual(state.reason, "VISION_TRADINGVIEW_FOCUS_FAIL")
 
+    def test_no_chart_movement_stops(self) -> None:
+        nav = _FakeNav()
+        state = run_navigation(
+            window=_window(),
+            initial_tokens=[],
+            initial_visible=False,
+            read_once=lambda: ([], False, False),
+            navigator=nav,
+            max_attempts=3,
+            redraw_s=0,
+        )
+        self.assertEqual(nav.keypresses, 1)
+        self.assertEqual(state.reason, "VISION_AUTO_RIGHT_NO_MOVEMENT")
+
     def test_minimized_sends_no_keys(self) -> None:
         nav = _FakeNav(minimized=True)
         state = run_navigation(

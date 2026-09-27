@@ -114,12 +114,22 @@ def run_navigation(
         state.attempts += 1
         if redraw_s:
             time.sleep(redraw_s)
-        tokens, visible = read_once()
+        observed = read_once()
+        if len(observed) == 3:
+            tokens, visible, moved = observed
+        else:
+            tokens, visible = observed
+            moved = True
+        if not moved:
+            state.reason = "VISION_AUTO_RIGHT_NO_MOVEMENT"
+            return state
         if not visible or not tokens:
             continue
         if redraw_s:
             time.sleep(min(0.25, redraw_s))
-        second, second_visible = read_once()
+        second_obs = read_once()
+        second = second_obs[0]
+        second_visible = second_obs[1]
         state.frames = [tokens]
         if second and second_visible:
             state.frames.append(second)

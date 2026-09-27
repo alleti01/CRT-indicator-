@@ -71,13 +71,17 @@ def run_shadow_job(
     method = ""
     entry_raw: list[str] = []
     nav_shots = {"n": 0}
+    last_fp: dict[str, list[int] | None] = {"value": None}
 
     def capture(label: str = ""):
         nonlocal method
         shot = capture_window(window)
         if shot is None:
-            return [], False, []
+            return [], False, [], True
         method = shot.method
+        fingerprint = _fingerprint(shot.image)
+        moved = _moved(last_fp["value"], fingerprint)
+        last_fp["value"] = fingerprint
         if debug_dir is not None and label:
             debug_dir.mkdir(parents=True, exist_ok=True)
             shot.image.save(debug_dir / label)
@@ -100,9 +104,9 @@ def run_shadow_job(
             sanity_points=config.sanity_points,
             actual_fill=request.actual_fill,
         )
-        return tokens, candidate is not None, observed.raw
+        return tokens, candidate is not None, observed.raw, moved
 
-    tokens, visible, raw = capture("before_navigation.png" if debug_dir else "")
+    tokens, visible, raw, _moved_first = capture("before_navigation.png" if debug_dir else "")
     entry_raw.extend(raw)
     frames: list = []
     triggered = False
@@ -117,7 +121,7 @@ def run_shadow_job(
             if (time.perf_counter() - started) > config.timeout_seconds:
                 break
             time.sleep(delay)
-            more, _vis, more_raw = capture()
+            more, _vis, more_raw, _moved_more = capture()
             entry_raw.extend(more_raw)
             if more:
                 frames.append(more)
@@ -139,9 +143,9 @@ def run_shadow_job(
 
         def read_once():
             nav_shots["n"] += 1
-            got, vis, got_raw = capture(f"after_right_{nav_shots['n']}.png")
+            got, vis, got_raw, moved = capture(f"after_right_{nav_shots['n']}.png")
             entry_raw.extend(got_raw)
-            return got, vis
+            return got, vis, moved
 
         state = run_navigation(
             window=window,
@@ -182,6 +186,18 @@ def run_shadow_job(
         result.reasons = [Reason.VISION_CAPTURE_INVALID.value]
         result.state = VisionState.VISION_REJECTED
     return result
+
+
+def _fingerprint(image) -> list[int]:
+    small = image.convert("L").resize((48, 27))
+    return list(small.getdata())
+
+
+def _moved(previous: list[int] | None, current: list[int]) -> bool:
+    if previous is None or len(previous) != len(current):
+        return True
+    delta = sum(abs(a - b) for a, b in zip(previous, current)) / len(current)
+    return delta > 4.0
 
 
 def _reasons_for(tokens, request: VisionCaptureRequest, config: VisionConfig) -> list[str]:

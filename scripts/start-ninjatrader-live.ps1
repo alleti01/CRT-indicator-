@@ -37,6 +37,12 @@ Get-Content $envFile | ForEach-Object {
     }
 }
 
+# Vision is shadow-only. It cannot place or change an order.
+$env:CDX_VISION_ENABLED = "true"
+$env:CDX_VISION_SHADOW_ONLY = "true"
+$env:CDX_VISION_EXECUTION_ENABLED = "false"
+$env:CDX_VISION_AUTO_RIGHT_ENABLED = "true"
+
 if (-not $env:NINJATRADER_EXECUTION_BRIDGE_TOKEN) {
     $execToken = New-RandomToken
     Set-EnvKey -Path $envFile -Key "NINJATRADER_EXECUTION_BRIDGE_TOKEN" -Value $execToken

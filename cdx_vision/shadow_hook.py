@@ -7,12 +7,14 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 from decimal import Decimal
-from threading import Thread
+from threading import Lock, Thread
 
 from cdx_vision.config import VisionConfig
 from cdx_vision.models import VisionCaptureRequest
 
 log = logging.getLogger("cdx_vision.shadow")
+_inflight: set[str] = set()
+_lock = Lock()
 
 
 def enqueue_shadow(signal, received_at: datetime | None = None) -> None:
@@ -31,6 +33,11 @@ def enqueue_shadow(signal, received_at: datetime | None = None) -> None:
         webhook_received_at=received_at,
         webhook_price=price,
     )
+    with _lock:
+        if request.signal_id in _inflight:
+            log.info("vision duplicate in flight signal_id=%s", request.signal_id)
+            return
+        _inflight.add(request.signal_id)
     Thread(target=_run, args=(config, request), daemon=True, name="cdx-vision-shadow").start()
 
 
@@ -42,3 +49,6 @@ def _run(config: VisionConfig, request: VisionCaptureRequest) -> None:
         run_shadow_job(request, config)
     except Exception:
         log.exception("cdx vision shadow failed signal_id=%s", request.signal_id)
+    finally:
+        with _lock:
+            _inflight.discard(request.signal_id)

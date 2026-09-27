@@ -7,6 +7,8 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from cdx_vision.active_trade_selector import should_navigate
+from cdx_vision.auto_right import ChartNavigator, run_navigation
 from cdx_vision.config import VisionConfig
 from cdx_vision.consensus import consensus
 from cdx_vision.entry_read import read_visual_entry
@@ -19,7 +21,7 @@ from cdx_vision.tesseract_cmd import resolve_tesseract
 from cdx_vision.window_locator import list_tradingview_windows
 
 log = logging.getLogger("cdx_vision.live")
-_DELAYS = (0.0, 0.25, 0.5, 1.0)
+_DELAYS = (0.25, 0.5, 1.0)
 
 
 def load_roi() -> tuple[float, float, float, float]:
@@ -35,38 +37,50 @@ def run_shadow_job(
     request: VisionCaptureRequest,
     config: VisionConfig | None = None,
     debug_dir: Path | None = None,
+    navigator: ChartNavigator | None = None,
 ) -> object:
     """Capture, OCR, validate, and append a ledger row. Never places an order."""
     config = config or VisionConfig(enabled=True, shadow_only=True, execution_enabled=False)
     bridge = VisionBridge(config)
+    job_started = datetime.now(timezone.utc)
     windows = list_tradingview_windows()
-    now = datetime.now(timezone.utc)
     if not windows:
-        return bridge.process_frames(request, [], now=now, window_title="")
+        return bridge.process_frames(
+            request,
+            [],
+            now=job_started,
+            window_title="",
+            auto_right_enabled=config.auto_right_enabled,
+        )
     window = windows[0]
     if is_minimized(window.hwnd):
-        result = bridge.process_frames(request, [], now=now, window_title=window.title)
-        result.reasons = [Reason.VISION_WINDOW_MINIMIZED.value]
-        result.state = VisionState.VISION_REJECTED
-        return result
+        return bridge.process_frames(
+            request,
+            [],
+            now=job_started,
+            window_title=window.title,
+            forced_reasons=[Reason.VISION_TRADINGVIEW_MINIMIZED.value],
+            auto_right_enabled=config.auto_right_enabled,
+            navigation_reason=Reason.VISION_TRADINGVIEW_MINIMIZED.value,
+        )
     exe = resolve_tesseract()
     if not exe:
-        return bridge.process_frames(request, [], now=now, window_title=window.title)
+        return bridge.process_frames(request, [], now=job_started, window_title=window.title)
     engine = TesseractOcr(exe, psm=11)
     roi = load_roi()
-    frames = []
     method = ""
     entry_raw: list[str] = []
-    started = time.perf_counter()
-    for delay in _DELAYS:
-        if delay:
-            time.sleep(delay)
-        if (time.perf_counter() - started) > config.timeout_seconds:
-            break
+    nav_shots = {"n": 0}
+
+    def capture(label: str = ""):
+        nonlocal method
         shot = capture_window(window)
         if shot is None:
-            continue
+            return [], False, []
         method = shot.method
+        if debug_dir is not None and label:
+            debug_dir.mkdir(parents=True, exist_ok=True)
+            shot.image.save(debug_dir / label)
         crop = chart_crop(shot.image, roi)
         tokens = list(engine.recognize(preprocess(crop, scale=3)))
         observed = read_visual_entry(
@@ -75,35 +89,108 @@ def run_shadow_job(
             roi,
             tokens,
             scale=3,
-            debug_dir=debug_dir if not frames else None,
+            debug_dir=debug_dir if label in {"", "before_navigation.png"} and not entry_raw else None,
         )
         tokens.extend(observed.tokens)
-        entry_raw.extend(observed.raw)
+        candidate, _reasons = frame_candidate(
+            tokens,
+            webhook_direction=request.direction,
+            webhook_price=request.webhook_price,
+            tick=config.tick,
+            sanity_points=config.sanity_points,
+            actual_fill=request.actual_fill,
+        )
+        return tokens, candidate is not None, observed.raw
+
+    tokens, visible, raw = capture("before_navigation.png" if debug_dir else "")
+    entry_raw.extend(raw)
+    frames: list = []
+    triggered = False
+    attempts = 0
+    success = False
+    nav_reason = ""
+    if visible:
+        nav_reason = Reason.VISION_INITIAL_LEVELS_VISIBLE.value
         frames.append(tokens)
-        parsed = [
-            frame_candidate(
-                frame,
-                webhook_direction=request.direction,
-                webhook_price=request.webhook_price,
-                tick=config.tick,
-                sanity_points=config.sanity_points,
-                actual_fill=request.actual_fill,
-            )[0]
-            for frame in frames
-        ]
-        chosen, _reasons, _unstable = consensus(parsed)
-        if chosen is not None:
-            break
+        started = time.perf_counter()
+        for delay in _DELAYS:
+            if (time.perf_counter() - started) > config.timeout_seconds:
+                break
+            time.sleep(delay)
+            more, _vis, more_raw = capture()
+            entry_raw.extend(more_raw)
+            if more:
+                frames.append(more)
+            parsed = [
+                frame_candidate(
+                    frame,
+                    webhook_direction=request.direction,
+                    webhook_price=request.webhook_price,
+                    tick=config.tick,
+                    sanity_points=config.sanity_points,
+                    actual_fill=request.actual_fill,
+                )[0]
+                for frame in frames
+            ]
+            if consensus(parsed)[0] is not None:
+                break
+    elif config.auto_right_enabled and should_navigate(_reasons_for(tokens, request, config)):
+        triggered = True
+
+        def read_once():
+            nav_shots["n"] += 1
+            got, vis, got_raw = capture(f"after_right_{nav_shots['n']}.png")
+            entry_raw.extend(got_raw)
+            return got, vis
+
+        state = run_navigation(
+            window=window,
+            initial_tokens=tokens,
+            initial_visible=False,
+            read_once=read_once,
+            navigator=navigator or ChartNavigator(config.chart_focus_x, config.chart_focus_y),
+            max_attempts=config.auto_right_max_attempts,
+            redraw_s=config.redraw_delay_ms / 1000,
+        )
+        frames = state.frames
+        attempts = state.attempts
+        success = state.success
+        nav_reason = state.reason
+        if not success and state.reason == "VISION_AUTO_RIGHT_EXHAUSTED":
+            nav_reason = Reason.VISION_LEVELS_NOT_VISIBLE_AFTER_NAVIGATION.value
+    else:
+        if tokens:
+            frames.append(tokens)
+        nav_reason = Reason.VISION_LEVELS_NOT_VISIBLE.value
     result = bridge.process_frames(
         request,
         frames,
-        now=datetime.now(timezone.utc),
+        now=job_started,
         window_title=window.title,
         window_bounds=method or "NONE",
+        initial_levels_visible=visible,
+        auto_right_enabled=config.auto_right_enabled,
+        auto_right_triggered=triggered,
+        auto_right_attempts=attempts,
+        auto_right_success=success,
+        navigation_reason=nav_reason,
+        forced_reasons=[nav_reason] if triggered and not success and nav_reason else None,
     )
     result.entry_raw = " | ".join(entry_raw)
     result.window_bounds = method or "NONE"
-    if not frames:
+    if not frames and not result.reasons:
         result.reasons = [Reason.VISION_CAPTURE_INVALID.value]
         result.state = VisionState.VISION_REJECTED
     return result
+
+
+def _reasons_for(tokens, request: VisionCaptureRequest, config: VisionConfig) -> list[str]:
+    _candidate, reasons = frame_candidate(
+        tokens,
+        webhook_direction=request.direction,
+        webhook_price=request.webhook_price,
+        tick=config.tick,
+        sanity_points=config.sanity_points,
+        actual_fill=request.actual_fill,
+    )
+    return reasons

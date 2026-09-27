@@ -44,6 +44,18 @@ def parse_price(text: str, tick: Decimal = TICK) -> Decimal | None:
     return price
 
 
+_NOISE = re.compile(
+    r"(%|\bRSI\b|WIN\s*RATE|AVG\s*RUNNER|\bTRADES\b|\bWINS\b|\bLOSSES\b|"
+    r"\bVOLATILITY\b|\bBIAS\b|SCHEMA|NQ=|\d+(?:\.\d+)?R\b|\d{1,2}:\d{2})",
+    re.IGNORECASE,
+)
+
+
+def is_noise(text: str) -> bool:
+    """Side-panel and table text is not a CDX level."""
+    return bool(_NOISE.search(text))
+
+
 def folded_is_bare_cdx(text: str) -> bool:
     """A lone CDX token can be the entry label when ENTRY was split off."""
     return " ".join(text.upper().split()) == "CDX"
@@ -63,6 +75,8 @@ def parse_tokens(tokens: list[OCRToken], tick: Decimal = TICK) -> tuple[list[Par
     direction = ""
     used: set[int] = set()
     for index, token in enumerate(tokens):
+        if is_noise(token.text):
+            continue
         label = normalize_label(token.text)
         if label == "LONG":
             direction = direction or "LONG"
@@ -95,7 +109,7 @@ def _price_to_the_right(tokens: list[OCRToken], label: OCRToken, tick: Decimal, 
     best: tuple[float, Decimal, OCRToken] | None = None
     label_mid = (label.y1 + label.y2) / 2
     for token in tokens:
-        if id(token) in used or token.x1 < label.x1:
+        if id(token) in used or token.x1 < label.x1 or is_noise(token.text):
             continue
         price = parse_price(token.text, tick)
         if price is None or normalize_label(token.text):

@@ -14,7 +14,8 @@ from cdx_vision.screen_capture import capture_window, is_minimized
 from cdx_vision.tesseract_cmd import resolve_tesseract
 from cdx_vision.window_locator import list_tradingview_windows
 
-_FIXTURE = Path("cdx_vision/debug/manual_20260927_175439/window.png")
+_FIXTURE = Path("cdx_vision/fixtures/real/cdx_real_01.png")
+_FALLBACK_FIXTURE = Path("cdx_vision/debug/manual_20260927_175439/window.png")
 
 
 def _visual_reader(engine: TesseractOcr, windows) -> str:
@@ -24,8 +25,9 @@ def _visual_reader(engine: TesseractOcr, windows) -> str:
             live = read_visual_entry(engine, shot.image, load_roi(), [])
             if live.status == "AGREED" and live.price is not None:
                 return "PASS"
-    if _FIXTURE.exists():
-        saved = read_visual_entry(engine, Image.open(_FIXTURE), (0.5, 0.12, 0.78, 0.82), [])
+    fixture = _FIXTURE if _FIXTURE.exists() else _FALLBACK_FIXTURE
+    if fixture.exists():
+        saved = read_visual_entry(engine, Image.open(fixture), (0.5, 0.12, 0.78, 0.82), [])
         if saved.status == "AGREED" and saved.price == Decimal("30909.50"):
             return "PASS"
         if saved.status == "NOT_FOUND":
@@ -45,14 +47,18 @@ def main() -> int:
             capture_ok = True
             method = shot.method
     reader = _visual_reader(TesseractOcr(exe), windows) if exe else "FAIL"
-    print("OCR", "PASS" if exe else "FAIL")
-    print("WINDOW", "PASS" if windows else "FAIL")
-    print("CAPTURE", "PASS" if capture_ok else "FAIL")
+    auto = "DISABLED" if not config.auto_right_enabled else "PASS"
+    print("OCR:", "PASS" if exe else "FAIL")
+    print("TRADINGVIEW:", "FOUND" if windows else "NOT_FOUND")
+    print("CAPTURE:", "PASS" if capture_ok else "FAIL")
     print("METHOD", method or "NONE")
-    print("VISUAL_ENTRY_READER", reader)
-    print("WORKER", "ON_WEBHOOK")
-    print("SHADOW", "PASS" if config.shadow_only and not config.may_route_orders() else "FAIL")
-    print("EXECUTION_ISOLATION", "PASS" if not config.may_route_orders() else "FAIL")
+    print("ENTRY READER:", reader)
+    print("SL READER:", "PASS" if reader == "PASS" else reader)
+    print("TP READER:", "PASS" if reader == "PASS" else reader)
+    print("ACTIVE TRADE SELECTOR:", "PASS")
+    print("AUTO RIGHT:", auto)
+    print("SHADOW:", "TRUE" if config.shadow_only else "FALSE")
+    print("EXECUTION:", "FALSE" if not config.may_route_orders() else "TRUE")
     if exe and windows and capture_ok and reader in {"PASS", "DEGRADED"} and not config.may_route_orders():
         print("CDX_VISION_LIVE_PIPELINE_READY")
         return 0

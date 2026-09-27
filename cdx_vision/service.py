@@ -37,6 +37,13 @@ class VisionBridge:
         now: datetime | None = None,
         window_title: str = "",
         window_bounds: str = "",
+        forced_reasons: list[str] | None = None,
+        initial_levels_visible: bool = False,
+        auto_right_enabled: bool = False,
+        auto_right_triggered: bool = False,
+        auto_right_attempts: int = 0,
+        auto_right_success: bool = False,
+        navigation_reason: str = "",
     ) -> VisionResult:
         now = now or datetime.now(timezone.utc)
         if request.signal_id in self._done:
@@ -52,6 +59,12 @@ class VisionBridge:
             webhook_entry=request.webhook_price,
             actual_fill=request.actual_fill,
             entry_source="MISSING",
+            initial_levels_visible=initial_levels_visible,
+            auto_right_enabled=auto_right_enabled,
+            auto_right_triggered=auto_right_triggered,
+            auto_right_attempts=auto_right_attempts,
+            auto_right_success=auto_right_success,
+            navigation_reason=navigation_reason,
         )
         self._transition(request.signal_id, VisionState.CAPTURE_REQUESTED)
         if not self.config.enabled:
@@ -61,6 +74,8 @@ class VisionBridge:
             return self._finish(request, result, VisionState.VISION_REJECTED, [Reason.VISION_REJECT_RESTART_STALE.value], now)
         if age > self.config.timeout_seconds:
             return self._finish(request, result, VisionState.VISION_TIMEOUT, [Reason.VISION_TIMEOUT.value], now)
+        if forced_reasons:
+            return self._finish(request, result, VisionState.VISION_REJECTED, forced_reasons, now)
         if self.config.require_tradingview_visible and not window_title and not frames:
             return self._finish(request, result, VisionState.VISION_REJECTED, [Reason.VISION_WINDOW_NOT_FOUND.value], now)
 

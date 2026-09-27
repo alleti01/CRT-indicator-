@@ -76,27 +76,42 @@ def build_candidates(
         return [], reasons
 
     entries = by_label.get("ENTRY", [])
-    distinct: list[Decimal] = []
-    for level in entries:
-        if level.price not in distinct:
-            distinct.append(level.price)
-    visual: Decimal | None = distinct[0] if len(distinct) == 1 else None
-    recorded_visual = visual
-    unstable = len(distinct) > 1
-    if visual is not None and webhook_price is not None and abs(visual - webhook_price) > sanity_points:
-        # Keep the read for the ledger, but do not use it as the native entry.
-        recorded_visual = visual
-        visual = None
-        unstable = False
-        mismatch_drop = True
-    else:
-        mismatch_drop = False
-
     candidates: list[CDXLevelCandidate] = []
     for stop in by_label["SL"]:
-        mid = (stop.y1 + stop.y2) / 2
-        tp1 = min(by_label["TP1"], key=lambda item: abs(((item.y1 + item.y2) / 2) - mid))
-        tp2 = min(by_label["TP2"], key=lambda item: abs(((item.y1 + item.y2) / 2) - mid))
+        stop_x = (stop.x1 + stop.x2) / 2
+        stop_y = (stop.y1 + stop.y2) / 2
+
+        def nearest(levels: list[ParsedLevel]) -> ParsedLevel:
+            return min(
+                levels,
+                key=lambda item: (
+                    abs(((item.x1 + item.x2) / 2) - stop_x),
+                    abs(((item.y1 + item.y2) / 2) - stop_y),
+                ),
+            )
+
+        tp1 = nearest(by_label["TP1"])
+        tp2 = nearest(by_label["TP2"])
+        visual = None
+        recorded_visual = None
+        unstable = False
+        mismatch_drop = False
+        if entries:
+            chosen_entry = nearest(entries)
+            chosen_x = (chosen_entry.x1 + chosen_entry.x2) / 2
+            collided = [
+                level
+                for level in entries
+                if level.price != chosen_entry.price and abs(((level.x1 + level.x2) / 2) - chosen_x) < 80
+            ]
+            if collided:
+                unstable = True
+            else:
+                visual = chosen_entry.price
+                recorded_visual = visual
+                if webhook_price is not None and abs(visual - webhook_price) > sanity_points:
+                    visual = None
+                    mismatch_drop = True
         for piece in (stop, tp1, tp2):
             if not on_tick(piece.price, tick):
                 reasons.append(Reason.VISION_OFF_TICK.value)

@@ -39,6 +39,12 @@ CSV_COLUMNS = (
     "fill_vs_webhook_points",
     "absolute_fill_vs_visual_points",
     "reason_codes",
+    "capture_method",
+    "initial_levels_visible",
+    "auto_right_enabled",
+    "auto_right_triggered",
+    "auto_right_attempts",
+    "auto_right_success",
 )
 CSV_HEADER = ",".join(CSV_COLUMNS) + "\n"
 
@@ -106,6 +112,8 @@ def load_rows(path: Path) -> list[dict]:
         row.setdefault("actual_fill", "")
         row.setdefault("cdx_native_entry", row.get("entry", ""))
         row.setdefault("entry_source", row.get("entry_source", ""))
+        row.setdefault("auto_right_triggered", False)
+        row.setdefault("auto_right_attempts", 0)
         rows.append(row)
     return rows
 
@@ -167,6 +175,13 @@ class VisionLedger:
             "reason_codes": result.reasons,
             "ocr_unstable": result.ocr_unstable,
             "debug_capture_paths": result.debug_paths,
+            "capture_method": result.window_bounds,
+            "initial_levels_visible": result.initial_levels_visible,
+            "auto_right_enabled": result.auto_right_enabled,
+            "auto_right_triggered": result.auto_right_triggered,
+            "auto_right_attempts": result.auto_right_attempts,
+            "auto_right_success": result.auto_right_success,
+            "navigation_reason": result.navigation_reason,
         }
         with self.path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(record) + "\n")
@@ -210,6 +225,12 @@ class VisionLedger:
                 stats["absolute_fill_vs_visual_points"] if isinstance(stats["absolute_fill_vs_visual_points"], Decimal) else None
             ),
             "reason_codes": "|".join(result.reasons),
+            "capture_method": result.window_bounds,
+            "initial_levels_visible": "true" if result.initial_levels_visible else "false",
+            "auto_right_enabled": "true" if result.auto_right_enabled else "false",
+            "auto_right_triggered": "true" if result.auto_right_triggered else "false",
+            "auto_right_attempts": str(result.auto_right_attempts),
+            "auto_right_success": "true" if result.auto_right_success else "false",
         }
         line = ",".join(values[name] for name in CSV_COLUMNS)
         with self.research_csv.open("a", encoding="utf-8") as fh:
@@ -220,10 +241,14 @@ class VisionLedger:
             self.research_csv.write_text(CSV_HEADER, encoding="utf-8")
             return
         lines = self.research_csv.read_text(encoding="utf-8").splitlines()
-        if lines and "cdx_visual_entry" in lines[0]:
+        wanted = ",".join(CSV_COLUMNS)
+        if lines and lines[0] == wanted:
+            return
+        if not lines:
+            self.research_csv.write_text(CSV_HEADER, encoding="utf-8")
             return
         # New columns are appended. Existing data rows are left as they were.
-        lines[0] = ",".join(CSV_COLUMNS)
+        lines[0] = wanted
         self.research_csv.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 

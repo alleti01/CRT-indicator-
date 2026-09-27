@@ -45,7 +45,20 @@ class Reason(str, Enum):
     VISION_REJECT_RESTART_STALE = "VISION_REJECT_RESTART_STALE"
     VISION_DUPLICATE = "VISION_DUPLICATE"
     VISION_WINDOW_MINIMIZED = "VISION_WINDOW_MINIMIZED"
+    VISION_TRADINGVIEW_MINIMIZED = "VISION_TRADINGVIEW_MINIMIZED"
     VISION_CAPTURE_INVALID = "VISION_CAPTURE_INVALID"
+    VISION_NO_CURRENT_CDX_LEVELS = "VISION_NO_CURRENT_CDX_LEVELS"
+    VISION_LEVELS_NOT_VISIBLE = "VISION_LEVELS_NOT_VISIBLE"
+    VISION_CURRENT_SIGNAL_OFFSCREEN = "VISION_CURRENT_SIGNAL_OFFSCREEN"
+    VISION_LEVELS_NOT_VISIBLE_AFTER_NAVIGATION = "VISION_LEVELS_NOT_VISIBLE_AFTER_NAVIGATION"
+    VISION_INITIAL_LEVELS_VISIBLE = "VISION_INITIAL_LEVELS_VISIBLE"
+    VISION_AUTO_RIGHT_TRIGGERED = "VISION_AUTO_RIGHT_TRIGGERED"
+    VISION_AUTO_RIGHT_LEVELS_FOUND = "VISION_AUTO_RIGHT_LEVELS_FOUND"
+    VISION_AUTO_RIGHT_EXHAUSTED = "VISION_AUTO_RIGHT_EXHAUSTED"
+    VISION_TRADINGVIEW_FOCUS_FAIL = "VISION_TRADINGVIEW_FOCUS_FAIL"
+    VISION_NAVIGATION_FAIL = "VISION_NAVIGATION_FAIL"
+    VISION_LEVELS_OUTSIDE_VISIBLE_PRICE_RANGE = "VISION_LEVELS_OUTSIDE_VISIBLE_PRICE_RANGE"
+    VISION_REJECT_STALE_TRADE_LEVELS = "VISION_REJECT_STALE_TRADE_LEVELS"
 
 
 @dataclass(frozen=True)
@@ -65,6 +78,7 @@ class OCRToken:
     y1: int
     x2: int
     y2: int
+    confidence: float | None = None
 
     @property
     def cx(self) -> float:
@@ -127,6 +141,12 @@ class VisionResult:
     window_title: str = ""
     window_bounds: str = ""
     debug_paths: list[str] = field(default_factory=list)
+    initial_levels_visible: bool = False
+    auto_right_enabled: bool = False
+    auto_right_triggered: bool = False
+    auto_right_attempts: int = 0
+    auto_right_success: bool = False
+    navigation_reason: str = ""
 
     @property
     def confirmed(self) -> bool:

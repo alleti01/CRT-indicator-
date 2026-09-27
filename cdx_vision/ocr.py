@@ -67,6 +67,12 @@ class TesseractOcr(OcrEngine):
                 continue
             x, y = int(data["left"][i]), int(data["top"][i])
             w, h = int(data["width"][i]), int(data["height"][i])
-            tokens.append(OCRToken(cleaned, x, y, x + w, y + h))
+            conf = None
+            try:
+                raw_conf = float(data["conf"][i])
+                conf = None if raw_conf < 0 else raw_conf
+            except (KeyError, TypeError, ValueError):
+                conf = None
+            tokens.append(OCRToken(cleaned, x, y, x + w, y + h, conf))
         return tokens
 

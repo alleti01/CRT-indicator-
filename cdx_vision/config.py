@@ -22,6 +22,11 @@ class VisionConfig:
     timeout_seconds: float = 5.0
     sanity_points: Decimal = Decimal("500")
     entry_mismatch_points: Decimal = Decimal("100")
+    auto_right_enabled: bool = False
+    auto_right_max_attempts: int = 3
+    redraw_delay_ms: int = 400
+    chart_focus_x: float = 0.40
+    chart_focus_y: float = 0.45
     tick: Decimal = Decimal("0.25")
     window_title_pattern: str = "TradingView"
     root: Path = Path("cdx_vision")
@@ -38,6 +43,11 @@ class VisionConfig:
             timeout_seconds=float(os.environ.get("CDX_VISION_TIMEOUT_SECONDS", "5")),
             sanity_points=Decimal(os.environ.get("CDX_VISION_SANITY_POINTS", "500")),
             entry_mismatch_points=Decimal(os.environ.get("CDX_VISION_ENTRY_MISMATCH_POINTS", "100")),
+            auto_right_enabled=_flag("CDX_VISION_AUTO_RIGHT_ENABLED", "false"),
+            auto_right_max_attempts=int(os.environ.get("CDX_VISION_AUTO_RIGHT_MAX_ATTEMPTS", "3")),
+            redraw_delay_ms=int(os.environ.get("CDX_VISION_REDRAW_DELAY_MS", "400")),
+            chart_focus_x=float(os.environ.get("CDX_VISION_CHART_FOCUS_X", "0.40")),
+            chart_focus_y=float(os.environ.get("CDX_VISION_CHART_FOCUS_Y", "0.45")),
         )
 
     def may_route_orders(self) -> bool:

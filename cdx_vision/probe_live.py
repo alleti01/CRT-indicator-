@@ -28,6 +28,16 @@ def main() -> int:
     )
     stats = level_metrics(result)
     print("DRY_RUN_ONLY")
+    print("INITIAL_CAPTURE_LEVELS:", "FOUND" if result.initial_levels_visible else "NOT_FOUND")
+    if result.auto_right_triggered:
+        auto = "TRIGGERED"
+    elif result.auto_right_enabled:
+        auto = "NOT_NEEDED"
+    else:
+        auto = "DISABLED"
+    print("AUTO_RIGHT:", auto)
+    print("AUTO_RIGHT_ATTEMPTS:", result.auto_right_attempts)
+    print("CURRENT_LEVEL_SET:", result.state.value)
     print("VISION ENTRY:")
     print("   ", result.visual_entry if result.visual_entry is not None else "NOT FOUND")
     print("WEBHOOK ENTRY:")

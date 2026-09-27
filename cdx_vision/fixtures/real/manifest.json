@@ -1,0 +1,48 @@
+[
+  {
+    "filename": "cdx_real_01.png",
+    "purpose": "golden_short",
+    "expected_behavior": "CONFIRM",
+    "direction": "SHORT",
+    "entry": "30909.50",
+    "stop": "30947.00",
+    "tp1": "30872.00",
+    "tp2": "30845.00",
+    "entry_source": "VISION"
+  },
+  {
+    "filename": "cdx_real_02.png",
+    "purpose": "multi_trade",
+    "expected_behavior": "DO_NOT_CONFIRM_WITHOUT_WEBHOOK_CONTEXT",
+    "expected_values": null,
+    "note": "Real TradingView screenshot. Numeric ground truth was not transcribed."
+  },
+  {
+    "filename": "cdx_real_03.png",
+    "purpose": "zoomed_out",
+    "expected_behavior": "DO_NOT_CONFIRM_WITHOUT_WEBHOOK_CONTEXT",
+    "expected_values": null,
+    "note": "Real TradingView screenshot. Numeric ground truth was not transcribed."
+  },
+  {
+    "filename": "cdx_real_04.png",
+    "purpose": "historical_chart",
+    "expected_behavior": "DO_NOT_CONFIRM_WITHOUT_WEBHOOK_CONTEXT",
+    "expected_values": null,
+    "note": "Real TradingView screenshot. Numeric ground truth was not transcribed."
+  },
+  {
+    "filename": "cdx_real_05.png",
+    "purpose": "historical_chart",
+    "expected_behavior": "DO_NOT_CONFIRM_WITHOUT_WEBHOOK_CONTEXT",
+    "expected_values": null,
+    "note": "Real TradingView screenshot. Numeric ground truth was not transcribed."
+  },
+  {
+    "filename": "cdx_real_06.png",
+    "purpose": "historical_chart",
+    "expected_behavior": "DO_NOT_CONFIRM_WITHOUT_WEBHOOK_CONTEXT",
+    "expected_values": null,
+    "note": "Real TradingView screenshot. Numeric ground truth was not transcribed."
+  }
+]

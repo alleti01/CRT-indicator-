@@ -140,6 +140,7 @@ def run_shadow_job(
                 break
     elif config.auto_right_enabled and should_navigate(_reasons_for(tokens, request, config)):
         triggered = True
+        navigator = navigator or ChartNavigator(config.chart_focus_x, config.chart_focus_y)
 
         def read_once():
             nav_shots["n"] += 1
@@ -152,7 +153,7 @@ def run_shadow_job(
             initial_tokens=tokens,
             initial_visible=False,
             read_once=read_once,
-            navigator=navigator or ChartNavigator(config.chart_focus_x, config.chart_focus_y),
+            navigator=navigator,
             max_attempts=config.auto_right_max_attempts,
             redraw_s=config.redraw_delay_ms / 1000,
         )
@@ -180,6 +181,8 @@ def run_shadow_job(
         navigation_reason=nav_reason,
         forced_reasons=[nav_reason] if triggered and not success and nav_reason else None,
     )
+    if triggered and hasattr(navigator, "reset_chart_view"):
+        navigator.reset_chart_view(window)
     result.entry_raw = " | ".join(entry_raw)
     result.window_bounds = method or "NONE"
     if not frames and not result.reasons:

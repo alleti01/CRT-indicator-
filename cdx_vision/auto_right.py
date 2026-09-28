@@ -11,7 +11,9 @@ from cdx_vision.models import OCRToken
 from cdx_vision.window_locator import WindowInfo
 
 VK_CONTROL = 0x11
+VK_MENU = 0x12
 VK_RIGHT = 0x27
+VK_R = 0x52
 KEYEVENTF_KEYUP = 0x0002
 
 
@@ -67,6 +69,21 @@ class ChartNavigator:
         user32.keybd_event(VK_RIGHT, 0, KEYEVENTF_KEYUP, 0)
         user32.keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0)
         self.keypresses += 1
+        return True
+
+    def reset_chart_view(self, window: WindowInfo) -> bool:
+        """Alt+R. Returns the chart to the latest candles so it follows price again."""
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        if not self.focus_and_confirm(window):
+            return False
+        if user32.GetForegroundWindow() != window.hwnd:
+            return False
+        user32.keybd_event(VK_MENU, 0, 0, 0)
+        user32.keybd_event(VK_R, 0, 0, 0)
+        user32.keybd_event(VK_R, 0, KEYEVENTF_KEYUP, 0)
+        user32.keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0)
         return True
 
     def _try_foreground(self, hwnd: int) -> None:

@@ -75,6 +75,7 @@ class NinjaTraderExecutionAdapter:
         self.stop_order_id = ""
         self.target_order_id = ""
         self.last_intent: ExecutionIntent | None = None
+        self.chart_stop_crossed = False
         self.last_m0: M0Protection | None = None
         self.last_reconcile: ReconciliationResult | None = None
         self.active_latency: LatencySample | None = None
@@ -201,6 +202,7 @@ class NinjaTraderExecutionAdapter:
         )
         self.expected_entry = intent.expected_entry
         self.signal_atr = intent.signal_atr
+        self.chart_stop_crossed = False
         self._safe_transition(ExecutionState.ENTRY_PENDING)
         self.audit.write("COMMAND_RECEIVED", command=cmd.command, command_id=cmd.command_id)
         self._open_ledger(intent, cmd, now)
@@ -216,6 +218,22 @@ class NinjaTraderExecutionAdapter:
         events = self.transport.send(cmd)
         self._apply_events(events)
         return AdapterResult(True, "ENTRY_COMMAND_SENT", events=events, gate=gate, command=cmd, m0=self.last_m0)
+
+    def _apply_chart_stop_to_m0(self, intent: ExecutionIntent | None) -> None:
+        """Keep the broker stop on the chart price after the real fill."""
+        if self.last_m0 is None or intent is None or intent.chart_stop_price is None or self.actual_fill is None:
+            return
+        from phase74.runtime.chart_stop import chart_stop_for_fill
+
+        applied = chart_stop_for_fill(self.side, float(self.actual_fill), float(intent.chart_stop_price), self.cfg.tick_size)
+        if applied is None:
+            self.chart_stop_crossed = True
+            self.audit.write("CHART_STOP_CROSSED", stop=intent.chart_stop_price, fill=self.actual_fill)
+            return
+        stop, risk = applied
+        self.last_m0.stop_price = stop
+        self.last_m0.risk = risk
+        self.signal_atr = risk
 
     def place_protection(self, *, quantity: int | None = None) -> AdapterResult:
         if self.actual_fill is None or self.filled_qty < 1:
@@ -399,6 +417,7 @@ class NinjaTraderExecutionAdapter:
                         expected_entry=self.expected_entry,
                         tick_size=self.cfg.tick_size,
                     )
+                    self._apply_chart_stop_to_m0(intent)
                 self.audit.write("FILL", price=self.actual_fill, qty=self.filled_qty)
                 self.ledger.update_last(
                     fill_time=ev.created_at_utc,

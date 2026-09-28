@@ -133,6 +133,7 @@ class LiveStack:
         self._trade_lock = threading.Lock()
         self._pending_vision: dict[str, tuple] = {}
         self._vision_released: set[str] = set()
+        self._visual_stops: dict[str, float] = {}
         self._vision_orders_enabled = False
         try:
             from cdx_vision.config import VisionConfig
@@ -231,6 +232,10 @@ class LiveStack:
             result = original_execute(signal, state_before, take_action)
             if result.get("ok") and self.engine.mgmt is not None:
                 self._apply_fixed_stop()
+                if not self._apply_chart_stop(signal.signal_id):
+                    self._void_rejected_paper_entry(None)
+                    log.warning("no order, chart stop is through the fill signal=%s", signal.signal_id)
+                    return {"ok": False, "reason": "CHART_STOP_CROSSED"}
             if result.get("ok") and result.get("fill_price") is not None:
                 from phase73.execution.orders import Order, OrderSide
 
@@ -382,6 +387,27 @@ class LiveStack:
             return False
         return True
 
+    def _apply_chart_stop(self, signal_id: str) -> bool:
+        """Put the protective stop on the chart price. True when no chart stop was stored."""
+        visual = self._visual_stops.get(signal_id)
+        mgmt = self.engine.mgmt
+        if visual is None or mgmt is None:
+            return True
+        from phase74.runtime.chart_stop import chart_stop_for_fill
+
+        applied = chart_stop_for_fill(mgmt.side, float(mgmt.entry_price), visual, self.contract.tick_size)
+        if applied is None:
+            return False
+        stop, risk = applied
+        mgmt.stop_price = stop
+        mgmt.risk = risk
+        self._active_entry_risk = risk
+        for snap in (self.engine.book.internal, self.engine.book.desired, self.engine.book.broker):
+            if snap.side == mgmt.side:
+                snap.stop_price = stop
+        log.info("chart stop side=%s stop=%.2f risk=%.2f", mgmt.side, stop, risk)
+        return True
+
     def _apply_fixed_stop(self) -> None:
         """Use a fixed point stop. R multiples stay on that distance."""
         points = self._stop_points
@@ -519,6 +545,7 @@ class LiveStack:
             signal_id=signal.signal_id,
             expected_entry=float(fill_price),
             signal_atr=float(self._active_entry_risk or self._stop_points or signal.atr),
+            chart_stop_price=self._visual_stops.get(signal.signal_id),
             signal_time=signal.signal_time_utc,
             webhook_received=now,
             decision_time=now,
@@ -532,6 +559,9 @@ class LiveStack:
             if ev.event in {"COMMAND_REJECTED", "ORDER_REJECTED"}:
                 return ev.reason or ev.event
         if getattr(adapter, "state", None) == ExecutionState.FILLED_UNPROTECTED:
+            if getattr(adapter, "chart_stop_crossed", False):
+                adapter.flatten()
+                return "CHART_STOP_CROSSED"
             prot = adapter.place_protection()
             log.info("NT execution protect allowed=%s reason=%s", prot.allowed, prot.reason)
         return ""
@@ -656,6 +686,8 @@ class LiveStack:
             result.tp2,
         )
         self._vision_released.add(signal.signal_id)
+        if result.stop is not None:
+            self._visual_stops[signal.signal_id] = float(result.stop)
         with self._trade_lock:
             if not self._pre_entry_checks(signal):
                 log.warning("no order, pre-entry blocked after chart read signal=%s", signal.signal_id)

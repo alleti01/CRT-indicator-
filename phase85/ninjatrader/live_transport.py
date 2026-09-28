@@ -113,7 +113,10 @@ class LiveNtTransport:
         with self._lock:
             adapter.apply_external_events([event])
             if event.event == "FILLED" and adapter.state == ExecutionState.FILLED_UNPROTECTED:
-                adapter.place_protection()
+                if getattr(adapter, "chart_stop_crossed", False):
+                    adapter.flatten()
+                else:
+                    adapter.place_protection()
 
     def _apply_snapshot(self, event: Event) -> None:
         if event.account:

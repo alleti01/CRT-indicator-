@@ -18,6 +18,27 @@ from phase74.market_data.ninjatrader.bridge_server import BridgeStats, NinjaTrad
 log = logging.getLogger("phase74.ninjatrader.live")
 
 
+def bars_for_latest_market(bars: Sequence[Bar]) -> list[Bar]:
+    """Drop older bars from a different market than the newest close.
+
+    An NQ close near 30,000 and an MES close near 7,000 cannot share one ATR.
+    """
+    if not bars:
+        return []
+    anchor = float(bars[-1].close)
+    if anchor <= 0:
+        return list(bars)
+    start = 0
+    for i in range(len(bars) - 1, -1, -1):
+        close = float(bars[i].close)
+        if close <= 0 or close / anchor > 2.0 or close / anchor < 0.5:
+            start = i + 1
+            break
+    else:
+        return list(bars)
+    return list(bars[start:])
+
+
 def load_closed_bars_csv(path: Path, limit: int = 20) -> list[Bar]:
     """Last `limit` closed bars from BarLogger CSV (mid-session restart seed)."""
     if not path.exists():
@@ -171,6 +192,17 @@ class NinjaTraderLiveDataProvider(StreamLiveDataProvider):
 
     def _handle_bar(self, bar: Bar, stats: BridgeStats) -> None:
         self._last_bridge_stats = stats
+        last = self._cache.latest()
+        if last is not None:
+            prev = float(last.close)
+            close = float(bar.close)
+            if prev > 0 and close > 0 and (close / prev > 2.0 or close / prev < 0.5):
+                log.warning(
+                    "ninjatrader price scale changed %.2f -> %.2f — reset bar cache",
+                    prev,
+                    close,
+                )
+                self._reset_bar_cache()
         bar_end = bar.timestamp + timedelta(minutes=1)
         end_dt = bar_end.replace(tzinfo=timezone.utc)
         finalized = self.ingest_tick(bar, finalized=True, now=end_dt)

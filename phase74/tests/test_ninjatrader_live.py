@@ -315,6 +315,15 @@ class TestNinjaTraderLiveProvider(unittest.TestCase):
         self.assertEqual(n, 20)
         self.assertTrue(self.provider.atr_ready)
 
+    def test_bars_for_latest_market_drops_nq_history(self):
+        from phase74.market_data.ninjatrader_live import bars_for_latest_market
+
+        t0 = datetime(2026, 9, 28, 5, 1, tzinfo=timezone.utc)
+        nq = Bar(t0, 30678.5, 30693.5, 30678.25, 30692.5, 100)
+        mes = Bar(t0 + timedelta(minutes=1), 7777.25, 7779.0, 7777.0, 7777.75, 200)
+        kept = bars_for_latest_market([nq, mes])
+        self.assertEqual([b.close for b in kept], [7777.75])
+
     def test_load_closed_bars_csv_reads_logger_rows(self):
         from phase74.market_data.ninjatrader_live import load_closed_bars_csv
 

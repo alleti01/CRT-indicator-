@@ -210,14 +210,15 @@ def main() -> int:
     if args.provider == "ninjatrader":
         md = _build_ninjatrader_provider(cfg, on_nt_bar)
         md.connect()
-        from phase74.market_data.ninjatrader_live import load_closed_bars_csv
+        from phase74.market_data.ninjatrader_live import bars_for_latest_market, load_closed_bars_csv
 
-        seeded = md.seed_closed_bars(
+        seed_bars = bars_for_latest_market(
             load_closed_bars_csv(
                 cfg.log_dir / "bars.csv",
                 limit=2000,
             )
         )
+        seeded = md.seed_closed_bars(seed_bars)
         md._cache.duplicate_bars = 0
         md._cache.out_of_order_bars = 0
         md._cache.gap_bars = 0

@@ -21,7 +21,7 @@ namespace NinjaTrader.NinjaScript.AddOns
     public class CRTExecutionBridge : AddOnBase
     {
         private const int ProtocolVersion = 1;
-        private const int MaxQuantity = 1;
+        private const int MaxQuantity = 5;
         private const string AllowedRoot = "MNQ";
 
         private TcpClient _client;

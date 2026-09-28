@@ -89,7 +89,7 @@ def funded_preflight(adapter: NinjaTraderExecutionAdapter) -> list[str]:
     add(cfg.funded_account_verified and cfg.allowed_funded_account == cfg.expected_account, "FUNDED_ACCOUNT_VERIFIED", "FUNDED_ACCOUNT_NOT_VERIFIED")
     lines.append(f"CONTRACT={cfg.allowed_instrument_root}")
     add(adapter.transport.contract_verified, "CONTRACT_VERIFIED", "CONTRACT_UNVERIFIED")
-    add(cfg.max_quantity == 1, "MAX_QUANTITY=1", f"MAX_QUANTITY={cfg.max_quantity}")
+    add(1 <= cfg.max_quantity <= 5, f"MAX_QUANTITY={cfg.max_quantity}", f"MAX_QUANTITY={cfg.max_quantity}")
     add(adapter.position_reconciled and adapter.side == "FLAT", "POSITION_RECONCILED", "POSITION_NOT_RECONCILED")
     if adapter.side == "FLAT":
         lines.append("POSITION=FLAT")

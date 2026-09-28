@@ -130,8 +130,6 @@ def evaluate_entry_gates(ctx: GateContext) -> GateResult:
             failed.append("REJECT_ACCOUNT_NOT_ALLOWED")
         if not ctx.sim_gate_pass:
             failed.append("SIM_GATE_NOT_PASS")
-        if cfg.max_quantity != 1 or ctx.quantity != 1:
-            failed.append("REJECT_MAX_QUANTITY")
 
     if ctx.extra_failed:
         failed.append(ctx.extra_failed)

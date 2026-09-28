@@ -30,6 +30,7 @@ def p74_cfg(**mode) -> Phase74Config:
     raw = copy.deepcopy(load_phase74_config().raw)
     raw.setdefault("mode", {}).update({"shadow_mode": False, "paper_mode": True, "trading_enabled": True, "require_chart_levels": False, **mode})
     raw.setdefault("contracts", {})["contract_month"] = "202609"
+    raw.setdefault("contracts", {})["default_quantity"] = 1
     raw.setdefault("logging", {})["log_dir"] = tempfile.mkdtemp()
     raw.setdefault("persistence", {})["state_file"] = str(Path(raw["logging"]["log_dir"]) / "state.json")
     raw["persistence"]["idempotency_file"] = str(Path(raw["logging"]["log_dir"]) / "idempotency.jsonl")

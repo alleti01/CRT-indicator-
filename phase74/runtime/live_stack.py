@@ -226,6 +226,7 @@ class LiveStack:
             if bar is None:
                 return {"ok": False, "reason": "NO_BAR"}
             action_name = "MARKET_BUY" if signal.direction == "LONG" else "MARKET_SELL"
+            qty = max(1, int(self.contract.default_quantity or 1))
             if self.idempotency.seen(signal.signal_id, action_name):
                 return {"ok": False, "reason": "ORDER_IDEMPOTENT_DUPLICATE"}
             signal = self._with_live_atr(signal)
@@ -240,7 +241,11 @@ class LiveStack:
                 from phase73.execution.orders import Order, OrderSide
 
                 side = OrderSide.BUY if signal.direction == "LONG" else OrderSide.SELL
-                order = Order.new(action_name, side, 1, self.cfg.symbol, signal.signal_id)
+                order = Order.new(action_name, side, qty, self.cfg.symbol, signal.signal_id)
+                if self.engine.mgmt is not None:
+                    for snap in (self.engine.book.internal, self.engine.book.desired, self.engine.book.broker):
+                        if snap.side == self.engine.mgmt.side:
+                            snap.quantity = qty
                 self.broker.submit(order, result["fill_price"])
                 self.idempotency.record(signal.signal_id, action_name, order_id=order.order_id)
                 risk = self._active_entry_risk or self.engine.cfg.stop_atr * signal.atr
@@ -538,7 +543,7 @@ class LiveStack:
             return "SIGNAL_CONTRACT_MISMATCH"
         intent = ExecutionIntent(
             side=signal.direction,
-            quantity=1,
+            quantity=max(1, int(self.contract.default_quantity or 1)),
             instrument=instrument,
             command_id=str(uuid.uuid4()),
             event_id=signal.signal_id,

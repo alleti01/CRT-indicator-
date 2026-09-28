@@ -333,6 +333,17 @@ def main() -> int:
                 price = float(bar.close) if bar is not None else float(spec["price"])
                 result = stack.manual_reentry(side=str(spec["side"]), stop=float(spec["stop"]), price=price)
                 print("MANUAL_REENTRY", json.dumps(result, default=str), flush=True)
+            flatten_file = os.environ.get("MANUAL_FLATTEN_FILE", "").strip()
+            if (
+                flatten_file
+                and stack.execution_adapter is not None
+                and stack.execution_adapter.transport.authenticated
+                and Path(flatten_file).exists()
+            ):
+                Path(flatten_file).unlink(missing_ok=True)
+                os.environ.pop("MANUAL_FLATTEN_FILE", None)
+                result = stack.execution_adapter.flatten()
+                print("MANUAL_FLATTEN", result.allowed, result.reason, flush=True)
             if health.state.value == "DATA_HEALTHY" and last_count >= int(
                 cfg.section("market_data").get("ninjatrader_bootstrap_bars", 15)
             ):

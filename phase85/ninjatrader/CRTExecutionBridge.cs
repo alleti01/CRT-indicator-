@@ -22,7 +22,7 @@ namespace NinjaTrader.NinjaScript.AddOns
     {
         private const int ProtocolVersion = 1;
         private const int MaxQuantity = 1;
-        private const string AllowedRoot = "MNQ";
+        private const string AllowedRoot = "MES";
 
         private TcpClient _client;
         private NetworkStream _stream;
@@ -64,7 +64,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 BridgeHost = "127.0.0.1";
                 BridgePort = 8766;
                 ExpectedAccount = "TDFYSL50366329071";
-                ExpectedContract = "MNQ 12-26";
+                ExpectedContract = "MES 12-26";
             }
             else if (State == State.Realtime || State == State.Configure)
             {
@@ -87,7 +87,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                     if (string.IsNullOrWhiteSpace(ExpectedAccount))
                         ExpectedAccount = "TDFYSL50366329071";
                     if (string.IsNullOrWhiteSpace(ExpectedContract))
-                        ExpectedContract = "MNQ 12-26";
+                        ExpectedContract = "MES 12-26";
                     if (BridgeHost != "127.0.0.1" && BridgeHost != "localhost")
                     {
                         Print("CRTExecutionBridge refuse non-local host");

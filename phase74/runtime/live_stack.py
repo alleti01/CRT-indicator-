@@ -39,6 +39,16 @@ from phase73.risk.reconciliation import reconcile as p73_reconcile
 log = logging.getLogger("phase74.stack")
 
 
+def _market_root(name: str) -> str:
+    """NQ and MNQ are one market. ES and MES are another."""
+    root = (name or "").upper().split()[0]
+    if root in {"NQ", "MNQ"}:
+        return "NQ"
+    if root in {"ES", "MES"}:
+        return "ES"
+    return root
+
+
 def _keep_winner_past_hour(reason: str, mgmt, bar) -> bool:
     """A one-hour time stop does not apply once the trade is green."""
     if reason != "MAX_HOLD_60M" or mgmt is None or bar is None:
@@ -461,10 +471,18 @@ class LiveStack:
         from phase85.execution.state_machine import ExecutionState
 
         now = datetime.now(timezone.utc)
+        instrument = str(adapter.cfg.expected_contract or "MES 12-26")
+        if _market_root(signal.symbol) != _market_root(instrument):
+            log.warning(
+                "NT execution skip: signal %s does not match order contract %s",
+                signal.symbol,
+                instrument,
+            )
+            return "SIGNAL_CONTRACT_MISMATCH"
         intent = ExecutionIntent(
             side=signal.direction,
             quantity=1,
-            instrument=str(adapter.cfg.expected_contract or "MNQ 12-26"),
+            instrument=instrument,
             command_id=str(uuid.uuid4()),
             event_id=signal.signal_id,
             signal_id=signal.signal_id,

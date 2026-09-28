@@ -1,0 +1,6 @@
+variant,trades,note
+LIVE_BASELINE,11,Exact entry and exit prices only. No CDX native stop.
+C0_CDX_NATIVE_TP1,0,No exact CDX Entry/SL/TP1 for last week.
+H1_CDX_050R_STRUCTURAL,0,No exact CDX Entry/SL/TP1 for last week.
+H2_CDX_050R_PROFIT_STRUCTURAL,0,No exact CDX Entry/SL/TP1 for last week.
+H3_CDX_050R_PLUS010R,0,No exact CDX Entry/SL/TP1 for last week.

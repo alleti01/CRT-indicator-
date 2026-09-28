@@ -16,6 +16,7 @@ class ExecutionIntent:
     expected_entry: float | None = None
     signal_atr: float = 0.0
     chart_stop_price: float | None = None
+    chart_target_price: float | None = None
     signal_time: datetime | None = None
     webhook_received: datetime | None = None
     decision_time: datetime | None = None

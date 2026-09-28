@@ -319,6 +319,20 @@ def main() -> int:
                 )
             if stack.execution_adapter is not None:
                 stack.execution_adapter.mark_data_healthy(health.state.value == "DATA_HEALTHY")
+            reentry_file = os.environ.get("MANUAL_REENTRY_FILE", "").strip()
+            if (
+                reentry_file
+                and stack.execution_adapter is not None
+                and stack.execution_adapter.transport.authenticated
+                and Path(reentry_file).exists()
+            ):
+                spec = json.loads(Path(reentry_file).read_text(encoding="utf-8"))
+                Path(reentry_file).unlink(missing_ok=True)
+                os.environ.pop("MANUAL_REENTRY_FILE", None)
+                bar = md.latest_bar()
+                price = float(bar.close) if bar is not None else float(spec["price"])
+                result = stack.manual_reentry(side=str(spec["side"]), stop=float(spec["stop"]), price=price)
+                print("MANUAL_REENTRY", json.dumps(result, default=str), flush=True)
             if health.state.value == "DATA_HEALTHY" and last_count >= int(
                 cfg.section("market_data").get("ninjatrader_bootstrap_bars", 15)
             ):

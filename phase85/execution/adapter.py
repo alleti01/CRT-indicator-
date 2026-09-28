@@ -234,6 +234,12 @@ class NinjaTraderExecutionAdapter:
         self.last_m0.stop_price = stop
         self.last_m0.risk = risk
         self.signal_atr = risk
+        target = intent.chart_target_price
+        if target is not None:
+            if self.side == "LONG" and float(target) > float(self.actual_fill):
+                self.last_m0.target_price = float(target)
+            elif self.side == "SHORT" and float(target) < float(self.actual_fill):
+                self.last_m0.target_price = float(target)
 
     def place_protection(self, *, quantity: int | None = None) -> AdapterResult:
         if self.actual_fill is None or self.filled_qty < 1:

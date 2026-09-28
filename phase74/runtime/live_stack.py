@@ -134,6 +134,8 @@ class LiveStack:
         self._pending_vision: dict[str, tuple] = {}
         self._vision_released: set[str] = set()
         self._visual_stops: dict[str, float] = {}
+        self._bypass_health_once = False
+        self._bypass_day_halt_once = False
         self._vision_orders_enabled = False
         try:
             from cdx_vision.config import VisionConfig
@@ -367,8 +369,11 @@ class LiveStack:
 
     def _pre_entry_checks(self, signal: PineSignal) -> bool:
         if self._day_halt is not None and self._day_halt.should_halt_new_entries(signal.signal_time_utc):
-            log.warning("%s", self._day_halt.reason)
-            return False
+            if self._bypass_day_halt_once:
+                log.warning("manual reentry past day halt %s", self._day_halt.reason)
+            else:
+                log.warning("%s", self._day_halt.reason)
+                return False
         blocked = self._nt_entry_block_reason()
         if blocked:
             log.warning("NT entry blocked reason=%s signal=%s", blocked, signal.signal_id)
@@ -386,11 +391,82 @@ class LiveStack:
             self.engine.state = TraderState.HALTED
             return False
         if self.market_data.health().state.value not in ("DATA_HEALTHY",):
-            log.warning("DATA_UNHEALTHY %s", self.market_data.health().state.value)
-            return False
+            if self._bypass_health_once:
+                log.warning("manual reentry ignoring bar gap %s", self.market_data.health().state.value)
+            else:
+                log.warning("DATA_UNHEALTHY %s", self.market_data.health().state.value)
+                return False
         if not self.cfg.trading_enabled and not self.cfg.shadow_mode:
             return False
         return True
+
+    def manual_reentry(self, *, side: str, stop: float, price: float) -> dict[str, Any]:
+        """Reopen a chart-stop trade without waiting for another webhook."""
+        from phase73.webhook.schemas import WebhookReason, make_test_signal
+        from phase74.latency.tracker import LatencyTracker
+
+        side_name = side.upper()
+        now = datetime.now(timezone.utc)
+        signal_id = "REENTRY-" + now.strftime("%Y%m%dT%H%M%S")
+        self._bypass_health_once = True
+        self._bypass_day_halt_once = True
+        self._visual_stops[signal_id] = float(stop)
+        self._vision_released.add(signal_id)
+        if self.execution_adapter is not None:
+            self.execution_adapter.mark_data_healthy(True)
+        signal = make_test_signal(
+            "SIGNAL_LONG" if side_name == "LONG" else "SIGNAL_SHORT",
+            signal_id=signal_id,
+            symbol=self.cfg.symbol,
+            pine_hash=self.cfg.pine_hash,
+            signal_time_utc=now,
+            signal_bar_time_utc=now,
+            signal_price=float(price),
+            context="BULLISH" if side_name == "LONG" else "BEARISH",
+            state="IN_LONG" if side_name == "LONG" else "IN_SHORT",
+        )
+        log.info("manual reentry %s stop=%.2f price=%.2f", side_name, stop, price)
+        try:
+            result = self.on_webhook_signal(signal, WebhookReason.WEBHOOK_VALID, LatencyTracker())
+        finally:
+            self._bypass_health_once = False
+            self._bypass_day_halt_once = False
+        if result.get("ok") and result.get("fill_price") is not None:
+            return result
+        if self.execution_adapter is None:
+            return result
+        log.warning("manual reentry paper path skipped (%s); sending the MNQ order", result.get("reason") or result.get("action"))
+        return self._send_bracket(side_name, float(stop), float(price), signal_id)
+
+    def _send_bracket(self, side: str, stop: float, price: float, signal_id: str) -> dict[str, Any]:
+        from phase85.execution.intent import ExecutionIntent
+
+        adapter = self.execution_adapter
+        if adapter is None:
+            return {"ok": False, "reason": "NO_EXECUTION"}
+        now = datetime.now(timezone.utc)
+        cap_points = 100.0
+        target = price + cap_points if side == "LONG" else price - cap_points
+        adapter.mark_data_healthy(True)
+        intent = ExecutionIntent(
+            side=side,
+            quantity=max(1, int(self.contract.default_quantity or 1)),
+            instrument=str(adapter.cfg.expected_contract or "MNQ 12-26"),
+            command_id=str(uuid.uuid4()),
+            event_id=signal_id,
+            signal_id=signal_id,
+            expected_entry=price,
+            signal_atr=abs(price - stop),
+            chart_stop_price=stop,
+            chart_target_price=target,
+            signal_time=now,
+            webhook_received=now,
+            decision_time=now,
+            phase73_decision="TAKE",
+        )
+        sent = adapter.request_entry(intent)
+        log.info("manual bracket allowed=%s reason=%s", sent.allowed, sent.reason)
+        return {"ok": bool(sent.allowed), "reason": sent.reason, "action": "MANUAL_BRACKET"}
 
     def _apply_chart_stop(self, signal_id: str) -> bool:
         """Put the protective stop on the chart price. True when no chart stop was stored."""
@@ -656,7 +732,11 @@ class LiveStack:
                     self._quality_log.log(qdec, signal_id=signal.signal_id, direction=signal.direction)
                 log.info("quality skip signal=%s reason=%s", signal.signal_id, lock_reason)
                 return {"ok": False, "reason": lock_reason, "quality": lock_reason}
-        if self._day_halt is not None and self._day_halt.should_halt_new_entries(signal.signal_time_utc):
+        if (
+            self._day_halt is not None
+            and not self._bypass_day_halt_once
+            and self._day_halt.should_halt_new_entries(signal.signal_time_utc)
+        ):
             log.warning("%s signal=%s", self._day_halt.reason, signal.signal_id)
             return {"ok": False, "reason": self._day_halt.reason}
         tracker.decision_at = datetime.now(timezone.utc)

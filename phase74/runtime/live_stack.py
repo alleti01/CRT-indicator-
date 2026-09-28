@@ -471,7 +471,7 @@ class LiveStack:
         from phase85.execution.state_machine import ExecutionState
 
         now = datetime.now(timezone.utc)
-        instrument = str(adapter.cfg.expected_contract or "MES 12-26")
+        instrument = str(adapter.cfg.expected_contract or "MNQ 12-26")
         if _market_root(signal.symbol) != _market_root(instrument):
             log.warning(
                 "NT execution skip: signal %s does not match order contract %s",

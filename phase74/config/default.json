@@ -2,7 +2,7 @@
   "phase": 74,
   "extends": "phase73/config/default.json",
   "strategy": {
-    "symbol": "MES"
+    "symbol": "MNQ"
   },
   "mode": {
     "shadow_mode": true,
@@ -12,7 +12,7 @@
   },
   "market_data": {
     "provider": "STREAM_LIVE_PROVIDER",
-    "symbol": "MES",
+    "symbol": "MNQ",
     "exchange": "GLBX",
     "bar_timezone": "UTC",
     "staleness_limit_seconds": 90,
@@ -24,7 +24,7 @@
     "ninjatrader_port": 8765,
     "ninjatrader_auth_env_var": "NINJATRADER_BRIDGE_TOKEN",
     "ninjatrader_bootstrap_bars": 15,
-    "ninjatrader_expected_contract_prefix": "MES",
+    "ninjatrader_expected_contract_prefix": "MNQ",
     "ninjatrader_preserve_bars_on_disconnect": true,
     "log_bars_csv": true
   },
@@ -68,7 +68,7 @@
     "max_atr_points": 18.0,
     "pa_lookback_bars": 4,
     "pa_min_bodies": 3,
-    "nq_point_value": 5.0,
+    "nq_point_value": 2.0,
     "day_max_losers": 2,
     "day_max_loss_dollars": 400.0,
     "day_max_winners": 1,
@@ -88,7 +88,7 @@
     "profit_cap_r": 3.0,
     "profit_cap_dollars": 1000.0,
     "reversal_trail_points": 10.0,
-    "point_value": 5.0
+    "point_value": 2.0
   },
   "range_lock": {
     "enabled": false,

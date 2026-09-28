@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import uuid
 from dataclasses import replace
 from pathlib import Path
@@ -129,6 +130,19 @@ class LiveStack:
         )
         self._trade_hi: float | None = None
         self._trade_lo: float | None = None
+        self._trade_lock = threading.Lock()
+        self._pending_vision: dict[str, tuple] = {}
+        self._vision_released: set[str] = set()
+        self._vision_orders_enabled = False
+        try:
+            from cdx_vision.config import VisionConfig
+            from cdx_vision.shadow_hook import add_result_listener
+
+            self._vision_orders_enabled = bool(cfg.section("mode").get("require_chart_levels", False)) and VisionConfig.from_env().enabled
+            if self._vision_orders_enabled:
+                add_result_listener(self._on_chart_levels)
+        except Exception:
+            log.exception("vision order gate not installed")
 
         p73 = cfg.to_phase73_config()
         log_dir = cfg.log_dir
@@ -180,6 +194,17 @@ class LiveStack:
         original_exit = self.engine._execute_exit
 
         def execute_entry(signal, state_before, take_action):
+            if (
+                not self.cfg.shadow_mode
+                and self.cfg.trading_enabled
+                and self._vision_orders_enabled
+                and signal.signal_id not in self._vision_released
+            ):
+                self._pending_vision[signal.signal_id] = (signal, state_before, take_action)
+                self.engine.state = TraderState.FLAT
+                self.engine.pending_signal = None
+                log.info("WAIT_VISION signal=%s", signal.signal_id)
+                return {"ok": True, "action": "WAIT_VISION"}
             if self.cfg.shadow_mode:
                 entry = evaluate_entry(signal, self.market_data, self.engine.cfg, position_side=self.engine.book.internal.side)
                 action = "WOULD_ENTER" if entry.action in (TraderAction.TAKE_LONG, TraderAction.TAKE_SHORT) else f"WOULD_{entry.action.value}"
@@ -188,6 +213,10 @@ class LiveStack:
                 self.engine.state = TraderState.FLAT
                 self.engine.pending_signal = None
                 return {"ok": True, "shadow": True, "action": action}
+            with self._trade_lock:
+                return commit_live_entry(signal, state_before, take_action)
+
+        def commit_live_entry(signal, state_before, take_action):
             if not self._pre_entry_checks(signal):
                 self.engine.state = TraderState.FLAT
                 self.engine.pending_signal = None
@@ -246,6 +275,8 @@ class LiveStack:
                     log.warning("void paper entry NT rejected reason=%s signal=%s", rejected, signal.signal_id)
                     return {"ok": False, "reason": rejected}
             return result
+
+        self._commit_live_entry = commit_live_entry
 
         def execute_exit(state_before, exit_dec, bar):
             trade_id = self._active_trade_id
@@ -466,7 +497,7 @@ class LiveStack:
             return ""
         if not getattr(adapter.transport, "authenticated", False):
             log.warning("NT execution skip: CRTExecutionBridge not connected")
-            return ""
+            return "EXECUTION_NOT_CONNECTED"
         from phase85.execution.intent import ExecutionIntent
         from phase85.execution.state_machine import ExecutionState
 
@@ -603,7 +634,43 @@ class LiveStack:
         self.engine.events.log_signal({**signal.to_dict(), "latency": lat})
         return result
 
+    def _on_chart_levels(self, result) -> None:
+        """Place the held order only after Entry, SL, TP1, and TP2 were read."""
+        pending = self._pending_vision.pop(getattr(result, "signal_id", ""), None)
+        if pending is None:
+            return
+        from cdx_vision.order_gate import levels_allow_order
+
+        ok, why = levels_allow_order(result)
+        signal, state_before, take_action = pending
+        if not ok:
+            log.warning("no order, chart read failed signal=%s reason=%s", signal.signal_id, why)
+            self.engine.events.log_error({"vision_block": why, "signal_id": signal.signal_id})
+            return
+        log.info(
+            "chart levels pulled signal=%s entry=%s stop=%s tp1=%s tp2=%s",
+            signal.signal_id,
+            result.native_entry or result.entry,
+            result.stop,
+            result.tp1,
+            result.tp2,
+        )
+        self._vision_released.add(signal.signal_id)
+        with self._trade_lock:
+            if not self._pre_entry_checks(signal):
+                log.warning("no order, pre-entry blocked after chart read signal=%s", signal.signal_id)
+                return
+            commit = getattr(self, "_commit_live_entry", None)
+            if commit is None:
+                log.error("no order, live entry path missing signal=%s", signal.signal_id)
+                return
+            commit(signal, state_before, take_action)
+
     def on_bar(self) -> dict[str, Any]:
+        with self._trade_lock:
+            return self._on_bar_body()
+
+    def _on_bar_body(self) -> dict[str, Any]:
         if self.execution_adapter is not None:
             try:
                 healthy = self.market_data.health().state.value == "DATA_HEALTHY"

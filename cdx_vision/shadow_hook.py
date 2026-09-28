@@ -15,6 +15,13 @@ from cdx_vision.models import VisionCaptureRequest
 log = logging.getLogger("cdx_vision.shadow")
 _inflight: set[str] = set()
 _lock = Lock()
+_listeners: list = []
+
+
+def add_result_listener(fn) -> None:
+    """Live stack listens. The vision thread still never places an order."""
+    if fn not in _listeners:
+        _listeners.append(fn)
 
 
 def enqueue_shadow(signal, received_at: datetime | None = None) -> None:
@@ -42,13 +49,20 @@ def enqueue_shadow(signal, received_at: datetime | None = None) -> None:
 
 
 def _run(config: VisionConfig, request: VisionCaptureRequest) -> None:
+    result = None
     try:
         from cdx_vision.live_job import run_shadow_job
 
         log.info("CDX_VISION_WORKER_STARTED signal_id=%s", request.signal_id)
-        run_shadow_job(request, config)
+        result = run_shadow_job(request, config)
     except Exception:
         log.exception("cdx vision shadow failed signal_id=%s", request.signal_id)
     finally:
         with _lock:
             _inflight.discard(request.signal_id)
+        if result is not None:
+            for fn in list(_listeners):
+                try:
+                    fn(result)
+                except Exception:
+                    log.exception("vision result listener failed signal_id=%s", request.signal_id)

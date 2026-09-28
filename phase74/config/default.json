@@ -8,7 +8,8 @@
     "shadow_mode": true,
     "paper_mode": true,
     "trading_enabled": false,
-    "external_order_routing": false
+    "external_order_routing": false,
+    "require_chart_levels": true
   },
   "market_data": {
     "provider": "STREAM_LIVE_PROVIDER",

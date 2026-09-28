@@ -50,7 +50,12 @@ class TrailOverlay:
         risk = mgmt.risk
         if risk <= 0:
             return None
-        cap = self.cfg.profit_cap_r * risk if self.cfg.profit_cap_r > 0 else self.cfg.profit_cap_points
+        caps = []
+        if self.cfg.profit_cap_r > 0:
+            caps.append(self.cfg.profit_cap_r * risk)
+        if self.cfg.profit_cap_points > 0:
+            caps.append(self.cfg.profit_cap_points)
+        cap = min(caps) if caps else 0.0
         if cap > 0:
             return self._cap_or_reversal(mgmt, bar, cap)
 

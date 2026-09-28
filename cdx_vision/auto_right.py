@@ -11,9 +11,10 @@ from cdx_vision.models import OCRToken
 from cdx_vision.window_locator import WindowInfo
 
 VK_CONTROL = 0x11
+VK_SHIFT = 0x10
 VK_MENU = 0x12
+VK_ESCAPE = 0x1B
 VK_RIGHT = 0x27
-VK_R = 0x52
 KEYEVENTF_KEYUP = 0x0002
 
 
@@ -72,7 +73,10 @@ class ChartNavigator:
         return True
 
     def reset_chart_view(self, window: WindowInfo) -> bool:
-        """Alt+R. Returns the chart to the latest candles so it follows price again."""
+        """Alt+Shift+Right. Jumps to the latest bar so the chart follows price again.
+
+        Alt+R is not used. On this chart it opens the signal settings.
+        """
         import ctypes
 
         user32 = ctypes.windll.user32
@@ -80,9 +84,13 @@ class ChartNavigator:
             return False
         if user32.GetForegroundWindow() != window.hwnd:
             return False
+        user32.keybd_event(VK_ESCAPE, 0, 0, 0)
+        user32.keybd_event(VK_ESCAPE, 0, KEYEVENTF_KEYUP, 0)
         user32.keybd_event(VK_MENU, 0, 0, 0)
-        user32.keybd_event(VK_R, 0, 0, 0)
-        user32.keybd_event(VK_R, 0, KEYEVENTF_KEYUP, 0)
+        user32.keybd_event(VK_SHIFT, 0, 0, 0)
+        user32.keybd_event(VK_RIGHT, 0, 0, 0)
+        user32.keybd_event(VK_RIGHT, 0, KEYEVENTF_KEYUP, 0)
+        user32.keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, 0)
         user32.keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0)
         return True
 

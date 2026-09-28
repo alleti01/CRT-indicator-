@@ -407,6 +407,7 @@ class LiveStack:
         mgmt.stop_price = stop
         mgmt.risk = risk
         self._active_entry_risk = risk
+        self._wick_target = None
         for snap in (self.engine.book.internal, self.engine.book.desired, self.engine.book.broker):
             if snap.side == mgmt.side:
                 snap.stop_price = stop

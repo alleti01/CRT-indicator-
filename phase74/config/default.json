@@ -1,6 +1,9 @@
 {
   "phase": 74,
   "extends": "phase73/config/default.json",
+  "strategy": {
+    "symbol": "MES"
+  },
   "mode": {
     "shadow_mode": true,
     "paper_mode": true,

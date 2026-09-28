@@ -50,7 +50,7 @@ class Phase74IntegrationTests(unittest.TestCase):
         cfg = load_phase74_config().to_phase73_config()
         td = tempfile.TemporaryDirectory()
         recv = SecureWebhookReceiver(cfg, "secret", lambda s, r, t: None, deduplicator=__import__("phase73.webhook.deduplicator", fromlist=["SignalDeduplicator"]).SignalDeduplicator(Path(td.name) / "ids.jsonl"))
-        p = make_test_signal().to_dict()
+        p = make_test_signal(symbol="MES").to_dict()
         hdrs = {"Authorization": "Bearer secret"}
         self.assertTrue(recv.handle_payload(p, headers=hdrs)[0])
         self.assertFalse(recv.handle_payload(p, headers=hdrs)[0])
@@ -61,7 +61,7 @@ class Phase74IntegrationTests(unittest.TestCase):
         cfg = load_phase74_config().to_phase73_config()
         td = tempfile.TemporaryDirectory()
         recv = SecureWebhookReceiver(cfg, "secret", lambda s, r, t: None, deduplicator=__import__("phase73.webhook.deduplicator", fromlist=["SignalDeduplicator"]).SignalDeduplicator(Path(td.name) / "ids.jsonl"))
-        p = make_test_signal().to_dict()
+        p = make_test_signal(symbol="MES").to_dict()
         self.assertTrue(recv.handle_payload(p, headers={}, query_token="secret")[0])
         self.assertFalse(recv.handle_payload(p, headers={}, query_token="wrong")[0])
         td.cleanup()
@@ -77,7 +77,7 @@ class Phase74IntegrationTests(unittest.TestCase):
                 "phase73.webhook.deduplicator", fromlist=["SignalDeduplicator"]
             ).SignalDeduplicator(Path(td.name) / "ids.jsonl"),
         )
-        p = make_test_signal().to_dict()
+        p = make_test_signal(symbol="MES").to_dict()
         p["signal_time_utc"] = " " + p["signal_time_utc"]
         p["signal_bar_time_utc"] = " " + p["signal_bar_time_utc"]
         ok, reason, detail = recv.handle_payload(p, headers={"Authorization": "Bearer secret"})
@@ -87,13 +87,13 @@ class Phase74IntegrationTests(unittest.TestCase):
     def test_p74_03_stale_webhook(self):
         cfg = load_phase74_config().to_phase73_config()
         old = datetime.now(timezone.utc) - timedelta(seconds=500)
-        p = make_test_signal(signal_time_utc=old, signal_bar_time_utc=old).to_dict()
+        p = make_test_signal(symbol="MES", signal_time_utc=old, signal_bar_time_utc=old).to_dict()
         r = validate_webhook_payload(p, cfg)
         self.assertEqual(r.reason, WebhookReason.SIGNAL_STALE)
 
     def test_p74_04_bad_pine_hash(self):
         cfg = load_phase74_config().to_phase73_config()
-        p = make_test_signal().to_dict()
+        p = make_test_signal(symbol="MES").to_dict()
         p["pine_hash"] = "bad"
         r = validate_webhook_payload(p, cfg)
         self.assertEqual(r.reason, WebhookReason.SIGNAL_HASH_MISMATCH)

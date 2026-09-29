@@ -355,6 +355,16 @@ class GlobexEntryBlockTests(unittest.TestCase):
         ts = datetime(2026, 9, 18, 20, 0, tzinfo=timezone.utc)  # 4:00 PM ET
         self.assertEqual(new_entries_blocked_session(ts), "SKIP_GLOBEX")
 
+    def test_thin_reopen_blocks_until_tokyo_open(self) -> None:
+        from phase74.quality.day_halt import entries_blocked_thin_reopen
+
+        reopen = datetime(2026, 9, 28, 22, 30, tzinfo=timezone.utc)  # 6:30 PM ET
+        self.assertEqual(entries_blocked_thin_reopen(reopen), "SKIP_THIN_REOPEN")
+        asia = datetime(2026, 9, 29, 0, 0, tzinfo=timezone.utc)  # 8:00 PM ET
+        self.assertEqual(entries_blocked_thin_reopen(asia), "")
+        afternoon = datetime(2026, 9, 28, 18, 0, tzinfo=timezone.utc)  # 2:00 PM ET
+        self.assertEqual(entries_blocked_thin_reopen(afternoon), "")
+
     def test_allow_globex_opt_in(self) -> None:
         ts = datetime(2026, 9, 18, 12, 0, tzinfo=timezone.utc)
         self.assertEqual(new_entries_blocked_session(ts, allow_globex_entries=True), "")

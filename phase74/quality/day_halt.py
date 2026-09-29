@@ -35,6 +35,28 @@ def session_key_ny(now: datetime | None = None) -> tuple[date, str]:
     return local.date() - timedelta(days=1), "globex"
 
 
+def entries_blocked_thin_reopen(now: datetime | None = None) -> str:
+    """No new entries from the 6:00pm ET reopen until Tokyo cash open.
+
+    That stretch is the thin Globex reopen. Asia begins at 9:00am Tokyo,
+    which is 8:00pm ET in summer and 7:00pm ET in winter.
+    """
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    local = now.astimezone(_NY)
+    if local.time() < time(18, 0):
+        return ""
+    tokyo_open = datetime.combine(
+        local.date() + timedelta(days=1),
+        time(9, 0),
+        tzinfo=ZoneInfo("Asia/Tokyo"),
+    ).astimezone(_NY)
+    if local < tokyo_open:
+        return "SKIP_THIN_REOPEN"
+    return ""
+
+
 def new_entries_blocked_session(
     now: datetime | None = None,
     *,

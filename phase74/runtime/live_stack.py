@@ -26,6 +26,7 @@ from phase74.latency.tracker import LatencyTracker
 from phase74.market_data.live_provider import StreamLiveDataProvider
 from phase74.quality.day_halt import (
     PropDayHalt,
+    entries_blocked_thin_reopen,
     new_entries_blocked_session,
     seed_day_halt_from_paper_trades,
 )
@@ -433,6 +434,8 @@ class LiveStack:
             self._bypass_day_halt_once = False
         if result.get("ok") and result.get("fill_price") is not None:
             return result
+        if result.get("reason") == "SKIP_THIN_REOPEN":
+            return result
         if self.execution_adapter is None:
             return result
         log.warning("manual reentry paper path skipped (%s); sending the MNQ order", result.get("reason") or result.get("action"))
@@ -691,6 +694,16 @@ class LiveStack:
                 )
             log.info("quality skip signal=%s reason=%s", signal.signal_id, globex_block)
             return {"ok": False, "reason": globex_block, "quality": globex_block}
+        thin = entries_blocked_thin_reopen(signal.signal_time_utc)
+        if thin:
+            if self._quality_log is not None:
+                self._quality_log.log(
+                    QualityDecision(decision="SKIP", reason=thin),
+                    signal_id=signal.signal_id,
+                    direction=signal.direction,
+                )
+            log.info("quality skip signal=%s reason=%s", signal.signal_id, thin)
+            return {"ok": False, "reason": thin, "quality": thin}
         repeat = self._cdx_repeat_reason(signal)
         if repeat:
             if self._quality_log is not None:

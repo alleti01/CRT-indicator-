@@ -57,6 +57,20 @@ def entries_blocked_thin_reopen(now: datetime | None = None) -> str:
     return ""
 
 
+def entries_blocked_until(now: datetime | None, until_ny: datetime | None) -> str:
+    """No new entries before a New York deadline. Empty once that time has passed."""
+    if until_ny is None:
+        return ""
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    local = now.astimezone(_NY)
+    deadline = until_ny.astimezone(_NY) if until_ny.tzinfo else until_ny.replace(tzinfo=_NY)
+    if local < deadline:
+        return "SKIP_UNTIL_ASIA"
+    return ""
+
+
 def new_entries_blocked_session(
     now: datetime | None = None,
     *,

@@ -27,6 +27,7 @@ from phase74.market_data.live_provider import StreamLiveDataProvider
 from phase74.quality.day_halt import (
     PropDayHalt,
     entries_blocked_thin_reopen,
+    entries_blocked_until,
     new_entries_blocked_session,
     seed_day_halt_from_paper_trades,
 )
@@ -99,6 +100,8 @@ class LiveStack:
         self._last_cdx_direction: str | None = None
         self._last_cdx_time: datetime | None = None
         self._allow_globex_entries = bool(qg.get("allow_globex_entries", False))
+        raw_until = str(qg.get("no_entries_until_ny") or "").strip()
+        self._no_entries_until = datetime.fromisoformat(raw_until) if raw_until else None
         self._quality_cfg = QualityGateConfig.from_dict(qg)
         self._quality_log = QualitySkipLogger(cfg.log_dir) if self._quality_enabled else None
         self._day_halt = (
@@ -434,7 +437,7 @@ class LiveStack:
             self._bypass_day_halt_once = False
         if result.get("ok") and result.get("fill_price") is not None:
             return result
-        if result.get("reason") == "SKIP_THIN_REOPEN":
+        if result.get("reason") in {"SKIP_THIN_REOPEN", "SKIP_UNTIL_ASIA"}:
             return result
         if self.execution_adapter is None:
             return result
@@ -704,6 +707,16 @@ class LiveStack:
                 )
             log.info("quality skip signal=%s reason=%s", signal.signal_id, thin)
             return {"ok": False, "reason": thin, "quality": thin}
+        waiting = entries_blocked_until(signal.signal_time_utc, self._no_entries_until)
+        if waiting:
+            if self._quality_log is not None:
+                self._quality_log.log(
+                    QualityDecision(decision="SKIP", reason=waiting),
+                    signal_id=signal.signal_id,
+                    direction=signal.direction,
+                )
+            log.info("quality skip signal=%s reason=%s", signal.signal_id, waiting)
+            return {"ok": False, "reason": waiting, "quality": waiting}
         repeat = self._cdx_repeat_reason(signal)
         if repeat:
             if self._quality_log is not None:

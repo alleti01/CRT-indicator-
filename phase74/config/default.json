@@ -76,7 +76,8 @@
     "day_big_win_dollars": 1000.0,
     "day_giveback_arm_dollars": 400.0,
     "day_giveback_dollars": 300.0,
-    "allow_globex_entries": true
+    "allow_globex_entries": true,
+    "no_entries_until_ny": "2026-09-29T20:00:00"
   },
   "risk": {
     "stop_points": 14.25

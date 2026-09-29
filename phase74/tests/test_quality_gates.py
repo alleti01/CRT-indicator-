@@ -355,6 +355,15 @@ class GlobexEntryBlockTests(unittest.TestCase):
         ts = datetime(2026, 9, 18, 20, 0, tzinfo=timezone.utc)  # 4:00 PM ET
         self.assertEqual(new_entries_blocked_session(ts), "SKIP_GLOBEX")
 
+    def test_pause_until_asia_expires_at_8pm(self) -> None:
+        from phase74.quality.day_halt import entries_blocked_until
+
+        deadline = datetime(2026, 9, 29, 20, 0)
+        morning = datetime(2026, 9, 29, 14, 46, tzinfo=timezone.utc)  # 10:46 AM ET
+        self.assertEqual(entries_blocked_until(morning, deadline), "SKIP_UNTIL_ASIA")
+        asia = datetime(2026, 9, 30, 0, 0, tzinfo=timezone.utc)  # 8:00 PM ET
+        self.assertEqual(entries_blocked_until(asia, deadline), "")
+
     def test_thin_reopen_blocks_until_tokyo_open(self) -> None:
         from phase74.quality.day_halt import entries_blocked_thin_reopen
 

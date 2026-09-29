@@ -36,6 +36,7 @@ def p74_cfg(**mode) -> Phase74Config:
     raw["persistence"]["idempotency_file"] = str(Path(raw["logging"]["log_dir"]) / "idempotency.jsonl")
     raw.setdefault("quality_gates", {})["enabled"] = False
     raw["quality_gates"]["allow_globex_entries"] = True
+    raw["quality_gates"]["no_entries_until_ny"] = ""
     raw.setdefault("trail_overlay", {})["enabled"] = False
     raw.setdefault("range_lock", {})["enabled"] = False
     return Phase74Config(raw=raw)

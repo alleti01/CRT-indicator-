@@ -437,7 +437,7 @@ class LiveStack:
             self._bypass_day_halt_once = False
         if result.get("ok") and result.get("fill_price") is not None:
             return result
-        if result.get("reason") in {"SKIP_THIN_REOPEN", "SKIP_UNTIL_ASIA"}:
+        if result.get("reason") == "SKIP_THIN_REOPEN":
             return result
         if self.execution_adapter is None:
             return result

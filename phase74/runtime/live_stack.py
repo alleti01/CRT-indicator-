@@ -448,7 +448,7 @@ class LiveStack:
         if adapter is None:
             return {"ok": False, "reason": "NO_EXECUTION"}
         now = datetime.now(timezone.utc)
-        cap_points = 100.0
+        cap_points = float(self._trail_cfg.profit_cap_points or 0.0) or 71.43
         target = price + cap_points if side == "LONG" else price - cap_points
         adapter.mark_data_healthy(True)
         intent = ExecutionIntent(

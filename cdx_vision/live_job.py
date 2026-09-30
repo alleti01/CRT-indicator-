@@ -222,13 +222,16 @@ def _visible_frames(window, request: VisionCaptureRequest, engine) -> tuple[list
         images.append(shot.image)
         reads.append(read)
         if index == 0 and (read.reasons or not read.tokens):
-            debug = Path("cdx_vision/debug") / request.signal_id
-            save_debug(
-                debug,
-                shot.image,
-                read,
-                {"signal_id": request.signal_id, "symbol": request.ticker, "side": request.direction, "live_edge": True},
-            )
+            safe_id = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in request.signal_id) or "signal"
+            try:
+                save_debug(
+                    Path("cdx_vision/debug") / safe_id,
+                    shot.image,
+                    read,
+                    {"signal_id": request.signal_id, "symbol": request.ticker, "side": request.direction, "live_edge": True},
+                )
+            except OSError:
+                log.exception("vision debug folder skipped signal_id=%s", request.signal_id)
             return [], read.reasons or [Reason.VISION_TP1_NOT_FOUND.value]
         if index == 0:
             time.sleep(0.35)

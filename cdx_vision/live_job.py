@@ -18,6 +18,8 @@ from cdx_vision.ocr import TesseractOcr, chart_crop, preprocess
 from cdx_vision.screen_capture import capture_window, is_minimized
 from cdx_vision.service import VisionBridge
 from cdx_vision.tesseract_cmd import resolve_tesseract
+from cdx_vision.visible_levels import assemble, read_visible_tags, save_debug
+from cdx_vision.visible_route import current_signal_visible, extraction_route
 from cdx_vision.window_locator import list_tradingview_windows
 
 log = logging.getLogger("cdx_vision.live")
@@ -109,6 +111,7 @@ def run_shadow_job(
     tokens, visible, raw, _moved_first = capture("before_navigation.png" if debug_dir else "")
     entry_raw.extend(raw)
     frames: list = []
+    fail_reasons: list[str] = []
     triggered = False
     attempts = 0
     success = False
@@ -138,6 +141,13 @@ def run_shadow_job(
             ]
             if consensus(parsed)[0] is not None:
                 break
+    elif extraction_route(levels_visible=False, marker_visible=current_signal_visible(tokens)) == "VISIBLE_EXTRACTION":
+        triggered = False
+        nav_reason = Reason.VISION_ALREADY_AT_LIVE_EDGE.value
+        frames, extra_reasons = _visible_frames(window, request, engine)
+        if not frames:
+            nav_reason = extra_reasons[0] if extra_reasons else nav_reason
+            fail_reasons = extra_reasons or [nav_reason]
     elif config.auto_right_enabled and should_navigate(_reasons_for(tokens, request, config)):
         triggered = True
         navigator = navigator or ChartNavigator(config.chart_focus_x, config.chart_focus_y)
@@ -161,7 +171,13 @@ def run_shadow_job(
         attempts = state.attempts
         success = state.success
         nav_reason = state.reason
-        if not success and state.reason == "VISION_AUTO_RIGHT_EXHAUSTED":
+        if state.reason == "VISION_AUTO_RIGHT_NO_MOVEMENT":
+            nav_reason = Reason.VISION_ALREADY_AT_LIVE_EDGE.value
+            frames, extra_reasons = _visible_frames(window, request, engine)
+            success = bool(frames)
+            if not frames:
+                fail_reasons = [nav_reason, *extra_reasons]
+        elif not success and state.reason == "VISION_AUTO_RIGHT_EXHAUSTED":
             nav_reason = Reason.VISION_LEVELS_NOT_VISIBLE_AFTER_NAVIGATION.value
     else:
         if tokens:
@@ -173,13 +189,13 @@ def run_shadow_job(
         now=job_started,
         window_title=window.title,
         window_bounds=method or "NONE",
-        initial_levels_visible=visible,
+        initial_levels_visible=visible or bool(frames),
         auto_right_enabled=config.auto_right_enabled,
         auto_right_triggered=triggered,
         auto_right_attempts=attempts,
         auto_right_success=success,
         navigation_reason=nav_reason,
-        forced_reasons=[nav_reason] if triggered and not success and nav_reason else None,
+        forced_reasons=fail_reasons or ([nav_reason] if triggered and not success and nav_reason else None),
     )
     if triggered and hasattr(navigator, "reset_chart_view"):
         navigator.reset_chart_view(window)
@@ -189,6 +205,37 @@ def run_shadow_job(
         result.reasons = [Reason.VISION_CAPTURE_INVALID.value]
         result.state = VisionState.VISION_REJECTED
     return result
+
+
+def _visible_frames(window, request: VisionCaptureRequest, engine) -> tuple[list, list[str]]:
+    """Two settled frames. Empty when the visible chart does not yield a quartet."""
+    reads = []
+    images = []
+    for index in range(2):
+        shot = capture_window(window)
+        if shot is None:
+            return [], [Reason.VISION_CAPTURE_INVALID.value]
+        tags, lines = read_visible_tags(shot.image, engine)
+        read = assemble(tags, direction=request.direction, webhook_price=request.webhook_price)
+        read.lines = lines
+        read.tags = tags
+        images.append(shot.image)
+        reads.append(read)
+        if index == 0 and (read.reasons or not read.tokens):
+            debug = Path("cdx_vision/debug") / request.signal_id
+            save_debug(
+                debug,
+                shot.image,
+                read,
+                {"signal_id": request.signal_id, "symbol": request.ticker, "side": request.direction, "live_edge": True},
+            )
+            return [], read.reasons or [Reason.VISION_TP1_NOT_FOUND.value]
+        if index == 0:
+            time.sleep(0.35)
+    first, second = reads
+    if (first.stop, first.tp1, first.tp2, first.entry) != (second.stop, second.tp1, second.tp2, second.entry):
+        return [], [Reason.VISION_NO_CONSENSUS.value]
+    return [first.tokens, second.tokens], []
 
 
 def _fingerprint(image) -> list[int]:

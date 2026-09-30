@@ -67,7 +67,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Inspect a CDX chart image. Does not place orders.")
     parser.add_argument("image")
     parser.add_argument("--side", default="SHORT")
+    parser.add_argument("--symbol", default="")
     parser.add_argument("--webhook-price", default="")
+    parser.add_argument("--show-lines", action="store_true")
+    parser.add_argument("--show-tags", action="store_true")
+    parser.add_argument("--show-candidates", action="store_true")
     args = parser.parse_args(argv)
     image = Path(args.image)
     price = Decimal(args.webhook_price) if args.webhook_price else None
@@ -75,6 +79,15 @@ def main(argv: list[str] | None = None) -> int:
     if not tokens and image.exists():
         tokens = _ocr_image(image)
     print(format_inspection(tokens, args.side.upper(), price))
+    if args.symbol:
+        from cdx_vision.symbols import accepted_chart_symbol
+
+        print(f"SYMBOL {args.symbol} {'ACCEPTED' if accepted_chart_symbol(args.symbol) else 'REJECTED'}")
+    if image.exists() and (args.show_lines or args.show_tags or args.show_candidates):
+        from cdx_vision.inspect_tags import format_tags
+        from PIL import Image
+
+        print(format_tags(Image.open(image)))
     return 0
 
 

@@ -575,6 +575,13 @@ class LiveStack:
             return ""
         if adapter.state != ExecutionState.HALTED:
             adapter.query_position()
+            import time
+            for _ in range(10):
+                if adapter.side == "FLAT" or not blocks_new_entries(adapter.state):
+                    break
+                time.sleep(0.05)
+        if adapter.side == "FLAT" and adapter.state != ExecutionState.HALTED:
+            return ""
         if not blocks_new_entries(adapter.state):
             return ""
         return "REJECT_POSITION_OPEN"

@@ -1,0 +1,5 @@
+variant,trades,open,unpriced,wins,losses,points,dollars,largest_loss_points,largest_win_points,max_dd_dollars
+v0,3,0,2,1,2,-6.5,-210.0,-36.25,35.75,507.5
+v1,5,0,0,4,1,130.5,1177.0,-36.25,67.25,507.5
+v2,5,0,0,4,1,130.5,1177.0,-36.25,67.25,507.5
+v3,5,0,0,4,1,130.5,1177.0,-36.25,67.25,507.5

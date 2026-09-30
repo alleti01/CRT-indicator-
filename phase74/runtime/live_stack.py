@@ -866,9 +866,31 @@ class LiveStack:
         ):
             trail_dec = self._trail.on_bar(self.engine.mgmt, bar)
             self.engine.book.internal.stop_price = self.engine.mgmt.stop_price
+            self._observe_consolidation_shadow(bar, trail_dec)
             if trail_dec is not None:
                 return self.engine._execute_exit(self.engine.state.value, trail_dec, bar)
         return self.engine.on_bar()
+
+    def _observe_consolidation_shadow(self, bar, trail_dec) -> None:
+        """Record a hypothetical structural stop. The live exit is unchanged."""
+        try:
+            from forward_rehearsal.research.cdx_consolidation_shadow import observe_live_bar
+
+            mgmt = self.engine.mgmt
+            if mgmt is None or bar is None:
+                return
+            observe_live_bar(
+                side=mgmt.side,
+                entry=float(mgmt.entry_price),
+                stop=float(mgmt.stop_price),
+                bar_open=bar.timestamp,
+                high=float(bar.high),
+                low=float(bar.low),
+                close=float(bar.close),
+                legacy_reason="" if trail_dec is None else str(trail_dec.reason),
+            )
+        except Exception:
+            log.debug("consolidation shadow skipped", exc_info=True)
 
     def tick(self) -> bool:
         """Advance live stream one closed bar."""

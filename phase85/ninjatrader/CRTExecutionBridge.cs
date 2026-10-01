@@ -63,7 +63,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 Name = "CRTExecutionBridge";
                 BridgeHost = "127.0.0.1";
                 BridgePort = 8766;
-                ExpectedAccount = "TDFYSL50366329071";
+                ExpectedAccount = "TDFYG50777923925";
                 ExpectedContract = "MNQ 12-26";
             }
             else if (State == State.Realtime || State == State.Configure)
@@ -85,7 +85,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 {
                     DisconnectBridge();
                     if (string.IsNullOrWhiteSpace(ExpectedAccount))
-                        ExpectedAccount = "TDFYSL50366329071";
+                        ExpectedAccount = "TDFYG50777923925";
                     if (string.IsNullOrWhiteSpace(ExpectedContract))
                         ExpectedContract = "MNQ 12-26";
                     if (BridgeHost != "127.0.0.1" && BridgeHost != "localhost")

@@ -49,7 +49,7 @@ if (-not $env:NINJATRADER_EXECUTION_BRIDGE_TOKEN) {
     $env:NINJATRADER_EXECUTION_BRIDGE_TOKEN = $execToken
 }
 
-$account = "TDFYSL50366329071"
+$account = "TDFYG50777923925"
 $contract = "MNQ 12-26"
 Set-EnvKey -Path $envFile -Key "EXPECTED_ACCOUNT" -Value $account
 Set-EnvKey -Path $envFile -Key "ALLOWED_FUNDED_ACCOUNT" -Value $account

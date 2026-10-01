@@ -36,7 +36,7 @@ def _start_execution_layer():
     token = os.environ.get("NINJATRADER_EXECUTION_BRIDGE_TOKEN", "").strip()
     if not token:
         raise RuntimeError("NINJATRADER_EXECUTION_BRIDGE_TOKEN not set — required for --execution")
-    account = os.environ.get("EXPECTED_ACCOUNT", "").strip() or "TDFYSL50366329071"
+    account = os.environ.get("EXPECTED_ACCOUNT", "").strip() or "TDFYG50777923925"
     contract = os.environ.get("EXPECTED_CONTRACT", "").strip() or "MNQ 12-26"
     funded = os.environ.get("ALLOWED_FUNDED_ACCOUNT", "").strip() or account
     gate = ROOT / "phase85" / "logs" / "sim_activation_gate.json"

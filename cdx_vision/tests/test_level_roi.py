@@ -38,6 +38,9 @@ class RoiTests(unittest.TestCase):
         self.image = Image.open(_FIXTURE)
         self.engine = TesseractOcr(resolve_tesseract(), psm=11)
 
+    def tearDown(self) -> None:
+        self.image.close()
+
     def test_old_roi_clips_the_prices(self) -> None:
         box = old_level_box(self.image)
         self.assertAlmostEqual(box[2] / self.image.size[0], 0.78, places=2)
@@ -58,6 +61,32 @@ class RoiTests(unittest.TestCase):
         self.assertEqual(found["ENTRY"], Decimal("30812.00"))
         self.assertEqual(found["SL"], Decimal("30785.50"))
         self.assertEqual(found["TP1"], Decimal("30838.50"))
+        self.assertEqual(found["TP2"], Decimal("30871.75"))
+        self.assertGreater(found["TP2"], found["TP1"])
+        self.assertGreater(found["TP1"], found["ENTRY"])
+        self.assertGreater(found["ENTRY"], found["SL"])
+        from cdx_vision.consensus import consensus
+        from cdx_vision.levels import frame_candidate
+
+        frame, _reasons = frame_candidate(
+            state.tokens,
+            webhook_direction="LONG",
+            webhook_price=Decimal("30825"),
+            tick=Decimal("0.25"),
+            sanity_points=Decimal("500"),
+        )
+        chosen, reasons, _unstable = consensus([frame, frame])
+        self.assertIsNotNone(chosen)
+        self.assertEqual(chosen.tp2, Decimal("30871.75"))
+        self.assertIn("VISION_CONFIRMED", reasons)
+
+    def test_bare_price_and_ribbon_are_not_tp2(self) -> None:
+        from cdx_vision.models import OCRToken
+
+        levels, _direction = parse_tokens([OCRToken("30871.75", 0, 0, 40, 12)])
+        self.assertFalse(any(level.normalized_label == "TP2" for level in levels))
+        for text in ("30922.55", "30912.08", "30901.61"):
+            self.assertIsNone(parse_price(text))
 
     def test_expansion_recovers_a_clipped_crop(self) -> None:
         state = resolve_level_crop(self.image, self.engine, base=old_level_box(self.image))

@@ -72,6 +72,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--show-lines", action="store_true")
     parser.add_argument("--show-tags", action="store_true")
     parser.add_argument("--show-candidates", action="store_true")
+    parser.add_argument("--debug-tp2", action="store_true")
     args = parser.parse_args(argv)
     image = Path(args.image)
     price = Decimal(args.webhook_price) if args.webhook_price else None
@@ -79,6 +80,19 @@ def main(argv: list[str] | None = None) -> int:
     if not tokens and image.exists():
         tokens = _ocr_image(image)
     print(format_inspection(tokens, args.side.upper(), price))
+    if args.debug_tp2 and image.exists():
+        from PIL import Image
+
+        from cdx_vision.tp2_read import read_tp2
+
+        tp2 = read_tp2(Image.open(image), debug_dir=image.parent / "tp2_debug")
+        print("TP2_LINE", tp2.line_y)
+        print("TP2_BOX", tp2.box)
+        print("TP2_EDGE", "YES" if tp2.edge_contact else "NO")
+        print("TP2_EXPANSIONS", tp2.expansions)
+        for attempt in tp2.attempts:
+            print(f"TP2_{attempt.method}: {attempt.text or 'none'} price={attempt.price}")
+        print("TP2_ACCEPTED", "YES" if tp2.accepted else "NO")
     if args.symbol:
         from cdx_vision.symbols import accepted_chart_symbol
 

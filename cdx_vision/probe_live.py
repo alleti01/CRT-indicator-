@@ -49,6 +49,16 @@ def main() -> int:
         parsed, _direction = parse_tokens(LAST.tokens)
         for level in parsed:
             print(f"OCR {level.normalized_label}:", level.price)
+        from cdx_vision.tp2_read import LAST_TP2
+
+        if LAST_TP2 is not None:
+            print("TP2_LINE_FOUND:", "YES" if LAST_TP2.line_y is not None else "NO")
+            print("TP2_CROP_EDGE:", "YES" if LAST_TP2.edge_contact else "NO")
+            print("TP2_EXPANSIONS:", LAST_TP2.expansions)
+            for attempt in LAST_TP2.attempts:
+                if attempt.labeled or attempt.price is not None:
+                    print(f"TP2_{attempt.method}:", attempt.text or "none")
+            print("TP2_ACCEPTED:", "YES" if LAST_TP2.accepted else "NO")
     print("INITIAL_CAPTURE_LEVELS:", "FOUND" if result.initial_levels_visible else "NOT_FOUND")
     if result.auto_right_triggered:
         auto = "TRIGGERED"

@@ -215,6 +215,12 @@ def resolve_level_crop(image: Image.Image, engine, *, base: tuple[int, int, int,
     if unresolved:
         reasons.append(Reason.VISION_ROI_TRUNCATION_UNRESOLVED.value)
         reasons.append(Reason.VISION_LABEL_PARTIAL.value)
+    from cdx_vision.tp2_read import read_tp2
+
+    tp2 = read_tp2(image)
+    if tp2.accepted:
+        tokens = [token for token in tokens if "TP2" not in token.text.upper()]
+        tokens.extend(tp2.tokens)
     state = LevelCrop(box, pane, base or box, attempts, truncated, unresolved, reasons, tokens)
     LAST = state
     return state

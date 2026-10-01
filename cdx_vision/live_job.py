@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from cdx_vision.active_trade_selector import should_navigate
-from cdx_vision.auto_right import ChartNavigator, run_navigation
+from cdx_vision.auto_right import ChartNavigator, follow_live_price, run_navigation
 from cdx_vision.config import VisionConfig
 from cdx_vision.consensus import consensus
 from cdx_vision.entry_read import read_visual_entry
@@ -127,6 +127,10 @@ def run_shadow_job(
                 auto_right_enabled=config.auto_right_enabled,
                 navigation_reason=prepared.reasons[0] if prepared.reasons else "",
             )
+    navigator = navigator or ChartNavigator(config.chart_focus_x, config.chart_focus_y)
+    brought_back = follow_live_price(window, navigator, capture_window)
+    if brought_back:
+        log.info("chart_follow signal=%s steps=%s", request.signal_id, brought_back)
     method = ""
     entry_raw: list[str] = []
     nav_shots = {"n": 0}
@@ -280,8 +284,10 @@ def run_shadow_job(
         navigation_reason=nav_reason,
         forced_reasons=fail_reasons or ([nav_reason] if triggered and not success and nav_reason else None),
     )
-    if triggered and hasattr(navigator, "reset_chart_view"):
-        navigator.reset_chart_view(window)
+    if navigator is not None:
+        brought_back = follow_live_price(window, navigator, capture_window)
+        if brought_back:
+            log.info("chart_follow signal=%s steps=%s", request.signal_id, brought_back)
     log.info(
         "chart_state signal=%s webhook_time=%s levels_confirmed_time=%s total_latency_ms=%s "
         "live_edge=%s auto_right_triggered=%s auto_right_attempts=%s level_set_complete=%s",

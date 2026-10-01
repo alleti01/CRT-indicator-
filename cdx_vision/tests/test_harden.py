@@ -4,7 +4,7 @@ from __future__ import annotations
 import unittest
 from decimal import Decimal
 
-from cdx_vision.auto_right import run_navigation
+from cdx_vision.auto_right import price_on_the_right, run_navigation
 from cdx_vision.config import VisionConfig
 from cdx_vision.models import OCRToken
 from cdx_vision.parser import is_noise, parse_tokens
@@ -291,6 +291,26 @@ class KnownFixtureTests(unittest.TestCase):
         self.assertEqual(result.stop, Decimal("30947.00"))
         self.assertEqual(result.tp1, Decimal("30872.00"))
         self.assertEqual(result.tp2, Decimal("30845.00"))
+
+
+class PriceOnTheRightTests(unittest.TestCase):
+    def test_candle_on_the_left_is_an_offset(self) -> None:
+        from PIL import Image
+
+        image = Image.new("RGB", (400, 300), (10, 12, 16))
+        for y in range(80, 160):
+            image.putpixel((80, y), (220, 40, 40))
+            image.putpixel((81, y), (220, 40, 40))
+        self.assertLess(price_on_the_right(image), 0.5)
+
+    def test_candle_on_the_right_is_live(self) -> None:
+        from PIL import Image
+
+        image = Image.new("RGB", (400, 300), (10, 12, 16))
+        for y in range(80, 160):
+            image.putpixel((300, y), (40, 180, 60))
+            image.putpixel((301, y), (40, 180, 60))
+        self.assertGreater(price_on_the_right(image), 0.7)
 
 
 if __name__ == "__main__":

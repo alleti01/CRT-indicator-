@@ -14,6 +14,7 @@ VK_CONTROL = 0x11
 VK_SHIFT = 0x10
 VK_MENU = 0x12
 VK_ESCAPE = 0x1B
+VK_LEFT = 0x25
 VK_RIGHT = 0x27
 KEYEVENTF_KEYUP = 0x0002
 
@@ -58,6 +59,18 @@ class ChartNavigator:
         user32.mouse_event(0x0002, 0, 0, 0, 0)
         user32.mouse_event(0x0004, 0, 0, 0, 0)
         return user32.GetForegroundWindow() == window.hwnd
+
+    def arrow_left(self, window: WindowInfo) -> bool:
+        """One small step back toward the live price. No Ctrl, so it does not jump."""
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        if user32.GetForegroundWindow() != window.hwnd:
+            return False
+        user32.keybd_event(VK_LEFT, 0, 0, 0)
+        user32.keybd_event(VK_LEFT, 0, KEYEVENTF_KEYUP, 0)
+        self.keypresses += 1
+        return True
 
     def ctrl_right(self, window: WindowInfo) -> bool:
         import ctypes
@@ -163,3 +176,73 @@ def run_navigation(
         return state
     state.reason = "VISION_AUTO_RIGHT_EXHAUSTED"
     return state
+
+
+def price_on_the_right(image) -> float:
+    """Where the last candle sits, as a fraction of the window width.
+
+    Horizontal CDX lines run across the empty future, so only a tall candle
+    body counts. The price scale on the far right is ignored. No candle
+    returns 1.0 so a blank capture is not treated as an offset.
+    """
+    import numpy as np
+
+    arr = np.asarray(image)
+    height, width = arr.shape[:2]
+    if width < 80 or height < 80:
+        return 1.0
+    y0, y1 = int(height * 0.18), int(height * 0.78)
+    x1 = int(width * 0.78)
+    body = arr[y0:y1, :x1]
+    red = body[:, :, 0].astype(int)
+    green = body[:, :, 1].astype(int)
+    blue = body[:, :, 2].astype(int)
+    color = ((red > 150) & (red > green + 40) & (red > blue + 40)) | (
+        (green > 140) & (green > red + 30) & (green > blue + 20)
+    )
+    last = -1
+    for x in range(color.shape[1]):
+        run = peak = 0
+        for on in color[:, x]:
+            run = run + 1 if on else 0
+            if run > peak:
+                peak = run
+        if peak >= 8:
+            last = x
+    if last < 0:
+        return 1.0
+    return last / width
+
+
+def follow_live_price(window: WindowInfo, navigator: ChartNavigator, capture, *, max_steps: int = 16) -> int:
+    """Scroll the chart back until the last candle sits on the right again.
+
+    Ctrl+Right leaves empty future on the screen. TradingView then waits for
+    someone to drag that space away. This does that scroll. It stops as soon
+    as the picture stops moving, so it does not walk off into old bars.
+    """
+    shot = capture(window)
+    if shot is None:
+        return 0
+    frac = price_on_the_right(shot.image)
+    if frac >= 0.62:
+        return 0
+    if not navigator.focus_and_confirm(window):
+        return 0
+    steps = 0
+    previous = frac
+    for _ in range(max_steps):
+        if not navigator.arrow_left(window):
+            break
+        time.sleep(0.12)
+        shot = capture(window)
+        if shot is None:
+            break
+        frac = price_on_the_right(shot.image)
+        steps += 1
+        if frac >= 0.68:
+            break
+        if frac <= previous + 0.008:
+            break
+        previous = frac
+    return steps

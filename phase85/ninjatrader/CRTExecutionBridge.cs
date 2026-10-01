@@ -325,9 +325,31 @@ namespace NinjaTrader.NinjaScript.AddOns
             return order;
         }
 
+        private Position LivePosition()
+        {
+            if (_account == null)
+                return null;
+            foreach (Position p in _account.Positions)
+            {
+                if (p == null || p.Instrument == null)
+                    continue;
+                if (!InstrumentAllowed(p.Instrument.FullName))
+                    continue;
+                if (p.MarketPosition != MarketPosition.Flat && p.Quantity > 0)
+                    return p;
+            }
+            return null;
+        }
+
         private void PlaceProtection(string line, string commandId)
         {
-            if (_filledQty < 1 || IsFlat())
+            Position pos = LivePosition();
+            if (pos != null)
+            {
+                _side = pos.MarketPosition == MarketPosition.Long ? "LONG" : "SHORT";
+                _filledQty = pos.Quantity;
+            }
+            if (pos == null || _filledQty < 1)
             {
                 Emit("PROTECTION_FAILURE", commandId, "NO_POSITION", "", 0, 0);
                 return;
@@ -530,6 +552,8 @@ namespace NinjaTrader.NinjaScript.AddOns
                         continue;
                     side = p.MarketPosition == MarketPosition.Long ? "LONG" : "SHORT";
                     qty = p.Quantity;
+                    _side = side;
+                    _filledQty = qty;
                 }
             }
             Emit(side == "FLAT" ? "POSITION_FLAT" : "POSITION_UPDATE", commandId, "OK", "", 0, qty);
@@ -570,7 +594,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             string ts = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
             string msg = string.Format(
                 CultureInfo.InvariantCulture,
-                "{{\"protocol_version\":{0},\"event\":\"{1}\",\"command_id\":\"{2}\",\"reason\":\"{3}\",\"order_id\":\"{4}\",\"fill_price\":{5},\"fill_quantity\":{6},\"remaining_quantity\":{7},\"account\":\"{8}\",\"instrument\":\"{9}\",\"created_at_utc\":\"{10}\"}}\n",
+                "{{\"protocol_version\":{0},\"event\":\"{1}\",\"command_id\":\"{2}\",\"reason\":\"{3}\",\"order_id\":\"{4}\",\"fill_price\":{5},\"fill_quantity\":{6},\"remaining_quantity\":{7},\"account\":\"{8}\",\"instrument\":\"{9}\",\"side\":\"{10}\",\"created_at_utc\":\"{11}\"}}\n",
                 ProtocolVersion,
                 EscapeJson(ev),
                 EscapeJson(commandId ?? ""),
@@ -581,6 +605,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 remaining,
                 EscapeJson(ExpectedAccount ?? ""),
                 EscapeJson(ExpectedContract ?? ""),
+                EscapeJson(_side ?? ""),
                 ts
             );
             lock (_ioLock)

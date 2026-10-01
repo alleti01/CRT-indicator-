@@ -8,6 +8,7 @@ from pathlib import Path
 from phase85.execution.adapter import make_intent
 from phase85.execution.kill_switch import KillState
 from phase85.execution.state_machine import ExecutionState, InvalidTransition
+from phase85.protocol.messages import Event
 from phase85.tests.support import ready_sim
 
 
@@ -126,6 +127,16 @@ class LifecycleTests(unittest.TestCase):
         self.assertTrue(result.allowed)
         self.assertEqual(result.reason, "FLAT")
         self.assertEqual(adapter.side, "FLAT")
+
+    def test_no_position_waits_instead_of_flattening(self) -> None:
+        adapter, _ = ready_sim(self.tmp)
+        adapter.request_entry(make_intent(signal_id="np1", event_id="np1"))
+        adapter.fsm.transition(ExecutionState.PROTECTION_PENDING)
+        adapter.apply_external_events([Event(event="PROTECTION_FAILURE", reason="NO_POSITION")])
+        self.assertTrue(adapter.protection_needs_retry)
+        self.assertEqual(adapter.state, ExecutionState.PROTECTION_PENDING)
+        self.assertNotEqual(adapter.kill.state, KillState.EXECUTION_HALTED)
+        self.assertEqual(adapter.side, "LONG")
 
 
 if __name__ == "__main__":

@@ -331,8 +331,44 @@ def main() -> int:
                 os.environ.pop("MANUAL_REENTRY_FILE", None)
                 bar = md.latest_bar()
                 price = float(bar.close) if bar is not None else float(spec["price"])
-                result = stack.manual_reentry(side=str(spec["side"]), stop=float(spec["stop"]), price=price)
+                result = stack.manual_reentry(
+                    side=str(spec["side"]),
+                    stop=float(spec["stop"]),
+                    price=price,
+                    target=float(spec["target"]) if spec.get("target") is not None else None,
+                )
                 print("MANUAL_REENTRY", json.dumps(result, default=str), flush=True)
+            protect_file = os.environ.get("MANUAL_PROTECT_FILE", "").strip()
+            if (
+                protect_file
+                and stack.execution_adapter is not None
+                and stack.execution_adapter.transport.authenticated
+                and Path(protect_file).exists()
+            ):
+                spec = json.loads(Path(protect_file).read_text(encoding="utf-8"))
+                adapter = stack.execution_adapter
+                adapter.query_position()
+                time.sleep(0.4)
+                if adapter.side in {"LONG", "SHORT"} and adapter.filled_qty >= 1:
+                    Path(protect_file).unlink(missing_ok=True)
+                    os.environ.pop("MANUAL_PROTECT_FILE", None)
+                    if adapter.actual_fill is None:
+                        adapter.actual_fill = float(spec.get("fill") or 0.0) or None
+                    if adapter.actual_fill is not None:
+                        from datetime import datetime, timezone
+
+                        from phase85.execution.m0_map import m0_from_actual_fill
+
+                        adapter.last_m0 = m0_from_actual_fill(
+                            adapter.side,
+                            float(adapter.actual_fill),
+                            abs(float(adapter.actual_fill) - float(spec["stop"])),
+                            datetime.now(timezone.utc),
+                        )
+                        adapter.last_m0.stop_price = float(spec["stop"])
+                        adapter.last_m0.target_price = float(spec["target"])
+                        sent = adapter.place_protection()
+                        print("MANUAL_PROTECT", sent.allowed, sent.reason, flush=True)
             flatten_file = os.environ.get("MANUAL_FLATTEN_FILE", "").strip()
             if (
                 flatten_file

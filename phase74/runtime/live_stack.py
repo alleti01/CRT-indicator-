@@ -408,7 +408,7 @@ class LiveStack:
             return False
         return True
 
-    def manual_reentry(self, *, side: str, stop: float, price: float) -> dict[str, Any]:
+    def manual_reentry(self, *, side: str, stop: float, price: float, target: float | None = None) -> dict[str, Any]:
         """Reopen a chart-stop trade without waiting for another webhook."""
         from phase73.webhook.schemas import WebhookReason, make_test_signal
         from phase74.latency.tracker import LatencyTracker
@@ -419,6 +419,8 @@ class LiveStack:
         self._bypass_health_once = True
         self._bypass_day_halt_once = True
         self._visual_stops[signal_id] = float(stop)
+        if target is not None:
+            self._visual_targets[signal_id] = float(target)
         self._vision_released.add(signal_id)
         if self.execution_adapter is not None:
             self.execution_adapter.mark_data_healthy(True)
@@ -446,17 +448,18 @@ class LiveStack:
         if self.execution_adapter is None:
             return result
         log.warning("manual reentry paper path skipped (%s); sending the MNQ order", result.get("reason") or result.get("action"))
-        return self._send_bracket(side_name, float(stop), float(price), signal_id)
+        return self._send_bracket(side_name, float(stop), float(price), signal_id, target)
 
-    def _send_bracket(self, side: str, stop: float, price: float, signal_id: str) -> dict[str, Any]:
+    def _send_bracket(self, side: str, stop: float, price: float, signal_id: str, target: float | None = None) -> dict[str, Any]:
         from phase85.execution.intent import ExecutionIntent
 
         adapter = self.execution_adapter
         if adapter is None:
             return {"ok": False, "reason": "NO_EXECUTION"}
         now = datetime.now(timezone.utc)
-        cap_points = float(self._trail_cfg.profit_cap_points or 0.0) or 71.43
-        target = price + cap_points if side == "LONG" else price - cap_points
+        if target is None:
+            cap_points = float(self._trail_cfg.profit_cap_points or 0.0) or 71.43
+            target = price + cap_points if side == "LONG" else price - cap_points
         adapter.mark_data_healthy(True)
         intent = ExecutionIntent(
             side=side,

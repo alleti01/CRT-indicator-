@@ -117,6 +117,15 @@ class LiveNtTransport:
                     adapter.flatten()
                 else:
                     adapter.place_protection()
+            elif (
+                event.event == "POSITION_UPDATE"
+                and getattr(adapter, "protection_needs_retry", False)
+                and adapter.filled_qty >= 1
+                and adapter.actual_fill is not None
+                and not adapter.stop_working
+            ):
+                adapter.protection_needs_retry = False
+                adapter.place_protection()
 
     def _apply_snapshot(self, event: Event) -> None:
         if event.account:
@@ -129,8 +138,10 @@ class LiveNtTransport:
             self._working_stop = False
             self._working_target = False
         elif event.event == "POSITION_UPDATE":
-            self._side = str(event.extra.get("position_side", event.side or self._side))
-            qty = event.extra.get("position_qty", event.quantity)
+            side = str(event.side or event.extra.get("position_side") or "")
+            if side in {"LONG", "SHORT"}:
+                self._side = side
+            qty = event.fill_quantity or event.quantity or event.extra.get("position_qty")
             if qty is not None:
                 self._quantity = int(qty)
         elif event.event == "STOP_WORKING":

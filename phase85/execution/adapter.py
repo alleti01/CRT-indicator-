@@ -80,6 +80,8 @@ class NinjaTraderExecutionAdapter:
         self.last_reconcile: ReconciliationResult | None = None
         self.active_latency: LatencySample | None = None
         self.flatten_confirmed = False
+        self.protection_needs_retry = False
+        self.protection_retries = 0
         self.audit.write("EXECUTION_BRIDGE_STARTED", mode=cfg.execution_mode)
 
     @property
@@ -448,8 +450,12 @@ class NinjaTraderExecutionAdapter:
             self._maybe_protected()
             return
         if name == "PROTECTION_FAILURE":
-            self._safe_transition(ExecutionState.PROTECTION_FAILURE)
             self.audit.write("PROTECTION_FAILURE", reason=ev.reason)
+            if ev.reason == "NO_POSITION" and self.protection_retries < 3:
+                self.protection_retries += 1
+                self.protection_needs_retry = True
+                return
+            self._safe_transition(ExecutionState.PROTECTION_FAILURE)
             self.kill.halt("PROTECTION_FAILURE")
             self.audit.write("EXECUTION_HALTED", reason="PROTECTION_FAILURE")
             self.flatten()
@@ -495,8 +501,15 @@ class NinjaTraderExecutionAdapter:
                 self._safe_transition(ExecutionState.IDLE)
             return
         if name == "POSITION_UPDATE":
-            self.side = str(ev.extra.get("position_side", self.side))
-            self.quantity = int(ev.extra.get("position_qty", self.quantity) or 0)
+            side = str(ev.side or ev.extra.get("position_side") or "")
+            if side in {"LONG", "SHORT"}:
+                self.side = side
+            qty = ev.fill_quantity or ev.quantity or ev.extra.get("position_qty") or 0
+            if int(qty) > 0:
+                self.quantity = int(qty)
+                self.filled_qty = max(self.filled_qty, int(qty))
+            if ev.fill_price:
+                self.actual_fill = float(ev.fill_price)
             return
         if name == "ORDER_CANCELLED":
             return

@@ -72,6 +72,20 @@ class ChartNavigator:
         self.keypresses += 1
         return True
 
+    def alt_right(self, window: WindowInfo) -> bool:
+        """Alt+Right. Brings the CDX prices back onto the pane. Not Ctrl+Right."""
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        if user32.GetForegroundWindow() != window.hwnd:
+            return False
+        user32.keybd_event(VK_MENU, 0, 0, 0)
+        user32.keybd_event(VK_RIGHT, 0, 0, 0)
+        user32.keybd_event(VK_RIGHT, 0, KEYEVENTF_KEYUP, 0)
+        user32.keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0)
+        self.keypresses += 1
+        return True
+
     def ctrl_right(self, window: WindowInfo) -> bool:
         import ctypes
 
@@ -212,6 +226,17 @@ def price_on_the_right(image) -> float:
     if last < 0:
         return 1.0
     return last / width
+
+
+def reveal_level_prices(window: WindowInfo, navigator: ChartNavigator) -> bool:
+    """Alt+Right twice. That is the shortcut that puts Entry, SL, and the targets back on screen."""
+    if not navigator.focus_and_confirm(window):
+        return False
+    for _ in range(2):
+        if not navigator.alt_right(window):
+            return False
+        time.sleep(0.25)
+    return True
 
 
 def follow_live_price(window: WindowInfo, navigator: ChartNavigator, capture, *, max_steps: int = 16) -> int:

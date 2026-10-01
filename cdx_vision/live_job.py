@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from cdx_vision.active_trade_selector import should_navigate
-from cdx_vision.auto_right import ChartNavigator, follow_live_price, run_navigation
+from cdx_vision.auto_right import ChartNavigator, reveal_level_prices, run_navigation
 from cdx_vision.config import VisionConfig
 from cdx_vision.consensus import consensus
 from cdx_vision.entry_read import read_visual_entry
@@ -128,9 +128,6 @@ def run_shadow_job(
                 navigation_reason=prepared.reasons[0] if prepared.reasons else "",
             )
     navigator = navigator or ChartNavigator(config.chart_focus_x, config.chart_focus_y)
-    brought_back = follow_live_price(window, navigator, capture_window)
-    if brought_back:
-        log.info("chart_follow signal=%s steps=%s", request.signal_id, brought_back)
     method = ""
     entry_raw: list[str] = []
     nav_shots = {"n": 0}
@@ -180,6 +177,11 @@ def run_shadow_job(
 
     tokens, visible, raw, _moved_first = capture("before_navigation.png" if debug_dir else "")
     entry_raw.extend(raw)
+    if not visible and reveal_level_prices(window, navigator):
+        log.info("alt_right signal=%s", request.signal_id)
+        time.sleep(0.3)
+        tokens, visible, raw, _moved_first = capture("after_alt_right.png" if debug_dir else "")
+        entry_raw.extend(raw)
     flags = label_flags(tokens)
     log.info(
         "chart_labels signal=%s signal_marker_visible=%s entry_label_visible=%s "
@@ -284,10 +286,6 @@ def run_shadow_job(
         navigation_reason=nav_reason,
         forced_reasons=fail_reasons or ([nav_reason] if triggered and not success and nav_reason else None),
     )
-    if navigator is not None:
-        brought_back = follow_live_price(window, navigator, capture_window)
-        if brought_back:
-            log.info("chart_follow signal=%s steps=%s", request.signal_id, brought_back)
     log.info(
         "chart_state signal=%s webhook_time=%s levels_confirmed_time=%s total_latency_ms=%s "
         "live_edge=%s auto_right_triggered=%s auto_right_attempts=%s level_set_complete=%s",

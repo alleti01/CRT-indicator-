@@ -32,11 +32,17 @@ def on_tick(price: Decimal, tick: Decimal = TICK) -> bool:
 
 
 def parse_price(text: str, tick: Decimal = TICK) -> Decimal | None:
-    match = _PRICE.search(text.replace(",", ""))
+    """A trailing comma on a whole number is a cut-off token, not a price."""
+    cleaned = re.sub(r"(?<=\d),(?=\d{3}(?:\D|$))", "", text)
+    match = _PRICE.search(cleaned)
     if not match:
         return None
+    number = match.group(1)
+    tail = cleaned[match.end(): match.end() + 1]
+    if tail in {",", "_"} and "." not in number:
+        return None
     try:
-        price = Decimal(match.group(1))
+        price = Decimal(number)
     except InvalidOperation:
         return None
     if price <= 0 or not on_tick(price, tick):

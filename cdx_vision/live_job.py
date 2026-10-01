@@ -14,7 +14,7 @@ from cdx_vision.consensus import consensus
 from cdx_vision.entry_read import read_visual_entry
 from cdx_vision.levels import frame_candidate
 from cdx_vision.models import Reason, VisionCaptureRequest, VisionState
-from cdx_vision.ocr import TesseractOcr, chart_crop, preprocess
+from cdx_vision.ocr import TesseractOcr
 from cdx_vision.chart_state import detect_symbol, label_flags, ribbon_values, signal_marker_visible, symbol_matches
 from cdx_vision.screen_capture import capture_window, is_minimized
 from cdx_vision.service import VisionBridge
@@ -127,7 +127,6 @@ def run_shadow_job(
                 auto_right_enabled=config.auto_right_enabled,
                 navigation_reason=prepared.reasons[0] if prepared.reasons else "",
             )
-    roi = load_roi()
     method = ""
     entry_raw: list[str] = []
     nav_shots = {"n": 0}
@@ -145,12 +144,21 @@ def run_shadow_job(
         if debug_dir is not None and label:
             debug_dir.mkdir(parents=True, exist_ok=True)
             shot.image.save(debug_dir / label)
-        crop = chart_crop(shot.image, roi)
-        tokens = list(engine.recognize(preprocess(crop, scale=3)))
+        from cdx_vision.level_roi import resolve_level_crop
+
+        resolved = resolve_level_crop(shot.image, engine)
+        width, height = shot.image.size
+        level_roi = (
+            resolved.box[0] / width,
+            resolved.box[1] / height,
+            resolved.box[2] / width,
+            resolved.box[3] / height,
+        )
+        tokens = list(resolved.tokens)
         observed = read_visual_entry(
             engine,
             shot.image,
-            roi,
+            level_roi,
             tokens,
             scale=3,
             debug_dir=debug_dir if label in {"", "before_navigation.png"} and not entry_raw else None,
@@ -286,6 +294,10 @@ def run_shadow_job(
         attempts,
         result.state is VisionState.VISION_CONFIRMED,
     )
+    from cdx_vision.level_roi import LAST as _roi_state
+
+    if _roi_state is not None and _roi_state.unresolved and not result.confirmed:
+        result.reasons = list(dict.fromkeys([*result.reasons, *_roi_state.reasons]))
     result.entry_raw = " | ".join(entry_raw)
     result.window_bounds = method or "NONE"
     if not frames and not result.reasons:

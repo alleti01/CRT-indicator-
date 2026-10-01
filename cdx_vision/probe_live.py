@@ -17,7 +17,7 @@ def main() -> int:
     request = VisionCaptureRequest(
         signal_id=f"PROBE_{uuid.uuid4().hex[:8]}",
         direction="SHORT",
-        ticker="NQ",
+        ticker="MNQ",
         webhook_received_at=now,
         webhook_price=None,
     )
@@ -27,7 +27,28 @@ def main() -> int:
         debug_dir=debug,
     )
     stats = level_metrics(result)
+    from cdx_vision.level_roi import LAST
+
     print("DRY_RUN_ONLY")
+    if LAST is not None:
+        pane = LAST.pane
+        print(
+            "CHART_BOUNDS:",
+            f"left={pane.left}",
+            f"right={pane.right}",
+            f"top={pane.top}",
+            f"bottom={pane.bottom}",
+        )
+        print("BASE_ROI:", LAST.base_box)
+        print("FINAL_ROI:", LAST.box)
+        print("ROI_TRUNCATED:", "true" if LAST.truncated else "false")
+        print("EXPANSION_ATTEMPTS:", LAST.attempts)
+        print("ROI_REASONS:", ",".join(LAST.reasons) or "none")
+        from cdx_vision.parser import parse_tokens
+
+        parsed, _direction = parse_tokens(LAST.tokens)
+        for level in parsed:
+            print(f"OCR {level.normalized_label}:", level.price)
     print("INITIAL_CAPTURE_LEVELS:", "FOUND" if result.initial_levels_visible else "NOT_FOUND")
     if result.auto_right_triggered:
         auto = "TRIGGERED"

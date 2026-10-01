@@ -95,6 +95,10 @@ class PropDayHalt:
     max_loss_dollars: float = 400.0
     max_winners: int = 2
     big_win_dollars: float = 500.0
+    cap_day_profits: bool = True
+    consistency_rule_enabled: bool = False
+    consistency_max_day_fraction: float = 0.35
+    profit_before_today: float = 0.0
     giveback_arm_dollars: float = 400.0
     giveback_dollars: float = 300.0
     point_value: float = NQ_POINT_VALUE
@@ -111,6 +115,7 @@ class PropDayHalt:
     def _roll(self, now: datetime | None = None) -> None:
         key = session_key_ny(now)
         if key != self.session_key:
+            self.profit_before_today += self.realized_dollars
             self.session_key = key
             self.session_date = key[0]
             self.realized_r = 0.0
@@ -152,11 +157,14 @@ class PropDayHalt:
         if self.realized_dollars <= -abs(self.max_loss_dollars):
             self.reason = "HALT_DAY_DOLLARS"
             return True
-        if self.had_big_win:
+        if self.cap_day_profits and self.had_big_win:
             self.reason = "HALT_DAY_BIG_WIN"
             return True
-        if self.winners >= self.max_winners:
+        if self.cap_day_profits and self.max_winners > 0 and self.winners >= self.max_winners:
             self.reason = "HALT_DAY_WINS"
+            return True
+        if self._consistency_exceeded():
+            self.reason = "HALT_CONSISTENCY"
             return True
         if (
             self.peak_dollars >= self.giveback_arm_dollars
@@ -166,6 +174,15 @@ class PropDayHalt:
             return True
         self.reason = ""
         return False
+
+    def _consistency_exceeded(self) -> bool:
+        """Best day stays within the funded fraction. The first profitable day is not capped."""
+        if not self.consistency_rule_enabled or self.profit_before_today <= 0 or self.realized_dollars <= 0:
+            return False
+        total = self.profit_before_today + self.realized_dollars
+        if total <= 0:
+            return False
+        return (self.realized_dollars / total) > self.consistency_max_day_fraction
 
 
 def nt_rejected_signal_ids(audit_path: Path) -> set[str]:

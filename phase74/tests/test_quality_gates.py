@@ -237,9 +237,31 @@ class PropDayHaltTests(unittest.TestCase):
         self.assertTrue(h.should_halt_new_entries(later))
         self.assertEqual(h.reason, "HALT_DAY_WINS")
 
-    def test_live_config_is_two_winners_per_session(self) -> None:
+    def test_eval_account_does_not_cap_the_day(self) -> None:
         qg = load_phase74_config().section("quality_gates")
-        self.assertEqual(int(qg["day_max_winners"]), 1)
+        self.assertFalse(bool(qg.get("cap_day_profits")))
+        self.assertFalse(bool(qg.get("consistency_rule_enabled")))
+        self.assertEqual(float(qg.get("consistency_max_day_fraction")), 0.35)
+
+    def test_open_day_profits_do_not_halt_when_cap_is_off(self) -> None:
+        h = PropDayHalt(max_winners=1, big_win_dollars=1000.0, cap_day_profits=False)
+        h.record_closed(4.0, dollars=1500.0)
+        h.record_closed(2.0, dollars=400.0)
+        self.assertFalse(h.should_halt_new_entries())
+
+    def test_funded_consistency_blocks_a_day_over_35_percent(self) -> None:
+        h = PropDayHalt(cap_day_profits=False, consistency_rule_enabled=True, consistency_max_day_fraction=0.35)
+        h.profit_before_today = 2000.0
+        h.record_closed(2.0, dollars=500.0)
+        self.assertFalse(h.should_halt_new_entries())
+        h.record_closed(2.0, dollars=700.0)
+        self.assertTrue(h.should_halt_new_entries())
+        self.assertEqual(h.reason, "HALT_CONSISTENCY")
+
+    def test_first_profitable_day_is_not_a_consistency_breach(self) -> None:
+        h = PropDayHalt(cap_day_profits=False, consistency_rule_enabled=True)
+        h.record_closed(4.0, dollars=2000.0)
+        self.assertFalse(h.should_halt_new_entries())
 
     def test_live_config_range_lock_is_off(self) -> None:
         rl = load_phase74_config().section("range_lock")

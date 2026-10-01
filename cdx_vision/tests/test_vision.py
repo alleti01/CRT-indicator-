@@ -105,7 +105,9 @@ class GeometryTests(unittest.TestCase):
             now=now,
             window_title="TradingView",
         )
-        self.assertFalse(missing.confirmed)
+        self.assertTrue(missing.confirmed)
+        self.assertIsNone(missing.tp2)
+        self.assertEqual(missing.tp1, Decimal("30872.00"))
         bad = bridge.process_frames(
             VisionCaptureRequest("b", "SHORT", "NQ", now, Decimal("30909.50")),
             [short_frame(sl="30800.00"), short_frame(sl="30800.00")],

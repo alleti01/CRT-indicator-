@@ -7,11 +7,20 @@ from cdx_vision.models import CDXLevelCandidate, ParsedLevel, Reason
 from cdx_vision.parser import on_tick
 
 
-def ordered(direction: str, entry: Decimal, stop: Decimal, tp1: Decimal, tp2: Decimal) -> bool:
+def ordered(
+    direction: str,
+    entry: Decimal,
+    stop: Decimal,
+    tp1: Decimal,
+    tp2: Decimal | None = None,
+) -> bool:
+    """TP2 is optional. When it is present it has to sit beyond TP1."""
     if direction == "LONG":
-        return stop < entry < tp1 < tp2
+        base = stop < entry < tp1
+        return base if tp2 is None else base and tp1 < tp2
     if direction == "SHORT":
-        return stop > entry > tp1 > tp2
+        base = stop > entry > tp1
+        return base if tp2 is None else base and tp1 > tp2
     return False
 
 
@@ -28,21 +37,21 @@ def _candidate(
     source: str,
     stop: ParsedLevel,
     tp1: ParsedLevel,
-    tp2: ParsedLevel,
+    tp2: ParsedLevel | None,
     visual: Decimal | None,
     webhook: Decimal | None,
     fill: Decimal | None,
     reason: str,
     unstable: bool,
 ) -> CDXLevelCandidate:
-    bundle = (stop, tp1, tp2)
+    bundle = tuple(level for level in (stop, tp1, tp2) if level is not None)
     return CDXLevelCandidate(
         direction_seen=direction,
         entry=entry,
         entry_source=source,
         stop=stop.price,
         tp1=tp1.price,
-        tp2=tp2.price,
+        tp2=None if tp2 is None else tp2.price,
         levels=bundle,
         visual_entry=visual,
         webhook_entry=webhook,
@@ -68,12 +77,12 @@ def build_candidates(
     for name, code in (
         ("SL", Reason.VISION_SL_NOT_FOUND),
         ("TP1", Reason.VISION_TP1_NOT_FOUND),
-        ("TP2", Reason.VISION_TP2_NOT_FOUND),
     ):
         if name not in by_label:
             reasons.append(code.value)
     if reasons:
         return [], reasons
+    tp2_levels = by_label.get("TP2", [])
 
     entries = by_label.get("ENTRY", [])
     candidates: list[CDXLevelCandidate] = []
@@ -91,7 +100,7 @@ def build_candidates(
             )
 
         tp1 = nearest(by_label["TP1"])
-        tp2 = nearest(by_label["TP2"])
+        tp2 = nearest(tp2_levels) if tp2_levels else None
         visual = None
         recorded_visual = None
         unstable = False
@@ -112,17 +121,19 @@ def build_candidates(
                 if webhook_price is not None and abs(visual - webhook_price) > sanity_points:
                     visual = None
                     mismatch_drop = True
-        for piece in (stop, tp1, tp2):
+        priced = [stop, tp1] + ([tp2] if tp2 is not None else [])
+        for piece in priced:
             if not on_tick(piece.price, tick):
                 reasons.append(Reason.VISION_OFF_TICK.value)
-        if not all(_near(piece.price, webhook_price or visual, sanity_points) for piece in (stop, tp1, tp2)):
+        if not all(_near(piece.price, webhook_price or visual, sanity_points) for piece in priced):
             reasons.append(Reason.VISION_SANITY_FAIL.value)
             continue
 
         use_visual = visual
         if use_visual is not None and not on_tick(use_visual, tick):
             use_visual = None
-        if use_visual is not None and not ordered(webhook_direction, use_visual, stop.price, tp1.price, tp2.price):
+        tp2_price = None if tp2 is None else tp2.price
+        if use_visual is not None and not ordered(webhook_direction, use_visual, stop.price, tp1.price, tp2_price):
             use_visual = None
         if use_visual is not None:
             candidates.append(
@@ -151,7 +162,7 @@ def build_candidates(
                 reasons.append(Reason.VISION_ENTRY_UNSTABLE.value)
             reasons.append(Reason.VISION_REJECT_ENTRY_UNAVAILABLE.value)
             continue
-        if not on_tick(fallback_price, tick) or not ordered(webhook_direction, fallback_price, stop.price, tp1.price, tp2.price):
+        if not on_tick(fallback_price, tick) or not ordered(webhook_direction, fallback_price, stop.price, tp1.price, tp2_price):
             reasons.append(Reason.VISION_INVALID_ORDERING.value)
             continue
         if not _near(fallback_price, webhook_price or fallback_price, sanity_points):

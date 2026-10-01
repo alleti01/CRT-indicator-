@@ -1,4 +1,4 @@
-"""An order is allowed only when the chart read has all four prices."""
+"""An order is allowed when Entry, SL, and TP1 are on the chart. TP2 can arrive later."""
 from __future__ import annotations
 
 import unittest
@@ -34,8 +34,13 @@ class OrderGateTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual(why, "VISION_NOT_CONFIRMED")
 
-    def test_missing_target_blocks_order(self) -> None:
+    def test_tp1_without_tp2_allows_order(self) -> None:
         ok, why = levels_allow_order(_result(tp2=None))
+        self.assertTrue(ok)
+        self.assertEqual(why, "LEVELS_PULLED")
+
+    def test_missing_tp1_blocks_order(self) -> None:
+        ok, why = levels_allow_order(_result(tp1=None))
         self.assertFalse(ok)
         self.assertEqual(why, "MISSING_LEVEL")
 

@@ -141,6 +141,7 @@ class LiveStack:
         self._pending_vision: dict[str, tuple] = {}
         self._vision_released: set[str] = set()
         self._visual_stops: dict[str, float] = {}
+        self._visual_targets: dict[str, float] = {}
         self._bypass_health_once = False
         self._bypass_day_halt_once = False
         self._vision_orders_enabled = False
@@ -644,6 +645,7 @@ class LiveStack:
             expected_entry=float(fill_price),
             signal_atr=float(self._active_entry_risk or self._stop_points or signal.atr),
             chart_stop_price=self._visual_stops.get(signal.signal_id),
+            chart_target_price=self._visual_targets.get(signal.signal_id),
             signal_time=signal.signal_time_utc,
             webhook_received=now,
             decision_time=now,
@@ -787,7 +789,7 @@ class LiveStack:
         return result
 
     def _on_chart_levels(self, result) -> None:
-        """Place the held order only after Entry, SL, TP1, and TP2 were read."""
+        """Place the held order once Entry, SL, and TP1 are read. TP2 can follow."""
         pending = self._pending_vision.pop(getattr(result, "signal_id", ""), None)
         if pending is None:
             return
@@ -810,6 +812,10 @@ class LiveStack:
         self._vision_released.add(signal.signal_id)
         if result.stop is not None:
             self._visual_stops[signal.signal_id] = float(result.stop)
+        if result.tp1 is not None:
+            self._visual_targets[signal.signal_id] = float(result.tp2 if result.tp2 is not None else result.tp1)
+            if result.tp2 is None:
+                self._watch_for_tp2(signal.signal_id, signal.direction, float(result.tp1))
         with self._trade_lock:
             if not self._pre_entry_checks(signal):
                 log.warning("no order, pre-entry blocked after chart read signal=%s", signal.signal_id)
@@ -819,6 +825,54 @@ class LiveStack:
                 log.error("no order, live entry path missing signal=%s", signal.signal_id)
                 return
             commit(signal, state_before, take_action)
+
+    def _watch_for_tp2(self, signal_id: str, direction: str, tp1: float) -> None:
+        """After entry, keep reading the chart until TP2 shows up or the trade is gone."""
+        from threading import Thread
+
+        def run() -> None:
+            import time
+
+            from cdx_vision.parser import parse_price
+            from cdx_vision.screen_capture import capture_window
+            from cdx_vision.tp2_read import read_tp2
+            from cdx_vision.window_locator import list_tradingview_windows, select_bot_window
+
+            for _attempt in range(8):
+                time.sleep(4)
+                if self.engine.book.internal.side != direction:
+                    return
+                windows = list_tradingview_windows()
+                window = select_bot_window(windows, "MNQ") if windows else None
+                if window is None and windows:
+                    window = windows[0]
+                if window is None:
+                    continue
+                shot = capture_window(window)
+                if shot is None:
+                    continue
+                found = read_tp2(shot.image)
+                if not found.accepted or not found.tokens:
+                    continue
+                price = parse_price(found.tokens[0].text)
+                if price is None:
+                    continue
+                px = float(price)
+                if direction == "LONG" and px <= tp1:
+                    continue
+                if direction == "SHORT" and px >= tp1:
+                    continue
+                self._visual_targets[signal_id] = px
+                mgmt = self.engine.mgmt
+                if mgmt is not None and mgmt.side == direction:
+                    mgmt.target_price = px
+                adapter = self.execution_adapter
+                if adapter is not None and getattr(adapter, "last_m0", None) is not None and adapter.side == direction:
+                    adapter.last_m0.target_price = px
+                log.info("tp2 read after entry signal=%s tp2=%.2f", signal_id, px)
+                return
+
+        Thread(target=run, daemon=True, name="cdx-tp2-watch").start()
 
     def on_bar(self) -> dict[str, Any]:
         with self._trade_lock:

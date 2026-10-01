@@ -133,4 +133,7 @@ def _price_plausible(candidate: CDXLevelCandidate, webhook_price: Decimal | None
         reference = candidate.entry
     if reference is not None and candidate.entry_source == "VISION":
         return abs(reference - webhook_price) <= sanity_points
-    return any(abs(price - webhook_price) <= sanity_points for price in (candidate.stop, candidate.tp1, candidate.tp2))
+    prices = [candidate.stop, candidate.tp1]
+    if candidate.tp2 is not None:
+        prices.append(candidate.tp2)
+    return any(abs(price - webhook_price) <= sanity_points for price in prices)

@@ -16,25 +16,28 @@ def _on_tick(price: Decimal) -> bool:
     return units == units.to_integral_value()
 
 
-def _geometry(direction: str, entry: Decimal, stop: Decimal, tp1: Decimal, tp2: Decimal) -> bool:
+def _geometry(direction: str, entry: Decimal, stop: Decimal, tp1: Decimal, tp2: Decimal | None) -> bool:
     if direction == "SHORT":
-        return stop > entry > tp1 > tp2
+        base = stop > entry > tp1
+        return base if tp2 is None else base and tp1 > tp2
     if direction == "LONG":
-        return stop < entry < tp1 < tp2
+        base = stop < entry < tp1
+        return base if tp2 is None else base and tp1 < tp2
     return False
 
 
 def levels_allow_order(result: VisionResult) -> tuple[bool, str]:
-    """True only when Entry, SL, TP1, and TP2 were pulled from the chart."""
+    """Entry, SL, and TP1 are enough to enter. TP2 is checked when it was read."""
     if not result.confirmed:
         return False, "VISION_NOT_CONFIRMED"
     entry = result.native_entry or result.entry
     stop = result.stop
     tp1 = result.tp1
     tp2 = result.tp2
-    if entry is None or stop is None or tp1 is None or tp2 is None:
+    if entry is None or stop is None or tp1 is None:
         return False, "MISSING_LEVEL"
-    if not all(_on_tick(price) for price in (entry, stop, tp1, tp2)):
+    prices = [entry, stop, tp1] if tp2 is None else [entry, stop, tp1, tp2]
+    if not all(_on_tick(price) for price in prices):
         return False, "OFF_TICK"
     if not _geometry(result.direction, entry, stop, tp1, tp2):
         return False, "BAD_GEOMETRY"

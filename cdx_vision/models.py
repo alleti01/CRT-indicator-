@@ -125,7 +125,7 @@ class CDXLevelCandidate:
     entry_source: str
     stop: Decimal
     tp1: Decimal
-    tp2: Decimal
+    tp2: Decimal | None
     levels: tuple[ParsedLevel, ...]
     visual_entry: Decimal | None = None
     webhook_entry: Decimal | None = None

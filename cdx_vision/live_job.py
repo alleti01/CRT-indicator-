@@ -15,12 +15,12 @@ from cdx_vision.entry_read import read_visual_entry
 from cdx_vision.levels import frame_candidate
 from cdx_vision.models import Reason, VisionCaptureRequest, VisionState
 from cdx_vision.ocr import TesseractOcr, chart_crop, preprocess
+from cdx_vision.chart_state import detect_symbol, label_flags, ribbon_values, signal_marker_visible, symbol_matches
 from cdx_vision.screen_capture import capture_window, is_minimized
 from cdx_vision.service import VisionBridge
 from cdx_vision.tesseract_cmd import resolve_tesseract
 from cdx_vision.visible_levels import assemble, read_visible_tags, save_debug
-from cdx_vision.visible_route import current_signal_visible, extraction_route
-from cdx_vision.window_locator import list_tradingview_windows
+from cdx_vision.window_locator import list_tradingview_windows, select_bot_window
 
 log = logging.getLogger("cdx_vision.live")
 _DELAYS = (0.25, 0.5, 1.0)
@@ -54,7 +54,32 @@ def run_shadow_job(
             window_title="",
             auto_right_enabled=config.auto_right_enabled,
         )
-    window = windows[0]
+    window = select_bot_window(windows, config.window_title_pattern) if config.dedicated_window else windows[0]
+    if window is None:
+        return bridge.process_frames(
+            request,
+            [],
+            now=job_started,
+            window_title="",
+            forced_reasons=[Reason.VISION_WINDOW_NOT_FOUND.value],
+            auto_right_enabled=config.auto_right_enabled,
+        )
+    if request.ticker and not symbol_matches(window.title, request.ticker):
+        log.info(
+            "chart_state symbol_expected=%s symbol_detected=%s reason=%s",
+            request.ticker,
+            detect_symbol(window.title),
+            Reason.VISION_WRONG_SYMBOL.value,
+        )
+        return bridge.process_frames(
+            request,
+            [],
+            now=job_started,
+            window_title=window.title,
+            forced_reasons=[Reason.VISION_WRONG_SYMBOL.value],
+            auto_right_enabled=config.auto_right_enabled,
+            navigation_reason=Reason.VISION_WRONG_SYMBOL.value,
+        )
     if is_minimized(window.hwnd):
         return bridge.process_frames(
             request,
@@ -69,6 +94,39 @@ def run_shadow_job(
     if not exe:
         return bridge.process_frames(request, [], now=job_started, window_title=window.title)
     engine = TesseractOcr(exe, psm=11)
+    if config.auto_restore_timeframe:
+        from cdx_vision.timeframe_ui import ensure_required_timeframe
+
+        safe_id = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in request.signal_id) or "signal"
+        prepared = ensure_required_timeframe(
+            window,
+            config,
+            engine,
+            capture_window,
+            debug_dir=Path("cdx_vision/debug") / safe_id,
+        )
+        log.info(
+            "chart_state signal=%s symbol_expected=%s symbol_detected=%s "
+            "timeframe_expected=%s timeframe_detected_initial=%s "
+            "timeframe_restore_attempted=%s timeframe_restore_success=%s",
+            request.signal_id,
+            request.ticker,
+            detect_symbol(window.title),
+            config.required_timeframe,
+            prepared.initial,
+            prepared.restore_attempted,
+            prepared.ok and prepared.detected == (config.required_timeframe or "3m").lower(),
+        )
+        if not prepared.ok:
+            return bridge.process_frames(
+                request,
+                [],
+                now=job_started,
+                window_title=window.title,
+                forced_reasons=prepared.reasons,
+                auto_right_enabled=config.auto_right_enabled,
+                navigation_reason=prepared.reasons[0] if prepared.reasons else "",
+            )
     roi = load_roi()
     method = ""
     entry_raw: list[str] = []
@@ -110,6 +168,18 @@ def run_shadow_job(
 
     tokens, visible, raw, _moved_first = capture("before_navigation.png" if debug_dir else "")
     entry_raw.extend(raw)
+    flags = label_flags(tokens)
+    log.info(
+        "chart_labels signal=%s signal_marker_visible=%s entry_label_visible=%s "
+        "sl_label_visible=%s tp1_label_visible=%s tp2_label_visible=%s ribbon=%s",
+        request.signal_id,
+        signal_marker_visible(tokens),
+        flags["entry"],
+        flags["sl"],
+        flags["tp1"],
+        flags["tp2"],
+        ribbon_values(tokens),
+    )
     frames: list = []
     fail_reasons: list[str] = []
     triggered = False
@@ -141,20 +211,13 @@ def run_shadow_job(
             ]
             if consensus(parsed)[0] is not None:
                 break
-    elif extraction_route(levels_visible=False, marker_visible=current_signal_visible(tokens)) == "VISIBLE_EXTRACTION":
-        triggered = False
-        nav_reason = Reason.VISION_ALREADY_AT_LIVE_EDGE.value
-        frames, extra_reasons = _visible_frames(window, request, engine)
-        if not frames:
-            nav_reason = extra_reasons[0] if extra_reasons else nav_reason
-            fail_reasons = extra_reasons or [nav_reason]
     elif config.auto_right_enabled and should_navigate(_reasons_for(tokens, request, config)):
         triggered = True
         navigator = navigator or ChartNavigator(config.chart_focus_x, config.chart_focus_y)
 
         def read_once():
             nav_shots["n"] += 1
-            got, vis, got_raw, moved = capture(f"after_right_{nav_shots['n']}.png")
+            got, vis, got_raw, moved = capture(f"06_after_auto_right_{nav_shots['n']}.png")
             entry_raw.extend(got_raw)
             return got, vis, moved
 
@@ -176,13 +239,25 @@ def run_shadow_job(
             frames, extra_reasons = _visible_frames(window, request, engine)
             success = bool(frames)
             if not frames:
-                fail_reasons = [nav_reason, *extra_reasons]
+                fail_reasons = [nav_reason, Reason.VISION_NATIVE_LABELS_NOT_RENDERED.value, *extra_reasons]
+                if signal_marker_visible(tokens):
+                    fail_reasons.append(Reason.VISION_SIGNAL_MARKER_VISIBLE_LEVELS_MISSING.value)
+                if ribbon_values(tokens):
+                    fail_reasons.append(Reason.VISION_REJECT_RIBBON_VALUE.value)
         elif not success and state.reason == "VISION_AUTO_RIGHT_EXHAUSTED":
             nav_reason = Reason.VISION_LEVELS_NOT_VISIBLE_AFTER_NAVIGATION.value
     else:
         if tokens:
             frames.append(tokens)
         nav_reason = Reason.VISION_LEVELS_NOT_VISIBLE.value
+    elapsed_ms = int((datetime.now(timezone.utc) - request.webhook_received_at).total_seconds() * 1000)
+    if elapsed_ms > config.max_total_acquisition_ms:
+        log.info(
+            "chart_state stale webhook_time=%s total_latency_ms=%s",
+            request.webhook_received_at.isoformat(),
+            elapsed_ms,
+        )
+        fail_reasons = list(dict.fromkeys([*fail_reasons, Reason.VISION_STALE_CONFIRMATION.value]))
     result = bridge.process_frames(
         request,
         frames,
@@ -199,6 +274,18 @@ def run_shadow_job(
     )
     if triggered and hasattr(navigator, "reset_chart_view"):
         navigator.reset_chart_view(window)
+    log.info(
+        "chart_state signal=%s webhook_time=%s levels_confirmed_time=%s total_latency_ms=%s "
+        "live_edge=%s auto_right_triggered=%s auto_right_attempts=%s level_set_complete=%s",
+        request.signal_id,
+        request.webhook_received_at.isoformat(),
+        datetime.now(timezone.utc).isoformat(),
+        elapsed_ms,
+        nav_reason == Reason.VISION_ALREADY_AT_LIVE_EDGE.value,
+        triggered,
+        attempts,
+        result.state is VisionState.VISION_CONFIRMED,
+    )
     result.entry_raw = " | ".join(entry_raw)
     result.window_bounds = method or "NONE"
     if not frames and not result.reasons:

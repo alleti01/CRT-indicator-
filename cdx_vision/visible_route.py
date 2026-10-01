@@ -11,9 +11,22 @@ def current_signal_visible(tokens: list[OCRToken]) -> bool:
     return "CDX" in blob and has_side
 
 
-def extraction_route(*, levels_visible: bool, marker_visible: bool) -> str:
+def extraction_route(
+    *,
+    levels_visible: bool,
+    marker_visible: bool,
+    timeframe_ok: bool = True,
+    live_edge: bool = False,
+    offscreen: bool = False,
+) -> str:
+    """A visible CDX LONG/SHORT marker does not stop recovery."""
+    del marker_visible
+    if not timeframe_ok:
+        return "RESTORE_TIMEFRAME"
     if levels_visible:
         return "READY"
-    if marker_visible:
-        return "VISIBLE_EXTRACTION"
-    return "AUTO_RIGHT"
+    if live_edge:
+        return "NATIVE_LABELS_MISSING"
+    if offscreen:
+        return "AUTO_RIGHT"
+    return "DIAGNOSTIC_RIGHT"

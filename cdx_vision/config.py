@@ -29,6 +29,12 @@ class VisionConfig:
     chart_focus_y: float = 0.45
     tick: Decimal = Decimal("0.25")
     window_title_pattern: str = "TradingView"
+    required_timeframe: str = "3m"
+    dedicated_window: bool = False
+    auto_restore_timeframe: bool = False
+    timeframe_restore_timeout_ms: int = 8000
+    redraw_wait_ms: int = 1500
+    max_total_acquisition_ms: int = 20000
     root: Path = Path("cdx_vision")
 
     @classmethod
@@ -48,6 +54,13 @@ class VisionConfig:
             redraw_delay_ms=int(os.environ.get("CDX_VISION_REDRAW_DELAY_MS", "1500")),
             chart_focus_x=float(os.environ.get("CDX_VISION_CHART_FOCUS_X", "0.40")),
             chart_focus_y=float(os.environ.get("CDX_VISION_CHART_FOCUS_Y", "0.45")),
+            required_timeframe=os.environ.get("CDX_VISION_REQUIRED_TIMEFRAME", "3m").strip().lower() or "3m",
+            dedicated_window=_flag("CDX_VISION_DEDICATED_WINDOW", "true"),
+            auto_restore_timeframe=_flag("CDX_VISION_AUTO_RESTORE_TIMEFRAME", "true"),
+            timeframe_restore_timeout_ms=int(os.environ.get("CDX_VISION_TIMEFRAME_RESTORE_TIMEOUT_MS", "8000")),
+            redraw_wait_ms=int(os.environ.get("CDX_VISION_REDRAW_WAIT_MS", "1500")),
+            max_total_acquisition_ms=int(os.environ.get("CDX_VISION_MAX_TOTAL_ACQUISITION_MS", "20000")),
+            window_title_pattern=os.environ.get("CDX_VISION_WINDOW_TITLE", "MNQ"),
         )
 
     def may_route_orders(self) -> bool:

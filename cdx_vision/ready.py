@@ -6,13 +6,15 @@ from pathlib import Path
 
 from PIL import Image
 
+from cdx_vision.chart_state import detect_symbol
 from cdx_vision.config import VisionConfig
 from cdx_vision.entry_read import read_visual_entry
 from cdx_vision.live_job import load_roi
 from cdx_vision.ocr import TesseractOcr
 from cdx_vision.screen_capture import capture_window, is_minimized
 from cdx_vision.tesseract_cmd import resolve_tesseract
-from cdx_vision.window_locator import list_tradingview_windows
+from cdx_vision.timeframe_ui import _read_timeframe
+from cdx_vision.window_locator import list_tradingview_windows, select_bot_window
 
 _FIXTURE = Path("cdx_vision/fixtures/real/cdx_real_01.png")
 _FALLBACK_FIXTURE = Path("cdx_vision/debug/manual_20260927_175439/window.png")
@@ -39,15 +41,20 @@ def main() -> int:
     config = VisionConfig.from_env()
     exe = resolve_tesseract()
     windows = list_tradingview_windows()
+    bot = select_bot_window(windows, config.window_title_pattern) if config.dedicated_window else (windows[0] if windows else None)
     capture_ok = False
     method = ""
-    if windows and not is_minimized(windows[0].hwnd):
-        shot = capture_window(windows[0])
+    detected_tf = ""
+    if bot is not None and not is_minimized(bot.hwnd):
+        shot = capture_window(bot)
         if shot is not None:
             capture_ok = True
             method = shot.method
-    reader = _visual_reader(TesseractOcr(exe), windows) if exe else "FAIL"
+        if exe:
+            _shot, detected_tf, _words = _read_timeframe(bot, TesseractOcr(exe, psm=11), capture_window)
+    reader = _visual_reader(TesseractOcr(exe), [bot] if bot is not None else windows) if exe else "FAIL"
     auto = "PASS" if config.auto_right_enabled else "DISABLED"
+    dedicated = "PASS" if bot is not None else "FAIL"
     print("OCR:", "PASS" if exe else "FAIL")
     print("TRADINGVIEW:", "FOUND" if windows else "NOT_FOUND")
     print("CAPTURE:", "PASS" if capture_ok else "FAIL")
@@ -57,6 +64,11 @@ def main() -> int:
     print("TP READER:", "PASS" if reader == "PASS" else reader)
     print("ACTIVE TRADE SELECTOR:", "PASS")
     print("AUTO RIGHT:", auto)
+    print("DEDICATED_WINDOW:", dedicated if config.dedicated_window else "DISABLED")
+    print("SYMBOL:", f"expected {config.window_title_pattern} / detected {detect_symbol(bot.title) if bot else ''}")
+    print("TIMEFRAME:", f"expected {config.required_timeframe} / detected {detected_tf or 'unknown'}")
+    print("AUTO_RESTORE_TIMEFRAME:", "PASS" if config.auto_restore_timeframe else "DISABLED")
+    print("CDX_NATIVE_LABEL_READER:", reader)
     print("VISION_ENABLED:", "true" if config.enabled else "false")
     print("SHADOW_ONLY:", "true" if config.shadow_only else "false")
     print("EXECUTION_ENABLED:", "false" if not config.may_route_orders() else "true")

@@ -73,6 +73,17 @@ def _process_name(hwnd: int) -> str:
 _TRADINGVIEW_PROCESS = "tradingview.exe"
 
 
+def select_bot_window(windows: list[WindowInfo], title_pattern: str) -> WindowInfo | None:
+    """The calibrated chart. Does not fall through to a random TradingView window."""
+    needle = (title_pattern or "").lower()
+    if not needle:
+        return None
+    matches = [window for window in windows if needle in window.title.lower()]
+    if not matches:
+        return None
+    return max(matches, key=lambda window: window.width * window.height)
+
+
 def list_tradingview_windows() -> list[WindowInfo]:
     """Visible windows owned by the TradingView desktop app only."""
     hits = []

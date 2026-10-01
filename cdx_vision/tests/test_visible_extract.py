@@ -37,12 +37,22 @@ class SymbolTests(unittest.TestCase):
 
 class RouteTests(unittest.TestCase):
     def test_offscreen_may_pan(self) -> None:
-        self.assertEqual(extraction_route(levels_visible=False, marker_visible=False), "AUTO_RIGHT")
+        self.assertEqual(
+            extraction_route(levels_visible=False, marker_visible=False, offscreen=True),
+            "AUTO_RIGHT",
+        )
 
-    def test_visible_marker_does_not_pan(self) -> None:
+    def test_visible_marker_does_not_stop_recovery(self) -> None:
         tokens = [OCRToken("CDX", 500, 10, 540, 24), OCRToken("LONG", 550, 10, 610, 24)]
         self.assertTrue(current_signal_visible(tokens))
-        self.assertEqual(extraction_route(levels_visible=False, marker_visible=True), "VISIBLE_EXTRACTION")
+        with_marker = extraction_route(levels_visible=False, marker_visible=True, timeframe_ok=True)
+        without = extraction_route(levels_visible=False, marker_visible=False, timeframe_ok=True)
+        self.assertEqual(with_marker, without)
+        self.assertEqual(with_marker, "DIAGNOSTIC_RIGHT")
+        self.assertEqual(
+            extraction_route(levels_visible=False, marker_visible=True, timeframe_ok=False),
+            "RESTORE_TIMEFRAME",
+        )
 
     def test_ready_levels_skip_both(self) -> None:
         self.assertEqual(extraction_route(levels_visible=True, marker_visible=True), "READY")

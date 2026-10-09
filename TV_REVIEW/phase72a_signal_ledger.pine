@@ -1901,8 +1901,8 @@ var string gldLastTakeEventId = ""
 f_gld_bool(float v) =>
     v > 0.5 ? 1.0 : 0.0
 
-f_gld_bool_opt(bool b) =>
-    na(b) ? na : (b ? 1.0 : 0.0)
+f_gld_bool_opt(series bool b) =>
+    (b == true or b == false) ? (b ? 1.0 : 0.0) : na
 
 // Bounded cold-start window: 12 completed 15M bars (m15C12) + swingPeriod pivot lag
 gldHtfWarmupMinBars = 12 * 15 + swingPeriod
@@ -1937,8 +1937,8 @@ f_gld_event_id(string dir) =>
 gld_armed_long = p58State == 1
 gld_armed_short = p58State == -1
 // Outside cold-start window: identical to pre-Part-C Layer D reads
-gld_evidence_threshold_long = gldInColdStartWindow ? na : p58State == 1 and gldSnapArmTotalLong >= takeThreshold
-gld_evidence_threshold_short = gldInColdStartWindow ? na : p58State == -1 and gldSnapArmTotalShort >= takeThreshold
+gld_evidence_threshold_long = gldInColdStartWindow ? bool(na) : (p58State == 1 and gldSnapArmTotalLong >= takeThreshold)
+gld_evidence_threshold_short = gldInColdStartWindow ? bool(na) : (p58State == -1 and gldSnapArmTotalShort >= takeThreshold)
 gld_htf_warmup_ready = gldHtfWarmupReady
 gld_p4_keep_long = gldSnapP4KeepLong
 gld_p4_keep_short = gldSnapP4KeepShort
@@ -1969,8 +1969,8 @@ if gld_take_long_edge
 if gld_take_short_edge
     gldLastTakeEventId := f_gld_event_id("SHORT")
 
-f_gld_json_bool(bool b) =>
-    na(b) ? "null" : str.tostring(b)
+f_gld_json_bool(series bool b) =>
+    (b == true or b == false) ? str.tostring(b) : "null"
 
 f_gld_gate_json() =>
     '{"htf_warmup_ready":' + str.tostring(gld_htf_warmup_ready) +

@@ -1,0 +1,154 @@
+{
+  "date": "2026-09-18",
+  "verdict": "PHASE85_NINJATRADER_API_BLOCKED",
+  "repository": "/Users/anishalleti/CRT indicator",
+  "commit": "e1d4406452c901a5e9d9a962c32eb00645165fad",
+  "phase72a": {
+    "expected": "d75ff747a491c176eda588efc945822b8bd4a6aeaaeaf1d2bdea2b7a8e32cc1f",
+    "before": "d75ff747a491c176eda588efc945822b8bd4a6aeaaeaf1d2bdea2b7a8e32cc1f",
+    "after": "d75ff747a491c176eda588efc945822b8bd4a6aeaaeaf1d2bdea2b7a8e32cc1f",
+    "pass": true
+  },
+  "phase73": {
+    "before_verifier_pass": true,
+    "after_verifier_pass": true,
+    "errors": [],
+    "critical_module_count": 16,
+    "modules": {
+      "phase73/trader/engine.py": {
+        "expected": "36926eee365a49269ab1c8185a0c3f8945ebadbe626d7a4df5bd38c4144d07c0",
+        "before": "36926eee365a49269ab1c8185a0c3f8945ebadbe626d7a4df5bd38c4144d07c0",
+        "after": "36926eee365a49269ab1c8185a0c3f8945ebadbe626d7a4df5bd38c4144d07c0"
+      },
+      "phase73/trader/fsm.py": {
+        "expected": "1edf3554a656cd06aa8a038d4df2da13368f3420bb0bfd88fc22d16baf98c189",
+        "before": "1edf3554a656cd06aa8a038d4df2da13368f3420bb0bfd88fc22d16baf98c189",
+        "after": "1edf3554a656cd06aa8a038d4df2da13368f3420bb0bfd88fc22d16baf98c189"
+      },
+      "phase73/trader/entry_quality.py": {
+        "expected": "1408f72a38c442cf0ae825057ebc8add035c8fe40f311c1ee6eeb293d2b66eeb",
+        "before": "1408f72a38c442cf0ae825057ebc8add035c8fe40f311c1ee6eeb293d2b66eeb",
+        "after": "1408f72a38c442cf0ae825057ebc8add035c8fe40f311c1ee6eeb293d2b66eeb"
+      },
+      "phase73/trader/management.py": {
+        "expected": "4631ffe4061c7d5fd8ed26f605579815b9a19ccad5062e6953e72d9818738961",
+        "before": "4631ffe4061c7d5fd8ed26f605579815b9a19ccad5062e6953e72d9818738961",
+        "after": "4631ffe4061c7d5fd8ed26f605579815b9a19ccad5062e6953e72d9818738961"
+      },
+      "phase73/market_data/provider.py": {
+        "expected": "cdec45ae97f77602638f1d5fbabe30d98b5a7bbd1b5380fddfcc5f8769ed09d9",
+        "before": "cdec45ae97f77602638f1d5fbabe30d98b5a7bbd1b5380fddfcc5f8769ed09d9",
+        "after": "cdec45ae97f77602638f1d5fbabe30d98b5a7bbd1b5380fddfcc5f8769ed09d9"
+      },
+      "phase73/market_data/base.py": {
+        "expected": "fd69b7a7bc93bd7b5742623230b865129e20dfaa924c544b6c932ce0664f36d7",
+        "before": "fd69b7a7bc93bd7b5742623230b865129e20dfaa924c544b6c932ce0664f36d7",
+        "after": "fd69b7a7bc93bd7b5742623230b865129e20dfaa924c544b6c932ce0664f36d7"
+      },
+      "phase73/market_data/cache.py": {
+        "expected": "f5354c0522462d09a9ae6434c33272ce3d08bb69e4b49280f0a25ceb6a8eb91e",
+        "before": "f5354c0522462d09a9ae6434c33272ce3d08bb69e4b49280f0a25ceb6a8eb91e",
+        "after": "f5354c0522462d09a9ae6434c33272ce3d08bb69e4b49280f0a25ceb6a8eb91e"
+      },
+      "phase73/webhook/receiver.py": {
+        "expected": "eed03b1a582161498054863aa364311428f98b436e7f8e578d374e5477c06f72",
+        "before": "eed03b1a582161498054863aa364311428f98b436e7f8e578d374e5477c06f72",
+        "after": "eed03b1a582161498054863aa364311428f98b436e7f8e578d374e5477c06f72"
+      },
+      "phase73/webhook/validator.py": {
+        "expected": "cf5a47148050268ed971472e4af7476ec793c3b385ec34afc6add701f3ffe913",
+        "before": "cf5a47148050268ed971472e4af7476ec793c3b385ec34afc6add701f3ffe913",
+        "after": "cf5a47148050268ed971472e4af7476ec793c3b385ec34afc6add701f3ffe913"
+      },
+      "phase73/webhook/schemas.py": {
+        "expected": "bc70cfe7313f8e41f2ffbd138df7e04d3e3f57c587831575ad796a26bfadc120",
+        "before": "bc70cfe7313f8e41f2ffbd138df7e04d3e3f57c587831575ad796a26bfadc120",
+        "after": "bc70cfe7313f8e41f2ffbd138df7e04d3e3f57c587831575ad796a26bfadc120"
+      },
+      "phase73/execution/sim_router.py": {
+        "expected": "c20a14e659c0c48bb0e57c280045f93d19f9c49439fbc36c4e9bf0fb053e5280",
+        "before": "c20a14e659c0c48bb0e57c280045f93d19f9c49439fbc36c4e9bf0fb053e5280",
+        "after": "c20a14e659c0c48bb0e57c280045f93d19f9c49439fbc36c4e9bf0fb053e5280"
+      },
+      "phase73/execution/base.py": {
+        "expected": "6d6b881583729c2c5d5cbc4c4051ab9ef38dbf621e6b27f735aa8da715c912a5",
+        "before": "6d6b881583729c2c5d5cbc4c4051ab9ef38dbf621e6b27f735aa8da715c912a5",
+        "after": "6d6b881583729c2c5d5cbc4c4051ab9ef38dbf621e6b27f735aa8da715c912a5"
+      },
+      "phase73/risk/reconciliation.py": {
+        "expected": "7831b33f2bbf66eec200f8a08932a8de647872d10577d251f1556eab03c65067",
+        "before": "7831b33f2bbf66eec200f8a08932a8de647872d10577d251f1556eab03c65067",
+        "after": "7831b33f2bbf66eec200f8a08932a8de647872d10577d251f1556eab03c65067"
+      },
+      "phase73/risk/safety.py": {
+        "expected": "d7c9c11abb85e39643d3eda2fafc1b73590c1161b2d05d7503010a85165f3f20",
+        "before": "d7c9c11abb85e39643d3eda2fafc1b73590c1161b2d05d7503010a85165f3f20",
+        "after": "d7c9c11abb85e39643d3eda2fafc1b73590c1161b2d05d7503010a85165f3f20"
+      },
+      "phase73/persistence/state.py": {
+        "expected": "f3e12296daa163ae0ccba1608f0554dfb127fa61da60725514f0078d944a561b",
+        "before": "f3e12296daa163ae0ccba1608f0554dfb127fa61da60725514f0078d944a561b",
+        "after": "f3e12296daa163ae0ccba1608f0554dfb127fa61da60725514f0078d944a561b"
+      },
+      "phase73/replay/runner.py": {
+        "expected": "575ef794c1fb2c034a987c868ccad762588ba96ef508be09b284a827fc1fa204",
+        "before": "575ef794c1fb2c034a987c868ccad762588ba96ef508be09b284a827fc1fa204",
+        "after": "575ef794c1fb2c034a987c868ccad762588ba96ef508be09b284a827fc1fa204"
+      }
+    }
+  },
+  "crtbarbridge": {
+    "before": "1a01a3f33c21cb3ac419e3ee7f3ab05448181b81a33bd5796f16ba2c6eeac880",
+    "after": "1a01a3f33c21cb3ac419e3ee7f3ab05448181b81a33bd5796f16ba2c6eeac880",
+    "read_only_static_tests_pass": true
+  },
+  "source_configuration_files_compared": 141,
+  "source_configuration_changes": [],
+  "tests": {
+    "phase73": {
+      "run": 26,
+      "passed": 26,
+      "failed": 0
+    },
+    "phase74": {
+      "run": 77,
+      "passed": 74,
+      "failed": 3
+    },
+    "phase85": {
+      "run": 69,
+      "passed": 69,
+      "failed": 0
+    }
+  },
+  "ninjatrader_compilation": "NOT_RUN",
+  "ninjatrader_sim": "NOT_RUN",
+  "funded_orders_sent_by_task": 0,
+  "defaults": {
+    "phase": 85,
+    "execution_mode": "SHADOW",
+    "shadow_mode": true,
+    "trading_enabled": false,
+    "external_order_routing": false,
+    "nt_execution_bridge_enabled": false,
+    "bind_host": "127.0.0.1",
+    "bind_port": 8766,
+    "auth_env_var": "NINJATRADER_EXECUTION_BRIDGE_TOKEN",
+    "expected_account": "",
+    "allowed_funded_account": "",
+    "funded_account_verified": false,
+    "allowed_instrument_root": "MNQ",
+    "expected_contract": "",
+    "tick_size": 0.25,
+    "point_value": 2.0,
+    "max_quantity": 1,
+    "max_open_strategy_positions": 1,
+    "stale_signal_seconds": 120,
+    "allow_nq_execution": false,
+    "persistence_dir": "phase85/logs",
+    "sim_gate_path": "phase85/logs/sim_activation_gate.json"
+  },
+  "git_status_before": " M phase77/__init__.py\n M phase77/python/__init__.py\n M phase77_macro/__init__.py\n M phase77_macro/python/__init__.py\n M phase78/__init__.py\n M phase78/python/__init__.py\n M phase78b/__init__.py\n M phase78b/python/__init__.py\n?? .codex/\n?? phase76/data/\n?? phase85/\n",
+  "git_status_after": " M phase77/__init__.py\n M phase77/python/__init__.py\n M phase77_macro/__init__.py\n M phase77_macro/python/__init__.py\n M phase78/__init__.py\n M phase78/python/__init__.py\n M phase78b/__init__.py\n M phase78b/python/__init__.py\n M phase85/README.md\n M phase85/reports/ARCHITECTURE_DISCOVERY.md\n M phase85/reports/PHASE85_FINAL_REPORT.md\n M phase85/reports/TEST_REPORT.md\n M phase85/reports/WINDOWS_SETUP.md\n?? .codex/\n?? phase76/data/\n?? phase85/reports/API_VERIFICATION_BLOCKERS.md\n",
+  "notes": "Before/after covers this reporting-only review; Phase85 implementation already existed. Unrelated pre-existing init-file changes preserved."
+}

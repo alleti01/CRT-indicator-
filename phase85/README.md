@@ -1,3 +1,5 @@
+> Current status (2026-09-18): **PHASE85_NINJATRADER_API_BLOCKED**. The API-verification review found an incompatible CreateOrder argument, unverified order correlation, and incomplete execution/protection integration. Do not activate SIM or FUNDED using this draft. See `reports/API_VERIFICATION_BLOCKERS.md` and `reports/PHASE85_FINAL_REPORT.md`. Existing fake tests do not establish NinjaTrader readiness.
+
 # Phase85 — NinjaTrader execution layer
 
 One execution path for **SHADOW / SIM / FUNDED**.
@@ -52,6 +54,6 @@ See `phase85/reports/WINDOWS_SETUP.md`.
 
 ## Current verdict
 
-`PHASE85_UNIT_TEST_PASS`
+`PHASE85_NINJATRADER_API_BLOCKED`
 
 NinjaTrader SIM checkout and funded routing are **not** claimed. They require the Windows SIM gate in `reports/SIM_ACTIVATION_CHECKLIST.md`.

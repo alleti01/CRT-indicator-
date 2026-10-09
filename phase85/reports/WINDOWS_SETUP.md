@@ -1,3 +1,5 @@
+> Review update (2026-09-18): **PHASE85_NINJATRADER_API_BLOCKED**. This earlier document is retained as draft context, not verified setup or readiness evidence. See `API_VERIFICATION_BLOCKERS.md` and the superseding `PHASE85_FINAL_REPORT.md`. Implementation stopped at the user-required API-verification gate; activation instructions below must not be used until the blocker and integration gaps are resolved.
+
 # Windows setup — Phase85
 
 Designed so the same layout can later run on a Windows VPS. No GUI scraping, no clipboard automation.

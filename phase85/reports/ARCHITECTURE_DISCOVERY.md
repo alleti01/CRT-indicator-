@@ -1,3 +1,5 @@
+> Review update (2026-09-18): **PHASE85_NINJATRADER_API_BLOCKED**. This earlier document is retained as draft context, not verified setup or readiness evidence. See `API_VERIFICATION_BLOCKERS.md` and the superseding `PHASE85_FINAL_REPORT.md`. Implementation stopped at the user-required API-verification gate; activation instructions below must not be used until the blocker and integration gaps are resolved.
+
 # Phase85 Architecture Discovery
 
 Recorded before implementation. Inspected repository on 2026-09-18.

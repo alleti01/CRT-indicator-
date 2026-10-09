@@ -1,198 +1,169 @@
-# Phase85 final report
+# Phase85 final report — 2026-09-18
 
-## PHASE85 VERDICT
+This report supersedes the pre-existing readiness report. Implementation stopped at the user's API-verification gate. No execution source was changed. PASS labels below are explicitly limited to the existing Python/fake tests where stated; they are not NinjaTrader acceptance results. NOT TESTED is used where PASS/FAIL would invent evidence.
 
-`PHASE85_UNIT_TEST_PASS`
+PHASE85 VERDICT:
+PHASE85_NINJATRADER_API_BLOCKED
 
-Framework + fail-closed adapter + separate C# execution bridge + 69 unit tests.  
-NinjaTrader SIM and funded routing are **not** claimed.
+PHASE72A HASH:
+d75ff747a491c176eda588efc945822b8bd4a6aeaaeaf1d2bdea2b7a8e32cc1f — matched before and after reporting changes.
 
-## PHASE72A HASH
+PHASE73 FREEZE:
+PASS — existing 16-module verifier, before and after.
 
-`d75ff747a491c176eda588efc945822b8bd4a6aeaaeaf1d2bdea2b7a8e32cc1f`
+PRODUCTION STRATEGY FILES MODIFIED:
+NONE by this task. Pre-existing unrelated working-tree changes preserved.
 
-## PHASE73 FREEZE
+CRTBarBridge:
+UNCHANGED; SHA256 1a01a3f33c21cb3ac419e3ee7f3ab05448181b81a33bd5796f16ba2c6eeac880. Read-only tests PASS.
 
-PASS
+CRTExecutionBridge:
+Pre-existing untracked source. BLOCKED: incompatible documented CreateOrder argument and unverified Order.CustomText dependency. Not compiled or activated.
 
-## PRODUCTION STRATEGY FILES MODIFIED
+TRANSPORT:
+JSON-lines localhost TCP scaffolding exists; real transport-to-adapter/runtime integration is incomplete.
 
-NONE
+AUTH:
+PASS in existing fake tests; real bridge authentication NOT TESTED.
 
-## CRTBarBridge
+EXECUTION MODES:
+SHADOW / SIM / FUNDED declarations exist; one complete real execution path is not implemented.
 
-UNCHANGED (`1a01a3f33c21cb3ac419e3ee7f3ab05448181b81a33bd5796f16ba2c6eeac880`)
+DEFAULT MODE:
+SHADOW; SHADOW_MODE=true; TRADING_ENABLED=false; EXTERNAL_ORDER_ROUTING=false; NT_EXECUTION_BRIDGE_ENABLED=false.
 
-## CRTExecutionBridge
+ACCOUNT VERIFICATION:
+PASS in fake tests; actual account identity NOT TESTED.
 
-Added: `phase85/ninjatrader/CRTExecutionBridge.cs`  
-NT8 AddOn, localhost JSON-lines client, authenticated, allowlisted commands, exact account, MNQ only, qty≤1, command-id persistence.
+FUNDED ACCOUNT ALLOWLIST:
+PASS in existing Python tests; real bridge enforcement NOT TESTED.
 
-## TRANSPORT
+CONTRACT:
+MNQ intended; exact contract unset in repository defaults.
 
-JSON-lines TCP, Python listens `127.0.0.1:8766`, NT connects (same polarity as bar bridge on 8765).
+CONTRACT VERIFICATION:
+PASS in existing fake tests; actual expiry/tick-size/point-value verification NOT TESTED.
 
-## AUTH
+MAX QUANTITY:
+1 configured; Python fake oversized-order tests PASS; actual C# enforcement NOT TESTED.
 
-PASS (unit: valid / invalid / missing). Distinct token env + file.
+ONE POSITION LIMIT:
+PASS in fake tests; real pending-order/exposure behavior NOT TESTED.
 
-## EXECUTION MODES
+DUPLICATE WEBHOOK SAFETY:
+PASS in existing Python/fake tests; real integrated lifecycle NOT TESTED.
 
-SHADOW / SIM / FUNDED — one adapter.
+DUPLICATE COMMAND SAFETY:
+FAIL acceptance — fake tests pass, but C# silently ignores command-persistence failures; durable real restart safety is not established.
 
-## DEFAULT MODE
+ENTRY SUBMISSION:
+FAIL acceptance — no complete real runtime/transport path; C# API blocker. Fake submission tests pass.
 
-SHADOW (`trading_enabled=false`, `external_order_routing=false`, `nt_execution_bridge_enabled=false`)
+ACTUAL FILL TRACKING:
+FAIL acceptance — C# correlation API unverified and callbacks insufficiently filtered. Fake fill tests pass.
 
-## ACCOUNT VERIFICATION
+M0 SOURCE:
+phase73/trader/management.py, build_management; frozen SHA256 4631ffe4061c7d5fd8ed26f605579815b9a19ccad5062e6953e72d9818738961.
 
-PASS (unit / fake). Live NT not run.
+M0 FROM ACTUAL FILL:
+PASS in existing fake mapping test; real fill lifecycle NOT TESTED.
 
-## FUNDED ACCOUNT ALLOWLIST
+STOP PROTECTION:
+FAIL acceptance — fill handler does not automatically submit protection; C# emits working before confirmation.
 
-PASS (unit). NOT TESTED against a live funded account. SIM gate absent → FUNDED cannot route.
+TARGET PROTECTION:
+FAIL acceptance — same gaps as stop protection.
 
-## CONTRACT
+OCO:
+NOT TESTED in NinjaTrader. Shared OCO identifier exists in source; fake exit tests pass.
 
-MNQ only. NQ rejected. No silent map.
+PROTECTION FAILURE HANDLING:
+FAIL acceptance — fake explicit-failure test passes, but real asynchronous protection confirmation/rejection path is incomplete.
 
-## CONTRACT VERIFICATION
+PARTIAL FILLS:
+PASS in existing fake test; real event ordering/quantity behavior NOT TESTED.
 
-PASS (unit)
+FLATTEN:
+FAIL acceptance — C# cancellation scans unrelated account orders; actual flatten NOT TESTED.
 
-## MAX QUANTITY
+POSITION RECONCILIATION:
+FAIL acceptance — real response does not include the computed position side; fake scenarios pass.
 
-1 (Python + C#)
+ORDER RECONCILIATION:
+FAIL acceptance — real QUERY_ORDERS does not supply an order snapshot; fake scenarios pass.
 
-## ONE POSITION LIMIT
+RESTART RECOVERY:
+FAIL acceptance — real durable correlation/reconciliation path unverified; fake restart scenarios pass.
 
-PASS
+DISCONNECT SAFETY:
+PASS in existing fake tests; real broker-side protection and OCO persistence NOT TESTED.
 
-## DUPLICATE WEBHOOK SAFETY
-
-PASS
-
-## DUPLICATE COMMAND SAFETY
-
-PASS (including Python restart + bridge replay)
-
-## ENTRY SUBMISSION
-
-PASS (fake). NinjaTrader SIM LONG/SHORT: NOT RUN
-
-## ACTUAL FILL TRACKING
-
-PASS
-
-## M0 SOURCE
-
-`phase73.trader.management.build_management` on **actual fill**
-
-## M0 FROM ACTUAL FILL
-
-PASS (unit: fill 20100, ATR 10 → stop 20090, target 20125)
-
-## STOP PROTECTION
-
-PASS (fake)
-
-## TARGET PROTECTION
-
-PASS (fake)
-
-## OCO
-
-Implemented in C# via shared OCO id; fake cancels the other side on stop/target fill. Live NT OCO: NOT RUN
-
-## PROTECTION FAILURE HANDLING
-
-PASS (flatten + HALTED, no new entries)
-
-## PARTIAL FILLS
-
-PASS (remaining quantity + protect qty ≤ filled)
-
-## FLATTEN
-
-PASS (requires `POSITION_FLAT`)
-
-## POSITION RECONCILIATION
-
-PASS
-
-## ORDER RECONCILIATION
-
-PASS (orphan / unexpected)
-
-## RESTART RECOVERY
-
-PASS (unit scenarios)
-
-## DISCONNECT SAFETY
-
-PASS (block entries; do not strip protection)
-
-## STALE SIGNAL GATE
-
-PASS (`PASS_STALE_SIGNAL`, default 120s)
-
-## DATA HEALTH GATE
-
-PASS
-
-## KILL SWITCH
-
-PASS (`EXECUTION_ENABLED` / `DISABLED` / `HALTED`)
-
-## DEFAULT FAIL-CLOSED
-
-PASS
-
-## LATENCY
-
-No live TV→NT samples. Fake-bridge recorder exists.  
-TV→WEBHOOK median — not measured  
-WEBHOOK→DECISION median — not measured  
-DECISION→NT median — not measured  
-SUBMIT→ACK / SUBMIT→FILL / FILL→PROTECTION — not measured on NT  
-P95 / MAX — not measured
-
-## UNIT TESTS
-
-69 PASS
-
-## NINJATRADER SIM LONG / SHORT / STOP / TARGET / FLATTEN
-
+STALE SIGNAL GATE:
+PASS in existing fake tests; real runtime integration incomplete.
+
+DATA HEALTH GATE:
+PASS in existing fake tests; real runtime integration incomplete.
+
+KILL SWITCH:
+PASS in existing fake tests; actual NinjaTrader path NOT TESTED.
+
+DEFAULT FAIL-CLOSED:
+PASS — repository defaults disable routing; existing default-config tests pass. No flags changed.
+
+LATENCY:
+TV→WEBHOOK median: NOT MEASURED
+WEBHOOK→DECISION median: NOT MEASURED
+DECISION→NT median: NOT MEASURED
+SUBMIT→ACK median: NOT MEASURED
+SUBMIT→FILL median: NOT MEASURED
+FILL→PROTECTION median: NOT MEASURED
+P95: NOT MEASURED
+MAX: NOT MEASURED
+
+UNIT TESTS:
+Phase73: 26 PASS.
+Phase74: 74 PASS, 3 pre-existing FAIL (77 total).
+Phase85 existing tests: 69 PASS.
+Combined: 169 PASS, 3 FAIL (172 total).
+Initial sandbox loopback errors resolved on permitted rerun; no source changes made to affect results.
+
+NINJATRADER SIM LONG:
 NOT RUN
 
-## REAL PHASE72A → NT SIM
-
+NINJATRADER SIM SHORT:
 NOT RUN
 
-## SIM ACTIVATION GATE
+SIM STOP:
+NOT RUN
 
-FAIL (not recorded; correctly blocks FUNDED)
+SIM TARGET:
+NOT RUN
 
-## FUNDED CAPABILITY
+SIM FLATTEN:
+NOT RUN
 
+REAL PHASE72A → NT SIM:
+NOT RUN
+
+SIM ACTIVATION GATE:
+FAIL — required real SIM evidence absent; no passing gate created.
+
+FUNDED CAPABILITY:
 NOT READY
 
-## FUNDED ORDERS SENT
+FUNDED ORDERS SENT:
+0 by this task.
 
-0
-
-## FIRST FUNDED TRADE
-
+FIRST FUNDED TRADE:
 NOT RUN
 
-## CURRENT EXECUTION STATE
+CURRENT EXECUTION STATE:
+SHADOW repository configuration. No execution runtime was launched; implementation work stopped at API verification.
 
-SHADOW
+PRODUCTION CHANGES:
+NONE. Reporting/documentation changes only.
 
-## PRODUCTION CHANGES
+NEXT ACTION:
+Verify supported command/order correlation and compile against the target NinjaTrader 8 version before resuming implementation. Resolve the three existing Phase74 baseline discrepancies without silently changing frozen behavior. Complete the identified execution-path gaps, then repeat tests and the real Windows SIM checklist. Funded capability remains NOT READY.
 
-NONE
-
-## NEXT ACTION
-
-On Windows: compile `CRTExecutionBridge`, run SIM checklist with 1 MNQ on the **simulation** account only, write the SIM gate file, then (and only then) consider supervised funded preflight. Do not enable FUNDED under repository defaults.
+See API_VERIFICATION_BLOCKERS.md for source locations and official documentation links, TEST_REPORT.md for test details, and FREEZE_VERIFICATION.json for before/after evidence.

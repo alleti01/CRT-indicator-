@@ -16,12 +16,12 @@
 
 **Chart A — production trading:**
 ```
-https://finale-streak-bucket.ngrok-free.dev/webhook?token=471ab31a4b0724cef0a3e66b05bdf577cc32a58ae52acaa4f05f353ddd6d93c5
+https://finale-streak-bucket.ngrok-free.dev/webhook?token=<PHASE74_WEBHOOK_SECRET>
 ```
 
 **Chart B — ledger gate JSON (diagnostic only, no trades):**
 ```
-https://finale-streak-bucket.ngrok-free.dev/webhook/ledger?token=471ab31a4b0724cef0a3e66b05bdf577cc32a58ae52acaa4f05f353ddd6d93c5
+https://finale-streak-bucket.ngrok-free.dev/webhook/ledger?token=<PHASE74_WEBHOOK_SECRET>
 ```
 
 Logs to: `phase74/logs/ledger_alerts.jsonl` + `ledger_alerts.csv`

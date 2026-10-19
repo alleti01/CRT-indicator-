@@ -34,6 +34,7 @@ from phase74.quality.day_halt import (
 from phase74.quality.gates import QualityDecision, QualityGateConfig, evaluate_quality_gates
 from phase74.quality.htf_bias import HtfBiasConfig, evaluate_htf_bias, log_htf_decision
 from phase74.quality.logger import QualitySkipLogger
+from phase74.quality.shadow_profile import build_profiles
 from phase74.quality.range_lock import RangeLock, RangeLockConfig, seed_from_paper_trades
 from phase74.quality.trail import TrailOverlay, TrailOverlayConfig
 from phase74.safety.daily_session import DailySessionSafety
@@ -106,6 +107,11 @@ class LiveStack:
         self._quality_cfg = QualityGateConfig.from_dict(qg)
         self._quality_log = QualitySkipLogger(cfg.log_dir) if self._quality_enabled else None
         self._htf_cfg = HtfBiasConfig.from_dict(cfg.section("htf_bias"))
+        try:
+            self._shadow_profiles = build_profiles(cfg.raw.get("shadow_profiles", []), cfg.log_dir)
+        except Exception:
+            log.exception("shadow profiles not installed")
+            self._shadow_profiles = []
         self._day_halt = (
             PropDayHalt(
                 max_losers=int(qg.get("day_max_losers", 2)),
@@ -701,6 +707,7 @@ class LiveStack:
             return {"ok": False, "reason": reason.value}
         if signal.pine_hash != self.cfg.pine_hash:
             return {"ok": False, "reason": "SIGNAL_HASH_MISMATCH"}
+        self._shadow_profiles_signal(signal)
         globex_block = new_entries_blocked_session(
             signal.signal_time_utc,
             allow_globex_entries=self._allow_globex_entries,
@@ -907,7 +914,34 @@ class LiveStack:
 
     def on_bar(self) -> dict[str, Any]:
         with self._trade_lock:
+            self._shadow_profiles_bar()
             return self._on_bar_body()
+
+    def _shadow_profiles_signal(self, signal: PineSignal) -> None:
+        """Paper-trade the signal under each shadow profile. Never affects live orders."""
+        if not self._shadow_profiles:
+            return
+        try:
+            bars = list(self.market_data.recent_bars(2000))
+            for p in self._shadow_profiles:
+                ev = p.on_signal(signal.signal_id, signal.direction, float(signal.signal_price), signal.signal_time_utc, bars)
+                log.info("shadow profile %s signal=%s %s", p.cfg.name, signal.signal_id, ev)
+        except Exception:
+            log.exception("shadow profile signal failed signal=%s", signal.signal_id)
+
+    def _shadow_profiles_bar(self) -> None:
+        if not self._shadow_profiles:
+            return
+        try:
+            bar = self.market_data.latest_bar()
+            if bar is None:
+                return
+            for p in self._shadow_profiles:
+                closed = p.on_bar(bar)
+                if closed:
+                    log.info("shadow profile %s close %s", p.cfg.name, closed)
+        except Exception:
+            log.exception("shadow profile bar failed")
 
     def _on_bar_body(self) -> dict[str, Any]:
         if self.execution_adapter is not None:

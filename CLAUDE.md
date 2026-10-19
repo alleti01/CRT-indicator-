@@ -43,7 +43,7 @@ The user wants the bot to learn when to take a CDX signal and where to put stops
 - **Don't tune on the same few days.** Every rule change gets a walk-forward or held-out check, and results are reported with the sample size.
 - **Dollars:** live trades are **MNQ, $2 per point, $0.50 per tick**, 10 contracts unless stated. Use NQ ($20/pt) only when the user says NQ. (The `.cursor/rules/nq-point-value.mdc` $20 rule is outdated.)
 - **Commit and push after making changes**, unless the user says not to (carried over from the Cursor rules). Commit messages are one plain sentence about why. Never force-push main. A repo post-commit hook (`.githooks/post-commit`) may push each commit automatically.
-- **The GitHub repo is public** until the user makes it private. Never commit `.env`, keys, `phase85/logs/audit.jsonl`, or anything with account numbers or fills.
+- The GitHub repo is private (since 2026-10-19). Still never commit `.env`, keys, `phase85/logs/audit.jsonl`, or anything with account numbers or fills.
 - Don't commit `phase76/data/` (782 MB) or other large generated data; GitHub rejects files over 100 MB.
 - Don't decompile or bypass CDX's protected source. Reconstructing its behavior from its outputs is fine.
 

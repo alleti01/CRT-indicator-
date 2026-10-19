@@ -115,6 +115,7 @@ class LiveStack:
         self._atr_level_raw = dict(levels.get("atr", {}))
         self._atr_signals: set[str] = set()
         self._entry_qty: dict[str, int] = {}
+        self._active_qty = 10  # reset from the contract once it loads
         try:
             self._shadow_profiles = build_profiles(cfg.raw.get("shadow_profiles", []), cfg.log_dir)
         except Exception:
@@ -180,6 +181,7 @@ class LiveStack:
         log_dir.mkdir(parents=True, exist_ok=True)
 
         self.contract = load_contract_spec(cfg.raw)
+        self._active_qty = max(1, int(self.contract.default_quantity or 1))
         sim = cfg.section("simulation")
         inner = SlippageSimRouter(
             entry_slippage_ticks=float(sim.get("entry_slippage_ticks", 1.0)),
@@ -292,6 +294,7 @@ class LiveStack:
                 trade_id = str(uuid.uuid4())
                 self._active_trade_id = trade_id
                 self._active_entry_atr = signal.atr
+                self._active_qty = qty
                 target_px = self.engine.mgmt.target_price if self.engine.mgmt else 0
                 self.journal.open_trade(
                     TradeJournalEntry(
@@ -362,7 +365,7 @@ class LiveStack:
                     )
                     if self._day_halt is not None:
                         self._day_halt.record_closed(
-                            gross_r, bar.timestamp, dollars=move * 20.0
+                            gross_r, bar.timestamp, dollars=move * float(self.contract.multiplier) * self._active_qty
                         )
                     self._expand_trade_range(bar)
                     arm_stop_only = self.range_lock.cfg.arm_on == "stop"
@@ -376,6 +379,7 @@ class LiveStack:
                     self._active_trade_id = None
                     self._active_entry_atr = 0.0
                     self._active_entry_risk = 0.0
+                    self._active_qty = max(1, int(self.contract.default_quantity or 1))
                     self._route_nt_flatten()
             return result
 

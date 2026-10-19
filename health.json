@@ -1,0 +1,21 @@
+{
+    "checked_at_utc":  "2026-10-19T20:19:08.7778806+00:00",
+    "market_open":  true,
+    "bot_running":  true,
+    "last_bar_utc":  "2026-10-19T20:18:00.0000000+00:00",
+    "bar_age_minutes":  1.1,
+    "last_signal_utc":  "2026-10-19T20:02:08.5245320+00:00",
+    "status":  "OK",
+    "problems":  [
+
+                 ],
+    "files":  [
+                  "phase74/logs/bars.csv",
+                  "phase74/logs/signals.jsonl",
+                  "phase74/logs/signals.csv",
+                  "phase74/logs/errors.jsonl",
+                  "phase74/logs/htf_bias.jsonl",
+                  "phase74/logs/quality_skips.csv",
+                  "cdx_vision/logs/vision_levels.jsonl"
+              ]
+}

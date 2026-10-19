@@ -1,5 +1,5 @@
 {
-  "trained_at_utc": "2026-10-19T20:23:11.145524+00:00",
+  "trained_at_utc": "2026-10-19T20:46:48.430420+00:00",
   "rows": 151,
   "cdx_rows": 48,
   "last_signal_utc": "2026-10-02T12:42:00+00:00",
@@ -68,35 +68,35 @@
     {
       "policy": "model",
       "signals": 48,
-      "trades": 23,
-      "win_rate": 0.5217391304347826,
-      "avg_r": 0.08987391304347826,
-      "total_r": 2.0671,
-      "green_days": 5,
-      "red_days": 2,
-      "worst_day_r": -2.2792000000000003
+      "trades": 21,
+      "win_rate": 0.38095238095238093,
+      "avg_r": -0.15675714285714287,
+      "total_r": -3.2919,
+      "green_days": 3,
+      "red_days": 3,
+      "worst_day_r": -3.1606
     },
     {
       "policy": "take_all_fixed14_2R",
       "signals": 48,
       "trades": 48,
-      "win_rate": 0.3125,
-      "avg_r": -0.1327,
-      "total_r": -6.3696,
-      "green_days": 3,
-      "red_days": 6,
+      "win_rate": 0.3958333333333333,
+      "avg_r": 0.1173,
+      "total_r": 5.6304,
+      "green_days": 6,
+      "red_days": 3,
       "worst_day_r": -4.9126
     },
     {
       "policy": "15m_agrees_atr1.5_2R",
       "signals": 48,
-      "trades": 19,
-      "win_rate": 0.7368421052631579,
-      "avg_r": 1.092005263157895,
-      "total_r": 20.748100000000004,
+      "trades": 20,
+      "win_rate": 0.7,
+      "avg_r": 0.9856550000000001,
+      "total_r": 19.7131,
       "green_days": 8,
       "red_days": 1,
-      "worst_day_r": -2.0739
+      "worst_day_r": -2.0718
     }
   ],
   "decision": "KEEP_RULE"

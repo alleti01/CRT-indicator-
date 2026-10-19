@@ -53,31 +53,37 @@ class HtfBiasDecision:
 
 
 def resample(bars: Sequence[Bar], minutes: int) -> list[Bar]:
-    """Group bars into closed `minutes` candles. The still-forming candle is dropped."""
+    """Group 1-minute bars into closed `minutes` candles. The still-forming candle is dropped.
+
+    NinjaTrader stamps each bar with its closing minute (the 12:41-12:42 bar is 12:42, the
+    last bar before the 5 pm ET break is 17:00, the first after it 18:01), so a bar belongs
+    to the candle containing the minute before its stamp. That lines the candles up with
+    TradingView's. Candles are stamped at their close too.
+    """
     if not bars:
         return []
     step = timedelta(minutes=minutes)
+    one = timedelta(minutes=1)
     out: list[Bar] = []
     cur: list[Bar] = []
     cur_start: datetime | None = None
     for b in bars:
         ts = b.timestamp if b.timestamp.tzinfo else b.timestamp.replace(tzinfo=timezone.utc)
-        start = _EPOCH + ((ts - _EPOCH) // step) * step
+        start = _EPOCH + ((ts - one - _EPOCH) // step) * step
         if cur_start is not None and start != cur_start:
-            out.append(_merge(cur_start, cur))
+            out.append(_merge(cur_start + step, cur))
             cur = []
         cur_start = start
         cur.append(b)
     last_ts = bars[-1].timestamp if bars[-1].timestamp.tzinfo else bars[-1].timestamp.replace(tzinfo=timezone.utc)
-    # A 1-minute bar stamped at its open closes the bucket on the bucket's last minute.
-    if cur and cur_start is not None and last_ts + timedelta(minutes=1) >= cur_start + step:
-        out.append(_merge(cur_start, cur))
+    if cur and cur_start is not None and last_ts >= cur_start + step:
+        out.append(_merge(cur_start + step, cur))
     return out
 
 
-def _merge(start: datetime, group: list[Bar]) -> Bar:
+def _merge(close: datetime, group: list[Bar]) -> Bar:
     return Bar(
-        timestamp=start,
+        timestamp=close,
         open=group[0].open,
         high=max(b.high for b in group),
         low=min(b.low for b in group),

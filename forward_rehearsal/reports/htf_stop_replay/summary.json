@@ -7,46 +7,46 @@
   "signals": 52,
   "align_counts": {
     "against": 17,
-    "agrees": 22,
-    "neutral": 13
+    "agrees": 23,
+    "neutral": 12
   },
   "median_mfe_4h_by_align": {
-    "against": 39.5,
-    "agrees": 130.125,
+    "against": 33.5,
+    "agrees": 126.75,
     "neutral": 43.75
   },
   "median_dist": {
     "fixed_14.25": 14.25,
-    "struct5": 30.611607142856883,
-    "struct10": 47.8772321428587,
-    "atr1.5": 25.258928571428573
+    "struct5": 30.561160714285506,
+    "struct10": 44.875446428572104,
+    "atr1.5": 26.049107142857146
   },
   "premature_stops_2R": {
-    "atr1.5|against": "2/11",
-    "atr1.5|agrees": "2/6",
-    "atr1.5|neutral": "2/9",
-    "fixed_14.25|against": "6/13",
-    "fixed_14.25|agrees": "10/14",
-    "fixed_14.25|neutral": "5/9",
-    "struct10|against": "1/10",
-    "struct10|agrees": "1/4",
-    "struct10|neutral": "0/5",
-    "struct5|against": "2/12",
-    "struct5|agrees": "3/6",
-    "struct5|neutral": "2/10"
+    "atr1.5|against": "2/12",
+    "atr1.5|agrees": "2/7",
+    "atr1.5|neutral": "2/7",
+    "fixed_14.25|against": "3/11",
+    "fixed_14.25|agrees": "9/13",
+    "fixed_14.25|neutral": "5/8",
+    "struct10|against": "1/11",
+    "struct10|agrees": "2/5",
+    "struct10|neutral": "0/4",
+    "struct5|against": "2/13",
+    "struct5|agrees": "3/7",
+    "struct5|neutral": "2/8"
   },
   "per_signal_2R_avgR": {
-    "fixed_14.25|against": -0.364,
-    "fixed_14.25|agrees": 0.021,
-    "fixed_14.25|neutral": -0.147,
-    "struct5|against": -0.301,
-    "struct5|agrees": 0.866,
-    "struct5|neutral": -0.364,
-    "struct10|against": -0.093,
-    "struct10|agrees": 0.868,
-    "struct10|neutral": 0.316,
-    "atr1.5|against": -0.006,
-    "atr1.5|agrees": 1.072,
-    "atr1.5|neutral": -0.126
+    "fixed_14.25|against": -0.011,
+    "fixed_14.25|agrees": 0.234,
+    "fixed_14.25|neutral": -0.07,
+    "struct5|against": -0.428,
+    "struct5|agrees": 0.794,
+    "struct5|neutral": -0.133,
+    "struct10|against": -0.201,
+    "struct10|agrees": 0.806,
+    "struct10|neutral": 0.465,
+    "atr1.5|against": -0.159,
+    "atr1.5|agrees": 0.981,
+    "atr1.5|neutral": 0.175
   }
 }

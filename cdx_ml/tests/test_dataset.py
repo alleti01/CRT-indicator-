@@ -34,7 +34,7 @@ class LookAheadTests(unittest.TestCase):
         bars = _bars(1500)
         sig = {"signal_id": "x", "t": bars[1000].timestamp, "side": "LONG", "price": bars[999].close, "source": "cdx"}
         a, _ = build(bars, [sig], {})
-        moved = bars[:1000] + [Bar(b.timestamp, b.open + 500, b.high + 500, b.low + 500, b.close + 500) for b in bars[1000:]]
+        moved = bars[:1001] + [Bar(b.timestamp, b.open + 500, b.high + 500, b.low + 500, b.close + 500) for b in bars[1001:]]
         b, _ = build(moved, [sig], {})
         feat_keys = [k for k in a[0] if not k.startswith(("r_", "exit_", "mfe", "mae"))]
         for k in feat_keys:

@@ -326,7 +326,8 @@ def build(bars: list[Bar], signals: list[dict], cdx_levels: dict[str, dict]) -> 
     prev = None
     for sig in signals:
         minute = sig["t"].replace(second=0, microsecond=0)
-        i = bisect.bisect_left(times, minute)
+        # Bars are stamped at their close: the bar stamped at the signal minute is known; the path starts after it.
+        i = bisect.bisect_right(times, minute)
         hist = bars[max(0, i - 2000) : i]
         path = [b for b in bars[i : i + 400] if b.timestamp < sig["t"] + HORIZON]
         reason = ""

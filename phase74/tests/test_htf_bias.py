@@ -37,18 +37,29 @@ RANGE = [100, 120, 100, 120, 100, 120, 100, 120, 100, 110]
 
 
 class ResampleTests(unittest.TestCase):
-    def test_groups_closed_buckets_and_drops_forming_one(self) -> None:
-        bars = [Bar(T0 + timedelta(minutes=i), i, i + 1, i - 1, i + 0.5) for i in range(37)]
+    """NinjaTrader bars are stamped at their close: the 13:00-13:01 bar is 13:01."""
+
+    def test_groups_closed_candles_and_drops_forming_one(self) -> None:
+        bars = [Bar(T0 + timedelta(minutes=i), i, i + 1, i - 1, i + 0.5) for i in range(1, 38)]
         out = resample(bars, 15)
         self.assertEqual(len(out), 2)
-        self.assertEqual(out[0].open, 0)
-        self.assertEqual(out[0].close, 14.5)
-        self.assertEqual(out[0].high, 15)
-        self.assertEqual(out[1].low, 14)
+        self.assertEqual(out[0].timestamp, T0 + timedelta(minutes=15))  # 13:00-13:15 candle, stamped at close
+        self.assertEqual(out[0].open, 1)
+        self.assertEqual(out[0].close, 15.5)
+        self.assertEqual(out[0].high, 16)
+        self.assertEqual(out[1].low, 15)
 
-    def test_keeps_bucket_once_its_last_minute_arrives(self) -> None:
-        bars = [Bar(T0 + timedelta(minutes=i), 1, 2, 0, 1) for i in range(30)]
+    def test_candle_closes_on_its_last_minute(self) -> None:
+        bars = [Bar(T0 + timedelta(minutes=i), 1, 2, 0, 1) for i in range(1, 31)]
         self.assertEqual(len(resample(bars, 15)), 2)
+        self.assertEqual(len(resample(bars[:-1], 15)), 1)
+
+    def test_bar_stamped_on_the_hour_ends_the_previous_candle(self) -> None:
+        # 16:59-17:00 ET is stamped 17:00 and belongs to the 16:57-17:00 3m candle, like TradingView.
+        bars = [Bar(T0 + timedelta(minutes=i), 1, 2, 0, 1) for i in (-2, -1, 0)]
+        out = resample(bars, 3)
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0].timestamp, T0)
 
 
 class StructureTests(unittest.TestCase):

@@ -213,7 +213,8 @@ def main() -> None:
 
     rows = []
     for s in sigs:
-        i = bisect.bisect_left(times, s["t"].replace(second=0, microsecond=0))
+        # Bars are stamped at their close: the bar stamped at the signal minute is known; the path starts after it.
+        i = bisect.bisect_right(times, s["t"].replace(second=0, microsecond=0))
         hist = bars[max(0, i - 2000) : i]
         path = [b for b in bars[i : i + 300] if b.timestamp < s["t"] + MAX_HOLD]
         if len(hist) < 600 or len(path) < 30:

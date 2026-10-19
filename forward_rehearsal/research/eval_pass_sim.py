@@ -28,7 +28,8 @@ def prepare(start: datetime) -> list[dict]:
     times = [b.timestamp for b in bars]
     rows = []
     for s in R.load_signals(bars[-1].timestamp):
-        i = bisect.bisect_left(times, s["t"].replace(second=0, microsecond=0))
+        # Bars are stamped at their close: the bar stamped at the signal minute is known; the path starts after it.
+        i = bisect.bisect_right(times, s["t"].replace(second=0, microsecond=0))
         hist = bars[max(0, i - 2000) : i]
         path = [b for b in bars[i : i + 300] if b.timestamp < s["t"] + R.MAX_HOLD]
         if len(hist) < 600 or len(path) < 30 or s["t"] - hist[-1].timestamp > timedelta(minutes=10):

@@ -8,6 +8,24 @@ Research only. Production was not changed. Script: `forward_rehearsal/research/h
 - **Real 1-minute OHLC from `phase74/logs/bars.csv`** (Sep 9 – Oct 2, pushed from Windows). The few minutes before Sep 9 05:48 UTC fall back to closes from `decisions.jsonl`.
 - 15m / 1H bias from `phase74/quality/htf_bias.py`, the same code the live shadow log uses, on bars closed before the signal minute.
 
+## Correction 2 (2026-10-19): bars are stamped at their close
+
+NinjaTrader stamps each 1-minute bar with its closing minute. The earlier runs treated the stamp as the open, so candles were one minute off from TradingView's and each trade path included the minute before the signal. Fixed in `htf_bias.resample` and the replays. With it fixed (48 real CDX signals, 2R):
+
+| Stop | Filter | Trades | Win | Avg R | Total R | PF | Max DD R |
+|---|---|---|---|---|---|---|---|
+| fixed_14.25 | none | 47 | 38% | +0.08 | +3.7 | 1.12 | 6.8 |
+| fixed_14.25 | 15m agrees | 20 | 45% | +0.28 | +5.6 | 1.48 | 4.3 |
+| **atr1.5** | **none** | **42** | **50%** | **+0.42** | **+17.5** | **1.80** | **5.2** |
+| **atr1.5** | **15m agrees** | **20** | **65%** | **+0.83** | **+16.7** | **3.30** | **3.1** |
+| struct10 | 15m agrees | 20 | 65% | +0.63 | +12.6 | 3.16 | 2.1 |
+
+- The fixed stop is no longer a loser, but it is the weakest option and the most sensitive: a one-minute shift in entry timing flipped its sign. The ATR stop stayed strongly positive both ways.
+- 15m groups (atr1.5, 2R, per signal): agrees +0.99R (n=20), neutral +0.18R (n=12), against +0.09R (n=16).
+- Eval sim: atr1.5 + 15m, $600 risk passed from all 15 start dates, none blown, median 6 sessions.
+
+Tables further down are from before this fix.
+
 ## Correction (2026-10-19): 44 "CDX" signals were fake
 
 The Sep 28 burst of LONG signals every 5 minutes came from the bot's own readiness probe (`make_test_signal`, random-UUID ids), not from CDX. The scorecard below now excludes them; only TradingView alert ids (timestamps) count. That leaves **48 real CDX signals** with bars.

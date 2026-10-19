@@ -20,6 +20,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from cdx_ml.dataset import is_alert_id
 from phase73.market_data.bar import Bar
 from phase74.quality.htf_bias import BEARISH, BULLISH, HtfBiasConfig, evaluate_htf_bias, resample
 
@@ -93,7 +94,7 @@ def load_signals(last_bar: datetime) -> list[dict]:
                 r = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if r.get("event") in ("SIGNAL_LONG", "SIGNAL_SHORT") and not r["signal_id"].startswith("REEN"):
+            if r.get("event") in ("SIGNAL_LONG", "SIGNAL_SHORT") and is_alert_id(r["signal_id"]):
                 seen[r["signal_id"]] = r
     out = []
     for r in seen.values():

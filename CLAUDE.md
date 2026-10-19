@@ -7,7 +7,7 @@ Automates trades on **CDX V3 Pro** signals (a closed-source TradingView indicato
 - **Mac**: where the user and Claude work (research, training, code). The user is at school during the trading day.
 - **Windows PC** (`C:\Users\allet\Trading Bot`): runs the live bot unattended. It has NinjaTrader and TradingView.
 - Code goes Mac → GitHub `main` → `git pull` on Windows, then a bot restart. **Never assume Windows has pulled.**
-- Logs come back on the **`bot-logs` branch**: `scripts/sync_bot_logs.ps1` runs every 30 minutes from Task Scheduler on Windows (installed by `scripts/install_log_sync_task.ps1`). On the Mac, `bash scripts/fetch_bot_logs.sh` copies them into place and prints the health check (`phase74/logs/bot_pc_health.json`). Check it first when asked how the bot is doing.
+- Logs come back on the **`bot-logs` branch**: `scripts/sync_bot_logs.ps1` runs every 30 minutes from Task Scheduler on Windows (installed by `scripts/install_log_sync_task.ps1`). On the Mac, `bash scripts/fetch_bot_logs.sh` copies them into place and prints the health check (`phase74/logs/bot_pc_health.json`). Check it first when asked how the bot is doing. **`bot-logs` holds only logs: never merge it into `main` or open a PR for it**, even if GitHub suggests one. The fetched copies overwrite tracked files like `phase74/logs/bars.csv` on the Mac; don't commit those to `main` (no `git commit -a`), they already live on `bot-logs`.
 
 ## Live path
 
@@ -21,12 +21,13 @@ Config: `phase74/config/default.json`. The Phase73 engine files are hash-frozen 
 
 ## Research state (as of 2026-10-19)
 
-- **Taking every CDX signal loses** with every stop type tested (−0.07R to −0.50R per trade).
-- **15m market structure decides it.** Signals where the 15m structure agrees with the trade: median 4h move ~130 pts, +1.09R/trade (1.5×ATR stop, 2R). Against: −0.69R. Code: `phase74/quality/htf_bias.py`, live in **shadow only** (`htf_bias.enforce: false`, log `phase74/logs/htf_bias.jsonl`; its live rule is "skip only when 15m and 1H both disagree", which research shows is too loose).
-- **The fixed 14.25-pt stop is the main exit problem**: it is hit before most good setups run. 1.5×ATR(3m) or structural stops did far better. Which of those is best is not settled.
+- Only TradingView alert ids (timestamps like `2026-10-09T12:42:00Z`) are real CDX signals. Random-UUID ids are the bot's readiness-probe test signals (`make_test_signal`) and `REEN*` are manual reentries; `cdx_ml.dataset.is_alert_id` filters them. A Sep 28 burst of 44 fake LONGs skewed earlier results until 2026-10-19.
+- **The fixed 14.25-pt stop is the main problem**: it is hit before most good setups run. With a 1.5×ATR(3m) stop and 2R target, taking every real CDX signal was +0.38R/trade (43 trades) vs −0.21R with the fixed stop.
+- **15m market structure helps but is secondary.** 15m agrees: +1.09R/trade (n=19); against: +0.25R (n=16); neutral: −0.13R (n=13). Code: `phase74/quality/htf_bias.py`, live in **shadow only** (`htf_bias.enforce: false`, log `phase74/logs/htf_bias.jsonl`).
+- Eval sim (`python -m forward_rehearsal.research.eval_pass_sim`): 1.5×ATR stop, 2R, $600 risk passed from every start date tested with none blown; median 4–9 sessions depending on filter and period.
 - **Size by dollar risk, not fixed contracts.** Fixed 10 MNQ with wide stops can lose $2k in one trade.
 - Replay: `forward_rehearsal/research/htf_stop_replay.py` → `forward_rehearsal/reports/htf_stop_replay/REPORT.md`.
-- Sample is small (~90 CDX signals with bars, Sep 22 – Oct 2). Don't present results as proven.
+- Sample is small (48 real CDX signals with bars, Sep 22 – Oct 2). Don't present results as proven.
 
 ## Learning layer (`cdx_ml/`)
 
@@ -34,7 +35,7 @@ The user wants the bot to learn when to take a CDX signal and where to put stops
 
 - `python -m cdx_ml.dataset` builds `cdx_ml/data/dataset.csv`: one row per signal, features from bars before the signal, triple-barrier outcomes for 7 stop types × 3 targets. Check `DATA_CARD.md` after.
 - `python -m cdx_ml.train` runs a walk-forward test (train on earlier days, test on the next unseen day) and compares the model with the fixed rules. It writes `cdx_ml/reports/TRAINING_REPORT.md` and decides `PROMOTE` or `KEEP_RULE`.
-- First run (2026-10-19): `KEEP_RULE`. Model −1.2R, "15m agrees + 1.5×ATR, 2R" rule +20.8R (but that rule was found on the same data). Needs ~300 CDX signals before a model can be trusted.
+- Latest run (2026-10-19, test signals removed): `KEEP_RULE`. Model +2.1R on 23 trades, "15m agrees + 1.5×ATR, 2R" rule +20.8R (but that rule was found on the same data). Needs ~300 CDX signals before a model can be trusted.
 - Requirements: `pip install -r cdx_ml/requirements.txt` (scikit-learn 1.5.2).
 
 ## Rules

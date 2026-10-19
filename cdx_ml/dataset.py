@@ -12,6 +12,7 @@ import bisect
 import csv
 import json
 import math
+import re
 import statistics
 from collections import Counter
 from dataclasses import dataclass
@@ -81,6 +82,15 @@ def load_bars(logs: Path = LOGS) -> list[Bar]:
     return out
 
 
+_ALERT_ID = re.compile(r"^\d{4}-\d{2}-\d{2}T")
+
+
+def is_alert_id(signal_id: str) -> bool:
+    """TradingView alerts carry a timestamp id. Random-UUID ids are the bot's own readiness-probe
+    test signals (make_test_signal), and REEN* ids are manual reentries; neither is a CDX print."""
+    return bool(_ALERT_ID.match(signal_id))
+
+
 def load_signals(logs: Path = LOGS) -> list[dict]:
     seen: dict[str, dict] = {}
     with (logs / "signals.jsonl").open(encoding="utf-8") as fh:
@@ -89,7 +99,7 @@ def load_signals(logs: Path = LOGS) -> list[dict]:
                 r = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if r.get("event") in ("SIGNAL_LONG", "SIGNAL_SHORT") and not r["signal_id"].startswith("REEN"):
+            if r.get("event") in ("SIGNAL_LONG", "SIGNAL_SHORT") and is_alert_id(r["signal_id"]):
                 seen[r["signal_id"]] = r
     out = []
     for r in seen.values():

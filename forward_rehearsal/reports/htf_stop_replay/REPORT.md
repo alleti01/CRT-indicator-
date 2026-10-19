@@ -8,6 +8,18 @@ Research only. Production was not changed. Script: `forward_rehearsal/research/h
 - **Real 1-minute OHLC from `phase74/logs/bars.csv`** (Sep 9 – Oct 2, pushed from Windows). The few minutes before Sep 9 05:48 UTC fall back to closes from `decisions.jsonl`.
 - 15m / 1H bias from `phase74/quality/htf_bias.py`, the same code the live shadow log uses, on bars closed before the signal minute.
 
+## Correction (2026-10-19): 44 "CDX" signals were fake
+
+The Sep 28 burst of LONG signals every 5 minutes came from the bot's own readiness probe (`make_test_signal`, random-UUID ids), not from CDX. The scorecard below now excludes them; only TradingView alert ids (timestamps) count. That leaves **48 real CDX signals** with bars.
+
+What changed:
+- **Taking every CDX signal is no longer a loser with a sensible stop.** 1.5 × ATR, 2R, no filter: +0.38R per trade over 43 trades (it was negative with the fake signals in).
+- **The fixed 14.25 stop is still the clear loser** (−0.21R per trade unfiltered).
+- **15m "against" is no longer bad** (+0.25R per signal, n=16); most of the old "against" losers were the fake burst. 15m agreeing is still the best group (+1.09R, n=19), but the filter now mainly lowers drawdown and halves trade count rather than turning losses into wins.
+- Main lesson: **the stop is the biggest problem**, more than which signals are taken.
+
+The tables below are the corrected run. The eval section is from `forward_rehearsal/research/eval_pass_sim.py`.
+
 ## Update: real bars (this report)
 
 The first version of this report used bars rebuilt from closes, with no wicks. With real highs and lows:

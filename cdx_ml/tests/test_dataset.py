@@ -10,6 +10,7 @@ from cdx_ml.dataset import (
     STOP_KINDS,
     TARGETS,
     _data_hole,
+    is_alert_id,
     build,
     features,
     stop_distances,
@@ -89,6 +90,13 @@ class LabelTests(unittest.TestCase):
         o = triple_barrier("LONG", 100.0, 10.0, 2.0, self._path([101, 104, 105]))
         self.assertEqual(o.exit, "TIME")
         self.assertAlmostEqual(o.r, 0.5 - 0.1)
+
+
+class SignalIdTests(unittest.TestCase):
+    def test_only_tradingview_alert_ids_count(self) -> None:
+        self.assertTrue(is_alert_id("2026-10-09T12:42:00Z"))
+        self.assertFalse(is_alert_id("d27035f4-30bb-4c19-9aa0-51cabf068a16"))  # readiness-probe test signal
+        self.assertFalse(is_alert_id("REENTRY_abc"))
 
 
 class GapTests(unittest.TestCase):

@@ -384,7 +384,9 @@ def main() -> int:
                 cfg.section("market_data").get("ninjatrader_bootstrap_bars", 15)
             ):
                 bar = md.latest_bar()
-                if bar and args.mode == "shadow":
+                # Readiness probe only: a continuous run (--bars 0) must not inject a fake
+                # LONG every second into the real signal logs.
+                if bar and args.mode == "shadow" and args.bars != 0:
                     sig = make_test_signal(
                         "SIGNAL_LONG",
                         signal_bar_time_utc=bar.timestamp,

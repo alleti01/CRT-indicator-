@@ -1,4 +1,6 @@
 # Start Phase74 shadow bot with NinjaTrader bar bridge + webhook
+# -Bars 480 (default) is a readiness check that exits once data is healthy; -Bars 0 stays up.
+param([int]$Bars = 480)
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
@@ -35,4 +37,4 @@ if ($existing) {
 Write-Host "Starting NinjaTrader shadow bot (port 8765 bridge, 8787 webhook)..." -ForegroundColor Cyan
 $webhookUrl = "http://127.0.0.1:8787/webhook?token=$($env:PHASE74_WEBHOOK_SECRET)"
 Write-Host "Webhook URL: $webhookUrl"
-& $python phase74\run_live.py --provider ninjatrader --mode shadow --webhook --bars 480
+& $python phase74\run_live.py --provider ninjatrader --mode shadow --webhook --bars $Bars

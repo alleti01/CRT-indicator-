@@ -1,0 +1,52 @@
+{
+  "bars": 23276,
+  "bar_range": [
+    "2026-09-08T01:34:00+00:00",
+    "2026-10-02T14:27:00+00:00"
+  ],
+  "signals": 104,
+  "align_counts": {
+    "against": 69,
+    "agrees": 22,
+    "neutral": 13
+  },
+  "median_mfe_4h_by_align": {
+    "against": 16.75,
+    "agrees": 130.125,
+    "neutral": 43.75
+  },
+  "median_dist": {
+    "fixed_14.25": 14.25,
+    "struct5": 20.024107142857247,
+    "struct10": 29.00089285714421,
+    "atr1.5": 28.821428571428573
+  },
+  "premature_stops_2R": {
+    "atr1.5|against": "2/63",
+    "atr1.5|agrees": "2/6",
+    "atr1.5|neutral": "2/9",
+    "fixed_14.25|against": "12/60",
+    "fixed_14.25|agrees": "10/14",
+    "fixed_14.25|neutral": "5/9",
+    "struct10|against": "13/56",
+    "struct10|agrees": "1/4",
+    "struct10|neutral": "0/5",
+    "struct5|against": "13/56",
+    "struct5|agrees": "3/6",
+    "struct5|neutral": "2/10"
+  },
+  "per_signal_2R_avgR": {
+    "fixed_14.25|against": -0.679,
+    "fixed_14.25|agrees": 0.021,
+    "fixed_14.25|neutral": -0.147,
+    "struct5|against": -0.572,
+    "struct5|agrees": 0.866,
+    "struct5|neutral": -0.364,
+    "struct10|against": -0.594,
+    "struct10|agrees": 0.868,
+    "struct10|neutral": 0.316,
+    "atr1.5|against": -0.783,
+    "atr1.5|agrees": 1.072,
+    "atr1.5|neutral": -0.126
+  }
+}

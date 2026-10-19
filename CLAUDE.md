@@ -13,7 +13,7 @@ Automates trades on **CDX V3 Pro** signals (a closed-source TradingView indicato
 
 1. A CDX TradingView alert hits the webhook: `phase74/webhook/secure_receiver.py`, schema `phase73/webhook/schemas.py` (`timeframe` is forced to `1m` even though the CDX chart is 3m).
 2. `phase74/runtime/live_stack.py` `on_webhook_signal` runs the gates in order (session pauses, repeat-alert window, HTF bias shadow, quality gates, range lock, day halt), then the frozen Phase73 engine.
-3. `cdx_vision/` screen-reads CDX Entry / SL / TP1 / TP2 off TradingView before the order (fragile: 5 of 46 real reads confirmed).
+3. With `levels.source: "chart"`, `cdx_vision/` screen-reads CDX Entry / SL / TP1 / TP2 off TradingView before the order (fragile: 5 of 46 real reads confirmed). With `"atr"`, levels come from bars and vision is off.
 4. `phase85/execution/adapter.py` sends the NinjaTrader order. Live size: **10 MNQ**.
 5. Bars come from the NinjaTrader bar bridge into `phase74/logs/bars.csv`. **The bar feed stopped on 2026-10-02 and was still down on 2026-10-19**; signals kept arriving. Bar-driven exits and the HTF read need it.
 
@@ -26,6 +26,7 @@ Config: `phase74/config/default.json`. The Phase73 engine files are hash-frozen 
 - **The 1.5×ATR(3m) stop is the robust choice.** Every real CDX signal, 2R: +0.42R/trade (42 trades) vs +0.08R for the fixed 14.25-pt stop (47 trades). The fixed stop's result flips sign with a one-minute change in entry timing; the ATR stop's doesn't.
 - **15m market structure helps.** 15m agrees: about +1R/trade (n=20), fewer trades, lower drawdown. Code: `phase74/quality/htf_bias.py`, live in **shadow only** (`htf_bias.enforce: false`, log `phase74/logs/htf_bias.jsonl`).
 - Eval sim (`python -m forward_rehearsal.research.eval_pass_sim`): 1.5×ATR stop + 15m filter, 2R, $600 risk passed from all 15 start dates tested, none blown, median 6 sessions. Unfiltered and fixed-stop versions blew 3–5 of 14–15.
+- **ATR level source for live orders** (`levels.source` in `phase74/config/default.json`, `phase74/quality/atr_levels.py`): `"chart"` (default, current behavior: vision levels when `require_chart_levels`, else fixed 14.25 + wick stop) or `"atr"` (stop 1.5×ATR(3m), target 2R, size from $600 risk, capped at 10 and at NinjaTrader's `MAX_QUANTITY`; no vision, no trail; refuses the entry if bars are stale). `start-ninjatrader-live.ps1` turns vision off when it's `"atr"`. Only switch it on when the user says so, after the shadow profiles have a track record.
 - **Shadow ATR profiles** (`phase74/quality/shadow_profile.py`, config `shadow_profiles`): `atr1.5_all` (every real CDX signal) and `atr1.5_15m` (15m agrees only) paper-trade each alert with a 1.5×ATR(3m) stop, 2R target, $600 risk on MNQ, one position at a time, the bot's day limits, and their own $50k eval balance. Never send orders. Log `phase74/logs/shadow_profiles.jsonl`; summary: `python -m phase74.tools.shadow_profile_report` (after `fetch_bot_logs.sh`). Started 2026-10-19.
 - **Size by dollar risk, not fixed contracts.** Fixed 10 MNQ with wide stops can lose $2k in one trade.
 - Replay: `forward_rehearsal/research/htf_stop_replay.py` → `forward_rehearsal/reports/htf_stop_replay/REPORT.md`.

@@ -34,6 +34,7 @@ from phase74.quality.day_halt import (
 from phase74.quality.gates import QualityDecision, QualityGateConfig, evaluate_quality_gates
 from phase74.quality.htf_bias import HtfBiasConfig, evaluate_htf_bias, log_htf_decision
 from phase74.quality.logger import QualitySkipLogger
+from phase74.quality.atr_levels import AtrLevelConfig, compute_atr_levels
 from phase74.quality.shadow_profile import build_profiles
 from phase74.quality.range_lock import RangeLock, RangeLockConfig, seed_from_paper_trades
 from phase74.quality.trail import TrailOverlay, TrailOverlayConfig
@@ -107,6 +108,13 @@ class LiveStack:
         self._quality_cfg = QualityGateConfig.from_dict(qg)
         self._quality_log = QualitySkipLogger(cfg.log_dir) if self._quality_enabled else None
         self._htf_cfg = HtfBiasConfig.from_dict(cfg.section("htf_bias"))
+        # Where live stops/targets come from: "chart" (vision levels when require_chart_levels,
+        # else the fixed + wick stop) or "atr" (computed from NinjaTrader bars, no chart reading).
+        levels = cfg.section("levels")
+        self._levels_source = str(levels.get("source", "chart")).strip().lower()
+        self._atr_level_raw = dict(levels.get("atr", {}))
+        self._atr_signals: set[str] = set()
+        self._entry_qty: dict[str, int] = {}
         try:
             self._shadow_profiles = build_profiles(cfg.raw.get("shadow_profiles", []), cfg.log_dir)
         except Exception:
@@ -157,7 +165,11 @@ class LiveStack:
             from cdx_vision.config import VisionConfig
             from cdx_vision.shadow_hook import add_result_listener
 
-            self._vision_orders_enabled = bool(cfg.section("mode").get("require_chart_levels", False)) and VisionConfig.from_env().enabled
+            self._vision_orders_enabled = (
+                self._levels_source != "atr"
+                and bool(cfg.section("mode").get("require_chart_levels", False))
+                and VisionConfig.from_env().enabled
+            )
             if self._vision_orders_enabled:
                 add_result_listener(self._on_chart_levels)
         except Exception:
@@ -232,6 +244,13 @@ class LiveStack:
                 self.engine.state = TraderState.FLAT
                 self.engine.pending_signal = None
                 return {"ok": True, "shadow": True, "action": action}
+            if self._levels_source == "atr" and signal.signal_id not in self._visual_stops:
+                why = self._apply_atr_levels(signal)
+                if why:
+                    self.engine.state = TraderState.FLAT
+                    self.engine.pending_signal = None
+                    log.warning("no order, ATR levels unavailable reason=%s signal=%s", why, signal.signal_id)
+                    return {"ok": False, "reason": f"ATR_LEVELS_{why}"}
             with self._trade_lock:
                 return commit_live_entry(signal, state_before, take_action)
 
@@ -244,7 +263,7 @@ class LiveStack:
             if bar is None:
                 return {"ok": False, "reason": "NO_BAR"}
             action_name = "MARKET_BUY" if signal.direction == "LONG" else "MARKET_SELL"
-            qty = max(1, int(self.contract.default_quantity or 1))
+            qty = self._order_qty(signal.signal_id)
             if self.idempotency.seen(signal.signal_id, action_name):
                 return {"ok": False, "reason": "ORDER_IDEMPOTENT_DUPLICATE"}
             signal = self._with_live_atr(signal)
@@ -255,6 +274,8 @@ class LiveStack:
                     self._void_rejected_paper_entry(None)
                     log.warning("no order, chart stop is through the fill signal=%s", signal.signal_id)
                     return {"ok": False, "reason": "CHART_STOP_CROSSED"}
+                if signal.signal_id in self._atr_signals:
+                    self._apply_atr_target(signal.signal_id)
             if result.get("ok") and result.get("fill_price") is not None:
                 from phase73.execution.orders import Order, OrderSide
 
@@ -290,7 +311,7 @@ class LiveStack:
                         slippage_R=slip.get("slippage_R", 0),
                     )
                 )
-                if self._trail_enabled and self.engine.mgmt is not None:
+                if self._trail_enabled and self.engine.mgmt is not None and signal.signal_id not in self._atr_signals:
                     self._trail = TrailOverlay(self._trail_cfg)
                     self._trail.hide_m0_target(self.engine.mgmt)
                     self.engine.book.internal.target_price = self.engine.mgmt.target_price
@@ -489,6 +510,42 @@ class LiveStack:
         log.info("manual bracket allowed=%s reason=%s", sent.allowed, sent.reason)
         return {"ok": bool(sent.allowed), "reason": sent.reason, "action": "MANUAL_BRACKET"}
 
+    def _order_qty(self, signal_id: str) -> int:
+        return self._entry_qty.get(signal_id) or max(1, int(self.contract.default_quantity or 1))
+
+    def _apply_atr_levels(self, signal: PineSignal) -> str:
+        """Set the stop, target and size from NinjaTrader bars. Returns a reason when it can't."""
+        cfg = AtrLevelConfig.from_dict({"tick_size": self.contract.tick_size, **self._atr_level_raw})
+        broker_max = getattr(getattr(self.execution_adapter, "cfg", None), "max_quantity", None)
+        if broker_max:
+            cfg = replace(cfg, max_qty=max(1, min(cfg.max_qty, int(broker_max))))  # never above NinjaTrader's MAX_QUANTITY
+        bars = list(self.market_data.recent_bars(2000))
+        levels, why = compute_atr_levels(signal.direction, float(signal.signal_price), signal.signal_time_utc, bars, cfg)
+        if levels is None:
+            return why
+        sid = signal.signal_id
+        self._visual_stops[sid] = levels.stop
+        self._visual_targets[sid] = levels.target
+        self._entry_qty[sid] = levels.qty
+        self._atr_signals.add(sid)
+        log.info(
+            "atr levels signal=%s side=%s stop=%.2f target=%.2f qty=%d stop_pts=%.2f atr3=%.2f",
+            sid, signal.direction, levels.stop, levels.target, levels.qty, levels.stop_points, levels.atr3,
+        )
+        return ""
+
+    def _apply_atr_target(self, signal_id: str) -> None:
+        """ATR trades exit at the fixed R target; the wick target and trail don't apply."""
+        mgmt = self.engine.mgmt
+        target = self._visual_targets.get(signal_id)
+        if mgmt is None or target is None:
+            return
+        mgmt.target_price = float(target)
+        self._wick_target = None
+        for snap in (self.engine.book.internal, self.engine.book.desired, self.engine.book.broker):
+            if snap.side == mgmt.side:
+                snap.target_price = mgmt.target_price
+
     def _apply_chart_stop(self, signal_id: str) -> bool:
         """Put the protective stop on the chart price. True when no chart stop was stored."""
         visual = self._visual_stops.get(signal_id)
@@ -648,7 +705,7 @@ class LiveStack:
             return "SIGNAL_CONTRACT_MISMATCH"
         intent = ExecutionIntent(
             side=signal.direction,
-            quantity=max(1, int(self.contract.default_quantity or 1)),
+            quantity=self._order_qty(signal.signal_id),
             instrument=instrument,
             command_id=str(uuid.uuid4()),
             event_id=signal.signal_id,

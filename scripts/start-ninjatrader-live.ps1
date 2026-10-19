@@ -37,11 +37,22 @@ Get-Content $envFile | ForEach-Object {
     }
 }
 
-# Vision is shadow-only. It cannot place or change an order.
-$env:CDX_VISION_ENABLED = "true"
+# levels.source "atr" computes stops and targets from NinjaTrader bars, so the chart reader is off.
+$levelsSource = "chart"
+try {
+    $levelsSource = ((Get-Content (Join-Path $RepoRoot "phase74\config\default.json") -Raw | ConvertFrom-Json).levels.source)
+} catch { }
+if ($levelsSource -eq "atr") {
+    Write-Host "Levels: ATR from NinjaTrader bars. CDX vision is off." -ForegroundColor Cyan
+    $env:CDX_VISION_ENABLED = "false"
+    $env:CDX_VISION_AUTO_RIGHT_ENABLED = "false"
+} else {
+    # Vision is shadow-only. It cannot place or change an order.
+    $env:CDX_VISION_ENABLED = "true"
+    $env:CDX_VISION_AUTO_RIGHT_ENABLED = "true"
+}
 $env:CDX_VISION_SHADOW_ONLY = "true"
 $env:CDX_VISION_EXECUTION_ENABLED = "false"
-$env:CDX_VISION_AUTO_RIGHT_ENABLED = "true"
 
 if (-not $env:NINJATRADER_EXECUTION_BRIDGE_TOKEN) {
     $execToken = New-RandomToken

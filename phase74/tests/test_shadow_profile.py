@@ -49,7 +49,12 @@ class ShadowProfileTests(unittest.TestCase):
         dist = 1.5 * self.atr
         self.assertAlmostEqual(tr.entry - tr.stop, dist, places=1)
         self.assertAlmostEqual(tr.target - tr.entry, 2 * dist, places=1)
-        self.assertEqual(tr.qty, math.floor(600 / (dist * 2.0)))
+        self.assertEqual(tr.qty, min(10, math.floor(600 / (dist * 2.0))))
+
+    def test_quantity_is_capped_when_atr_is_tiny(self) -> None:
+        p = self._profile(max_qty=7)
+        p.on_signal("2026-10-20T13:00:00Z", "LONG", 30000.0, T0, self.hist)
+        self.assertEqual(p.state.open.qty, 7)
 
     def test_target_close_books_profit_and_frees_the_slot(self) -> None:
         p = self._profile()

@@ -82,6 +82,10 @@
     "allow_globex_entries": true,
     "no_entries_until_ny": "2026-09-30T05:00:00"
   },
+  "levels": {
+    "source": "chart",
+    "atr": {"stop_atr": 1.5, "target_r": 2.0, "risk_usd": 600, "point_value": 2.0, "min_stop_points": 4.0, "max_qty": 10, "max_bar_age_minutes": 10}
+  },
   "shadow_profiles": [
     {"name": "atr1.5_all", "enabled": true, "stop_atr": 1.5, "target_r": 2.0, "risk_usd": 600, "filter": "none"},
     {"name": "atr1.5_15m", "enabled": true, "stop_atr": 1.5, "target_r": 2.0, "risk_usd": 600, "filter": "15m_agrees"}

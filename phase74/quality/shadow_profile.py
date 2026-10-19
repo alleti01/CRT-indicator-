@@ -19,6 +19,7 @@ from typing import Any, Optional, Sequence
 from zoneinfo import ZoneInfo
 
 from phase73.market_data.bar import Bar
+from phase74.quality.atr_levels import AtrLevelConfig, atr3, compute_atr_levels
 from phase74.quality.htf_bias import BEARISH, BULLISH, resample, structure_bias
 
 log = logging.getLogger("phase74.shadow_profile")
@@ -36,6 +37,7 @@ class ProfileConfig:
     filter: str = "none"  # none | 15m_agrees
     point_value: float = 2.0  # MNQ
     min_stop_points: float = 4.0
+    max_qty: int = 10
     max_hold_minutes: int = 240
     day_max_winners: int = 1
     day_max_losers: int = 2
@@ -81,14 +83,6 @@ def futures_day(t: datetime) -> str:
     return (t.astimezone(ET) - timedelta(hours=18)).date().isoformat()
 
 
-def atr3(bars: Sequence[Bar], n: int = 14) -> float:
-    threes = resample(bars, 3)
-    if len(threes) < n + 1:
-        return 0.0
-    w = threes[-(n + 1):]
-    return sum(max(b.high - b.low, abs(b.high - p.close), abs(b.low - p.close)) for p, b in zip(w, w[1:])) / n
-
-
 def _align(side: str, bias: str) -> int:
     want, against = (BULLISH, BEARISH) if side == "LONG" else (BEARISH, BULLISH)
     return 1 if bias == want else -1 if bias == against else 0
@@ -122,6 +116,11 @@ class ShadowProfile:
         with self.log_path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(row) + "\n")
 
+    def _level_cfg(self) -> AtrLevelConfig:
+        c = self.cfg
+        return AtrLevelConfig(stop_atr=c.stop_atr, target_r=c.target_r, risk_usd=c.risk_usd, point_value=c.point_value,
+                              min_stop_points=c.min_stop_points, max_qty=c.max_qty, max_bar_age_minutes=c.max_bar_age_minutes)
+
     # ---------- signals ----------
 
     def on_signal(self, signal_id: str, side: str, price: float, t: datetime, bars: Sequence[Bar]) -> str:
@@ -139,11 +138,10 @@ class ShadowProfile:
             self._save()
             return "SKIP_" + reason
 
-        if not hist or t - hist[-1].timestamp > timedelta(minutes=self.cfg.max_bar_age_minutes):
-            return skip("STALE_BARS", last_bar_utc=hist[-1].timestamp.isoformat() if hist else None)
-        atr = atr3(hist)
-        if atr <= 0:
-            return skip("NO_ATR")
+        levels, why = compute_atr_levels(side, price, t, hist, self._level_cfg())
+        if levels is None:
+            return skip(why, last_bar_utc=hist[-1].timestamp.isoformat() if hist else None)
+        atr = levels.atr3
         a15 = _align(side, structure_bias(resample(hist, 15)))
         a1h = _align(side, structure_bias(resample(hist, 60)))
         base.update(atr3=round(atr, 2), align_15m=a15, align_1h=a1h)
@@ -156,22 +154,19 @@ class ShadowProfile:
         if d["w"] >= self.cfg.day_max_winners or d["l"] >= self.cfg.day_max_losers or d["pnl"] <= -self.cfg.day_max_loss_usd:
             return skip("DAY_LIMIT", day_pnl=round(d["pnl"], 2), day_w=d["w"], day_l=d["l"])
 
-        dist = max(self.cfg.stop_atr * atr, self.cfg.min_stop_points)
-        qty = max(1, math.floor(self.cfg.risk_usd / (dist * self.cfg.point_value)))
-        sgn = 1 if side == "LONG" else -1
         trade = OpenTrade(
             signal_id=signal_id,
             side=side,
             entry=price,
-            stop=round(price - sgn * dist, 2),
-            target=round(price + sgn * dist * self.cfg.target_r, 2),
-            qty=qty,
+            stop=levels.stop,
+            target=levels.target,
+            qty=levels.qty,
             opened_at=t.isoformat(),
             day=day,
         )
         self.state.open = trade
-        self._log("OPEN", **base, entry=trade.entry, stop=trade.stop, target=trade.target, qty=qty,
-                  stop_points=round(dist, 2), risk_usd=round(dist * qty * self.cfg.point_value, 2))
+        self._log("OPEN", **base, entry=trade.entry, stop=trade.stop, target=trade.target, qty=trade.qty,
+                  stop_points=levels.stop_points, risk_usd=round(levels.stop_points * trade.qty * self.cfg.point_value, 2))
         self._save()
         return "OPEN"
 

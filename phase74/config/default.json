@@ -82,6 +82,12 @@
     "allow_globex_entries": true,
     "no_entries_until_ny": "2026-09-30T05:00:00"
   },
+  "htf_bias": {
+    "enabled": true,
+    "enforce": false,
+    "timeframes_minutes": [15, 60],
+    "swing_bars": 2
+  },
   "risk": {
     "stop_points": 14.25
   },

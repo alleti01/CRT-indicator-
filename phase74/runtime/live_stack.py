@@ -32,6 +32,7 @@ from phase74.quality.day_halt import (
     seed_day_halt_from_paper_trades,
 )
 from phase74.quality.gates import QualityDecision, QualityGateConfig, evaluate_quality_gates
+from phase74.quality.htf_bias import HtfBiasConfig, evaluate_htf_bias, log_htf_decision
 from phase74.quality.logger import QualitySkipLogger
 from phase74.quality.range_lock import RangeLock, RangeLockConfig, seed_from_paper_trades
 from phase74.quality.trail import TrailOverlay, TrailOverlayConfig
@@ -104,6 +105,7 @@ class LiveStack:
         self._no_entries_until = datetime.fromisoformat(raw_until) if raw_until else None
         self._quality_cfg = QualityGateConfig.from_dict(qg)
         self._quality_log = QualitySkipLogger(cfg.log_dir) if self._quality_enabled else None
+        self._htf_cfg = HtfBiasConfig.from_dict(cfg.section("htf_bias"))
         self._day_halt = (
             PropDayHalt(
                 max_losers=int(qg.get("day_max_losers", 2)),
@@ -743,6 +745,10 @@ class LiveStack:
             log.info("quality skip signal=%s reason=%s", signal.signal_id, repeat)
             return {"ok": False, "reason": repeat, "quality": repeat}
         self._remember_cdx(signal)
+        htf_skip = self._htf_bias_skip(signal)
+        if htf_skip:
+            log.info("quality skip signal=%s reason=%s", signal.signal_id, htf_skip)
+            return {"ok": False, "reason": htf_skip, "quality": htf_skip}
         if self._quality_enabled and self._filter_signals:
             lookback = self._quality_cfg.lookback_bars
             bars = list(self.market_data.recent_bars(lookback))
@@ -790,6 +796,28 @@ class LiveStack:
         self._latency_samples.extend(tracker.samples)
         self.engine.events.log_signal({**signal.to_dict(), "latency": lat})
         return result
+
+    def _htf_bias_skip(self, signal: PineSignal) -> str:
+        """Log the 15m/1H structure read. Return a skip reason only when enforced."""
+        if not self._htf_cfg.enabled:
+            return ""
+        try:
+            bars = list(self.market_data.recent_bars(2000))
+            dec = evaluate_htf_bias(bars, signal.direction, self._htf_cfg)
+            log_htf_decision(
+                self.cfg.log_dir,
+                dec,
+                signal_id=signal.signal_id,
+                direction=signal.direction,
+                enforced=self._htf_cfg.enforce,
+            )
+        except Exception:
+            log.exception("htf bias read failed signal=%s", signal.signal_id)
+            return ""
+        log.info("htf bias signal=%s %s %s %s", signal.signal_id, signal.direction, dec.biases, dec.decision)
+        if dec.decision == "SKIP" and self._htf_cfg.enforce:
+            return dec.reason
+        return ""
 
     def _on_chart_levels(self, result) -> None:
         """Place the held order once Entry, SL, and TP1 are read. TP2 can follow."""

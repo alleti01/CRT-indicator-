@@ -1,10 +1,10 @@
 {
-    "checked_at_utc":  "2026-10-20T04:19:38.6472713+00:00",
+    "checked_at_utc":  "2026-10-20T04:49:38.5782650+00:00",
     "market_open":  true,
     "bot_running":  true,
-    "last_bar_utc":  "2026-10-20T04:18:00.0000000+00:00",
+    "last_bar_utc":  "2026-10-20T04:48:00.0000000+00:00",
     "bar_age_minutes":  1.6,
-    "last_signal_utc":  "2026-10-19T20:02:08.5245320+00:00",
+    "last_signal_utc":  "2026-10-20T04:30:02.3166850+00:00",
     "status":  "OK",
     "problems":  [
 
@@ -15,6 +15,9 @@
                   "phase74/logs/signals.csv",
                   "phase74/logs/errors.jsonl",
                   "phase74/logs/htf_bias.jsonl",
+                  "phase74/logs/shadow_profiles.jsonl",
+                  "phase74/logs/shadow_profile_atr1.5_all.json",
+                  "phase74/logs/shadow_profile_atr1.5_15m.json",
                   "phase74/logs/quality_skips.csv",
                   "cdx_vision/logs/vision_levels.jsonl"
               ]

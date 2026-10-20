@@ -1,6 +1,6 @@
 # CDX model training report
 
-Trained 2026-10-19 20:46 UTC on 151 signals (48 CDX). Walk-forward tested on 9 CDX days, 48 signals.
+Trained 2026-10-20 17:06 UTC on 151 signals (48 CDX). Walk-forward tested on 9 CDX days, 48 signals.
 
 ## Decision: **KEEP_RULE**
 

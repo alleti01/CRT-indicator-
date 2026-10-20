@@ -11,6 +11,7 @@ from cdx_ml.dataset import (
     TARGETS,
     _data_hole,
     is_alert_id,
+    pullback_entry,
     build,
     features,
     stop_distances,
@@ -90,6 +91,35 @@ class LabelTests(unittest.TestCase):
         o = triple_barrier("LONG", 100.0, 10.0, 2.0, self._path([101, 104, 105]))
         self.assertEqual(o.exit, "TIME")
         self.assertAlmostEqual(o.r, 0.5 - 0.1)
+
+
+class PullbackTests(unittest.TestCase):
+    def _path(self, bars: list[tuple[float, float, float]]) -> list[Bar]:
+        return [Bar(T0 + timedelta(minutes=i + 1), c, h, l, c) for i, (h, l, c) in enumerate(bars)]
+
+    def test_short_fills_on_the_bounce_and_measures_from_the_fill(self) -> None:
+        # Short at 100, ATR 10, limit 0.5 ATR higher = 105. Bounce trades 105.25, then falls to target 105 - 30 = 75.
+        path = self._path([(101, 99, 100), (105.25, 101, 104), (104, 74, 75)])
+        pb = pullback_entry("SHORT", 100.0, 10.0, 0.5, 2.0, path)
+        self.assertTrue(pb.filled)
+        self.assertEqual(pb.fill_price, 105.0)
+        self.assertEqual(pb.outcome.exit, "TARGET")
+        self.assertAlmostEqual(pb.outcome.r, 2.0 - 1.0 / 15.0)
+
+    def test_touching_the_limit_without_trading_through_is_no_fill(self) -> None:
+        path = self._path([(105.0, 99, 100), (101, 90, 91)])
+        self.assertFalse(pullback_entry("SHORT", 100.0, 10.0, 0.5, 2.0, path).filled)
+
+    def test_limit_expires_after_15_minutes(self) -> None:
+        path = self._path([(100.5, 99, 100)] * 15 + [(106, 99, 105)])
+        self.assertFalse(pullback_entry("SHORT", 100.0, 10.0, 0.5, 2.0, path).filled)
+
+    def test_stop_on_the_fill_bar_counts(self) -> None:
+        # Long limit at 95 fills, and the same bar also drops through the 80 stop.
+        path = self._path([(100, 79, 85)])
+        pb = pullback_entry("LONG", 100.0, 10.0, 0.5, 2.0, path)
+        self.assertTrue(pb.filled)
+        self.assertEqual(pb.outcome.exit, "STOP")
 
 
 class SignalIdTests(unittest.TestCase):

@@ -39,6 +39,12 @@ MIN_HISTORY_BARS = 600
 MAX_PATH_GAP = timedelta(minutes=5)
 TARGETS = (1.0, 2.0, 3.0)
 STOP_KINDS = ("fixed14", "struct5", "struct10", "atr1", "atr1.5", "atr2", "cdx")
+# Pullback entry: a limit k x ATR better than the signal price, good for PULLBACK_WAIT.
+# Stop and target are the atr1.5 ones, measured from the fill.
+PULLBACK_K = (0.25, 0.5, 1.0)
+PULLBACK_WAIT = timedelta(minutes=15)
+PULLBACK_STOP_ATR = 1.5
+TICK = 0.25
 
 
 # ---------- loading ----------
@@ -285,6 +291,46 @@ def triple_barrier(side: str, entry: float, dist: float, target_r: float, path: 
     return Outcome(pts / dist - COST_PTS / dist, "TIME", (path[-1].timestamp - t0).total_seconds() / 60)
 
 
+@dataclass(frozen=True)
+class PullbackOutcome:
+    filled: bool
+    fill_price: float
+    wait_minutes: float
+    outcome: Outcome | None
+
+
+def pullback_entry(side: str, entry: float, atr: float, k: float, target_r: float, path: Sequence[Bar],
+                   wait: timedelta = PULLBACK_WAIT, stop_atr: float = PULLBACK_STOP_ATR) -> PullbackOutcome:
+    """Limit order k x ATR better than `entry`, waiting up to `wait` after the signal.
+
+    Filled only when price trades one tick through the limit. On the fill bar only the
+    stop is checked (the bar's order of high and low is unknown); the target counts from
+    the next bar. Stop and target sit stop_atr x ATR and target_r x that from the fill.
+    """
+    if not path or not atr or atr != atr:
+        return PullbackOutcome(False, float("nan"), float("nan"), None)
+    sgn = 1 if side == "LONG" else -1
+    limit = round(round((entry - sgn * k * atr) / TICK) * TICK, 2)
+    t0 = path[0].timestamp - timedelta(minutes=1)  # the signal minute; path starts on the bar after it
+    deadline = t0 + wait
+    for i, b in enumerate(path):
+        if b.timestamp > deadline:
+            break
+        through = (b.low <= limit - TICK) if sgn > 0 else (b.high >= limit + TICK)
+        if not through:
+            continue
+        dist = max(stop_atr * atr, MIN_STOP)
+        stop = limit - sgn * dist
+        waited = (b.timestamp - t0).total_seconds() / 60
+        if sgn * ((b.low if sgn > 0 else b.high) - stop) <= 0:
+            return PullbackOutcome(True, limit, waited, Outcome(-1.0 - COST_PTS / dist, "STOP", 0.0))
+        rest = path[i + 1:]
+        if not rest:
+            return PullbackOutcome(True, limit, waited, Outcome((sgn * (b.close - limit) - COST_PTS) / dist, "TIME", 0.0))
+        return PullbackOutcome(True, limit, waited, triple_barrier(side, limit, dist, target_r, rest))
+    return PullbackOutcome(False, limit, float("nan"), None)
+
+
 def label_columns(sig: dict, dists: dict[str, float], path: Sequence[Bar], atr: float) -> dict:
     sgn = 1 if sig["side"] == "LONG" else -1
     entry = sig["price"]
@@ -303,6 +349,15 @@ def label_columns(sig: dict, dists: dict[str, float], path: Sequence[Bar], atr: 
             o = triple_barrier(sig["side"], entry, d, tr, path)
             row[f"r_{key}"] = o.r
             row[f"exit_{key}"] = o.exit
+    for k in PULLBACK_K:
+        for tr in TARGETS:
+            key = f"pb{k:g}_t{tr:g}"
+            pb = pullback_entry(sig["side"], entry, atr, k, tr, path)
+            row[f"filled_{key}"] = int(pb.filled)
+            row[f"r_{key}"] = pb.outcome.r if pb.outcome else float("nan")  # NaN = never filled, no trade
+            row[f"exit_{key}"] = pb.outcome.exit if pb.outcome else "NOFILL"
+            if tr == TARGETS[0]:
+                row[f"fill_wait_pb{k:g}"] = pb.wait_minutes
     return row
 
 
@@ -406,12 +461,25 @@ def data_card(rows: list[dict], dropped: Counter, n_signals: int) -> str:
         g = [r for r in cdx if r["align_15m"] == a]
         if g:
             lines.append(f"| {name} | {len(g)} | {_mean(r['r_atr1.5_t2'] for r in g):+.2f} | {statistics.median(r['mfe_atr'] for r in g):.1f} |")
+    lines += ["", "## Pullback entry vs. market entry, CDX rows, atr1.5 stop / 2R", "",
+              "Limit k × ATR better than the signal price, good for 15 minutes. Per signal, an unfilled limit counts as 0R.", "",
+              "| Entry | Filled | Avg R per signal | Avg R per filled trade | Market-entry R of the missed signals |",
+              "|---|---|---|---|---|",
+              f"| market | {len(cdx)}/{len(cdx)} | {_mean(r['r_atr1.5_t2'] for r in cdx):+.2f} | {_mean(r['r_atr1.5_t2'] for r in cdx):+.2f} | |"]
+    for k in PULLBACK_K:
+        key = f"pb{k:g}_t2"
+        filled = [r for r in cdx if r[f"filled_{key}"]]
+        missed = [r for r in cdx if not r[f"filled_{key}"]]
+        per_signal = _mean([r[f"r_{key}"] if r[f"filled_{key}"] else 0.0 for r in cdx])
+        lines.append(f"| pullback {k:g} ATR | {len(filled)}/{len(cdx)} | {per_signal:+.2f} | {_mean(r[f'r_{key}'] for r in filled):+.2f} | "
+                     f"{_mean(r['r_atr1.5_t2'] for r in missed):+.2f} (n={len(missed)}) |")
     lines += [
         "",
         "## Columns",
         "",
         "- Inputs: `side`, `align_15m`, `align_1h` (+1 agrees, 0 neutral, −1 against), `atr3`, `atr_ratio` (ATR vs. its 100-bar average), `session`, `hour_et`, `weekday`, `eff20` / `overlap20` (chop over the last 20 3m bars), `range20_atr`, `pos20`, `room_day_atr`, `ret15_atr` / `ret60_atr` (move into the signal, signed by side), `mins_since_prev`, `prev_same_side`, `cdx_sl_pts`, `cdx_tp1_r`, `cdx_tp2_r`.",
         "- Answers: `r_<stop>_t<target>` is the R result after 1 point of cost, `exit_<stop>_t<target>` is TARGET, STOP or TIME. `mfe_*` / `mae_*` are the best and worst moves within 4 hours.",
+        "- Pullback entries: `filled_pb<k>_t<target>` (1 if the limit k × ATR better than the signal price filled within 15 minutes), `r_pb<k>_t<target>` (R from the fill with the atr1.5 stop; empty when unfilled), `exit_pb<k>_t<target>` (TARGET, STOP, TIME or NOFILL), `fill_wait_pb<k>` (minutes to fill).",
         "- Stops: fixed14 (14.25 pts), struct5 / struct10 (beyond the last 5 / 10 closed 3m bars), atr1 / atr1.5 / atr2 (× 3m ATR14), cdx (vision-confirmed CDX SL; mostly empty until vision reads improve).",
         "",
         "## Limits",

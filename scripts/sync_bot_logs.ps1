@@ -35,6 +35,12 @@ $Files = @(
     "phase74/logs/shadow_profile_atr1.5_dayext_400.json",
     "phase74/logs/shadow_profile_atr1.5_momo_400.json",
     "phase74/logs/shadow_profile_atr1.5_15m_momo_400.json",
+    "phase74/logs/shadow_profile_atr1.5_all_300.json",
+    "phase74/logs/shadow_profile_atr1.5_15m_300.json",
+    "phase74/logs/shadow_profile_atr1.5_atrexp_300.json",
+    "phase74/logs/shadow_profile_atr1.5_dayext_300.json",
+    "phase74/logs/shadow_profile_atr1.5_momo_300.json",
+    "phase74/logs/shadow_profile_atr1.5_15m_momo_300.json",
     "phase74/logs/quality_skips.csv",
     "cdx_vision/logs/vision_levels.jsonl"
 )

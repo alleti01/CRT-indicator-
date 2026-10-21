@@ -42,7 +42,7 @@ def prepare(start: datetime) -> list[dict]:
     return rows
 
 
-def run(rows, stop, filt, risk_usd, start_day, max_stop=1e9):
+def run(rows, stop, filt, risk_usd, start_day, max_stop=1e9, day_loss=400.0, max_losers=2, max_qty=10):
     bal = peak = 0.0
     busy = None
     days: dict = {}
@@ -56,9 +56,9 @@ def run(rows, stop, filt, risk_usd, start_day, max_stop=1e9):
         if dist > max_stop:
             continue
         st = days.setdefault(s["day"], {"pnl": 0.0, "w": 0, "l": 0})
-        if st["w"] >= 1 or st["l"] >= 2 or st["pnl"] <= -400:
+        if st["w"] >= 1 or st["l"] >= max_losers or st["pnl"] <= -day_loss:
             continue
-        qty = 10 if risk_usd == "10MNQ" else max(1, math.floor(risk_usd / (dist * MNQ_PER_POINT)))
+        qty = 10 if risk_usd == "10MNQ" else max(1, min(max_qty, math.floor(risk_usd / (dist * MNQ_PER_POINT))))
         res = R.simulate(s["side"], s["price"], dist, 2.0, s["path"])
         busy = res["exit_t"]
         usd = min(res["pts"] * MNQ_PER_POINT * qty, 1000.0)
@@ -74,7 +74,51 @@ def run(rows, stop, filt, risk_usd, start_day, max_stop=1e9):
     return "OPEN", None, trades
 
 
+def rolling(rows, sessions, first, **kw):
+    out = []
+    for d0 in sessions:
+        if d0 < first:
+            continue
+        left = [d for d in sessions if d >= d0]
+        res, day, _ = run(rows, start_day=d0, **kw)
+        n = len([d for d in left if d <= day]) if day else None
+        if res == "OPEN" and len(left) < 5:
+            continue  # ran out of data, not a result
+        out.append((res, n))
+    return out
+
+
+def compare_day_rules() -> None:
+    """Option A: smaller risk under the $400 day limit. Option B: $600 risk with a bigger day limit."""
+    rows = prepare(datetime(2026, 9, 8, 4, 0, tzinfo=R.UTC))
+    sessions = sorted({s["day"] for s in rows})
+    cdx_start = datetime(2026, 9, 22).date()
+    setups = [
+        ("current: $600 risk, $400 day limit", 600, 400),
+        ("A: $300 risk, $400 day limit", 300, 400),
+        ("A: $350 risk, $400 day limit", 350, 400),
+        ("A: $400 risk, $400 day limit", 400, 400),
+        ("B: $600 risk, $1,000 day limit", 600, 1000),
+        ("B: $600 risk, $1,200 day limit", 600, 1200),
+    ]
+    print(f"{len(rows)} signals, {len(sessions)} sessions {sessions[0]} to {sessions[-1]}; stop 1.5xATR, 2R, max 10 MNQ, 2 losers or the dollar limit ends the day")
+    for filt in ("15m_agrees", "none"):
+        for label, first in (("CDX", cdx_start), ("ALL", sessions[0])):
+            print(f"\n== filter={filt}  signals={label}")
+            print(f"{'setup':36} starts  pass<=5  passed  blown  median_sessions")
+            for name, risk, dl in setups:
+                out = rolling(rows, sessions, first, stop="atr1.5", filt=filt, risk_usd=risk, day_loss=dl)
+                passed = sorted(n for r, n in out if r == "PASSED")
+                print(f"{name:36} {len(out):6} {sum(1 for r, n in out if r == 'PASSED' and n <= 5):8} {len(passed):7} "
+                      f"{sum(1 for r, _ in out if r == 'BLOWN'):6}  {passed[len(passed) // 2] if passed else '-'}")
+
+
 def main() -> None:
+    import sys
+
+    if "--day-rules" in sys.argv:
+        compare_day_rules()
+        return
     rows = prepare(datetime(2026, 9, 8, 4, 0, tzinfo=R.UTC))
     sessions = sorted({s["day"] for s in rows})
     cdx_start = R.START.__class__(2026, 9, 22).date()

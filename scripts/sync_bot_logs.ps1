@@ -29,6 +29,8 @@ $Files = @(
     "phase74/logs/shadow_profiles.jsonl",
     "phase74/logs/shadow_profile_atr1.5_all.json",
     "phase74/logs/shadow_profile_atr1.5_15m.json",
+    "phase74/logs/shadow_profile_atr1.5_all_400.json",
+    "phase74/logs/shadow_profile_atr1.5_15m_400.json",
     "phase74/logs/quality_skips.csv",
     "cdx_vision/logs/vision_levels.jsonl"
 )

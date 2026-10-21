@@ -6,13 +6,20 @@ It never touches the bot's own folder beyond reading log files: the copy and
 the git work happen in a separate clone ($SyncDir), on a branch that holds
 only logs. Account and fill files (phase85 audit) are never copied.
 
+It also sends Discord alerts when the bot stops, bars go stale, or the sync
+itself was down for a while, plus one message when things recover. The webhook
+URL is read from DISCORD_WEBHOOK_URL in phase74\.env (never committed).
+
 Manual run:
   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sync_bot_logs.ps1
+Send a test alert only:
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sync_bot_logs.ps1 -TestAlert
 #>
 param(
     [string]$RepoDir = (Split-Path -Parent $PSScriptRoot),
     [string]$SyncDir = (Join-Path $env:USERPROFILE "bot-log-sync"),
-    [int]$StaleMinutes = 15
+    [int]$StaleMinutes = 15,
+    [switch]$TestAlert
 )
 
 # git reports progress on stderr; Windows PowerShell 5.1 would treat that as fatal under "Stop".
@@ -51,6 +58,36 @@ function Write-SyncLog([string]$msg) {
     Write-Host $line
 }
 
+function Get-DiscordWebhook {
+    if ($env:DISCORD_WEBHOOK_URL) { return $env:DISCORD_WEBHOOK_URL.Trim() }
+    $envFile = Join-Path $RepoDir "phase74\.env"
+    if (Test-Path $envFile) {
+        foreach ($line in Get-Content $envFile) {
+            if ($line -match '^\s*DISCORD_WEBHOOK_URL\s*=\s*(.+)$') { return $Matches[1].Trim().Trim('"') }
+        }
+    }
+    return $null
+}
+
+function Send-Alert([string]$text) {
+    $url = Get-DiscordWebhook
+    if (-not $url) { Write-SyncLog "alert not sent (no DISCORD_WEBHOOK_URL): $text"; return }
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        $body = @{ content = $text } | ConvertTo-Json -Compress
+        Invoke-RestMethod -Uri $url -Method Post -ContentType "application/json; charset=utf-8" `
+            -Body ([Text.Encoding]::UTF8.GetBytes($body)) | Out-Null
+        Write-SyncLog "alert sent: $text"
+    } catch {
+        Write-SyncLog "alert failed: $($_.Exception.Message)"
+    }
+}
+
+function Format-Et([DateTimeOffset]$utc) {
+    $tz = [TimeZoneInfo]::FindSystemTimeZoneById("Eastern Standard Time")
+    return [TimeZoneInfo]::ConvertTime($utc, $tz).ToString("ddd h:mm tt") + " ET"
+}
+
 function Get-LastTimestamp([string]$path, [string]$kind) {
     if (-not (Test-Path $path)) { return $null }
     $last = Get-Content -Path $path -Tail 1
@@ -72,6 +109,12 @@ function Test-MarketOpen([DateTimeOffset]$utc) {
     if ($d -eq "Sunday" -and $h -lt 18) { return $false }
     if ($h -eq 17) { return $false }  # daily 5-6 pm ET break
     return $true
+}
+
+if ($TestAlert) {
+    New-Item -ItemType Directory -Force -Path $SyncDir | Out-Null
+    Send-Alert ("Test alert from the trading bot PC ({0}). Bot alerts will arrive here." -f (Format-Et ([DateTimeOffset]::UtcNow)))
+    exit 0
 }
 
 # ---------- first run: separate clone on the logs branch ----------
@@ -133,6 +176,46 @@ $health = [ordered]@{
 $history = Join-Path $SyncDir "health_history.csv"
 if (-not (Test-Path $history)) { "checked_at_utc,status,problems,bar_age_minutes,bot_running,market_open" | Set-Content $history }
 "{0},{1},{2},{3},{4},{5}" -f $health.checked_at_utc, $health.status, ($problems -join ";"), $barAge, $health.bot_running, $open | Add-Content $history
+
+# ---------- Discord alerts ----------
+# New problem -> alert; same problem -> reminder every 2 hours; problem gone -> one recovery message.
+# A gap of 45+ minutes since the previous sync means the PC or this task was down; say so once it's back.
+$alertFile = Join-Path $SyncDir "alert_state.json"
+$prev = $null
+if (Test-Path $alertFile) { try { $prev = Get-Content $alertFile -Raw | ConvertFrom-Json } catch { $prev = $null } }
+$prevProblems = @(); if ($prev -and $prev.problems) { $prevProblems = @($prev.problems) }
+$lastAlert = $null; if ($prev -and $prev.last_alert_utc) { $lastAlert = [DateTimeOffset]::Parse($prev.last_alert_utc) }
+$alertNow = $null
+if ($prev -and $prev.last_sync_utc) {
+    $gap = ($now - [DateTimeOffset]::Parse($prev.last_sync_utc)).TotalMinutes
+    if ($gap -ge 45) { Send-Alert ("Trading bot PC is back: log sync resumed after {0:N0} minutes without one." -f $gap) }
+}
+if ($problems.Count) {
+    $isNew = @($problems | Where-Object { $prevProblems -notcontains $_ }).Count -gt 0
+    $due = (-not $lastAlert) -or (($now - $lastAlert).TotalHours -ge 2)
+    if ($isNew -or $due) {
+        $parts = @()
+        if ($problems -contains "BOT_NOT_RUNNING") { $parts += "bot process is not running" }
+        if ($problems -contains "BARS_STALE") {
+            $barText = "no bars at all"
+            if ($lastBar) { $barText = "no bars since " + (Format-Et $lastBar) }
+            $parts += $barText
+        }
+        $prefix = if ($isNew) { "Trading bot problem: " } else { "Trading bot still down: " }
+        Send-Alert ($prefix + ($parts -join "; "))
+        $alertNow = $now
+    }
+} elseif ($prevProblems.Count) {
+    $bar = if ($lastBar) { Format-Et $lastBar } else { "none" }
+    Send-Alert ("Trading bot recovered: bot running and bars flowing (last bar {0})." -f $bar)
+    $alertNow = $now
+}
+$state = [ordered]@{
+    problems       = $problems
+    last_sync_utc  = $now.ToString("o")
+    last_alert_utc = if ($alertNow) { $alertNow.ToString("o") } elseif ($lastAlert) { $lastAlert.ToString("o") } else { $null }
+}
+[IO.File]::WriteAllText($alertFile, ($state | ConvertTo-Json))
 
 # ---------- commit and push ----------
 git -C $SyncDir add -A

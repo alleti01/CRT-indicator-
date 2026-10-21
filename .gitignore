@@ -2,6 +2,7 @@
 cdx_vision/config/windows_chart.json
 cdx_vision/debug/
 
+.env
 .env.*
 !.env.example
 

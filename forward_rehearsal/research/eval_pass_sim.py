@@ -113,9 +113,76 @@ def compare_day_rules() -> None:
                       f"{sum(1 for r, _ in out if r == 'BLOWN'):6}  {passed[len(passed) // 2] if passed else '-'}")
 
 
+def day_results(rows, filt, stop="atr1.5", max_losers=2):
+    """R of each trade the bot would take, grouped by futures day, under one-position and the
+    1-winner / N-loser day rule (the $ day limit is applied later, per risk size)."""
+    days: dict = {}
+    busy = None
+    for s in rows:
+        if stop not in s["dists"] or (busy and s["t"] < busy) or not R.passes(filt, s["side"], s["biases"]):
+            continue
+        res = R.simulate(s["side"], s["price"], s["dists"][stop], 2.0, s["path"])
+        days.setdefault(s["day"], []).append(res["pts"] / s["dists"][stop])
+        busy = res["exit_t"]
+    return [days.get(d, []) for d in sorted({s["day"] for s in rows})]
+
+
+def bootstrap(day_rs, risk_usd, day_loss=400.0, max_losers=2, n=20000, max_days=60, seed=7):
+    """Resample real trading days into many possible evals. Returns pass/blow rates and days to pass."""
+    import random
+
+    rng = random.Random(seed)
+    passed, blown, days_to_pass = 0, 0, []
+    for _ in range(n):
+        bal = peak = 0.0
+        for day in range(1, max_days + 1):
+            pnl, w, l = 0.0, 0, 0
+            for r in rng.choice(day_rs):
+                if w >= 1 or l >= max_losers or pnl <= -day_loss:
+                    break
+                usd = min(r * risk_usd, 1000.0)
+                pnl += usd
+                bal += usd
+                peak = max(peak, bal)
+                w, l = (w + 1, l) if usd > 0 else (w, l + 1)
+                if bal <= peak - DRAWDOWN_USD:
+                    break
+            if bal <= peak - DRAWDOWN_USD:
+                blown += 1
+                break
+            if bal >= TARGET_USD:
+                passed += 1
+                days_to_pass.append(day)
+                break
+    days_to_pass.sort()
+    return {
+        "pass": passed / n,
+        "blow": blown / n,
+        "pass_5": sum(d <= 5 for d in days_to_pass) / n,
+        "pass_10": sum(d <= 10 for d in days_to_pass) / n,
+        "median_days": days_to_pass[len(days_to_pass) // 2] if days_to_pass else None,
+    }
+
+
+def compare_risk_bootstrap() -> None:
+    rows = prepare(datetime(2026, 9, 22, 4, 0, tzinfo=R.UTC))  # real CDX signals only
+    for filt in ("15m_agrees", "none"):
+        day_rs = day_results(rows, filt)
+        trades = [r for d in day_rs for r in d]
+        print(f"\n== filter={filt}: {len(day_rs)} real sessions, {len(trades)} trades, "
+              f"avg {sum(trades) / len(trades):+.2f}R; 20,000 resampled evals, 60-session limit")
+        print(f"{'risk/trade':10} {'losses to blow':>14} {'pass':>6} {'blown':>6} {'pass<=5d':>9} {'pass<=10d':>10} {'median days':>11}")
+        for risk in (200, 300, 400, 500, 600):
+            b = bootstrap(day_rs, risk)
+            print(f"${risk:<9} {2000 // risk:14} {b['pass']:6.0%} {b['blow']:6.0%} {b['pass_5']:9.0%} {b['pass_10']:10.0%} {str(b['median_days']):>11}")
+
+
 def main() -> None:
     import sys
 
+    if "--bootstrap" in sys.argv:
+        compare_risk_bootstrap()
+        return
     if "--day-rules" in sys.argv:
         compare_day_rules()
         return

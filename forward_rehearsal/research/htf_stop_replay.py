@@ -54,7 +54,10 @@ def load_bars() -> list[Bar]:
                 t = parse(r["timestamp_utc"])
                 real[t] = Bar(t, float(r["open"]), float(r["high"]), float(r["low"]), float(r["close"]), float(r["volume"] or 0))
     rebuilt = {b.timestamp: b for b in _close_bars()}
-    merged = {**rebuilt, **real}
+    from cdx_ml.dataset import load_bars as _dataset_bars  # includes NinjaTrader history exports
+
+    exported = {b.timestamp: b for b in _dataset_bars(LOGS)}
+    merged = {**rebuilt, **exported, **real}
     out = []
     prev = None
     for t in sorted(merged):

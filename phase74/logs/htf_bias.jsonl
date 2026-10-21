@@ -7,3 +7,4 @@
 {"received_at_utc": "2026-10-20T14:15:08.722064+00:00", "signal_id": "2026-10-20T14:15:00Z", "direction": "LONG", "decision": "TAKE", "reason": "HTF_NOT_ALL_AGAINST", "biases": {"15m": "BEARISH", "1H": "NEUTRAL"}, "enforced": false}
 {"received_at_utc": "2026-10-20T20:54:01.549343+00:00", "signal_id": "2026-10-20T20:54:00Z", "direction": "LONG", "decision": "TAKE", "reason": "HTF_NOT_ALL_AGAINST", "biases": {"15m": "BEARISH", "1H": "NEUTRAL"}, "enforced": false}
 {"received_at_utc": "2026-10-21T01:27:01.456055+00:00", "signal_id": "2026-10-21T01:27:00Z", "direction": "SHORT", "decision": "SKIP", "reason": "HTF_ALL_BULLISH", "biases": {"15m": "BULLISH", "1H": "BULLISH"}, "enforced": false}
+{"received_at_utc": "2026-10-21T02:00:02.550614+00:00", "signal_id": "2026-10-21T02:00:00Z", "direction": "LONG", "decision": "TAKE", "reason": "HTF_NOT_ALL_AGAINST", "biases": {"15m": "NEUTRAL", "1H": "BULLISH"}, "enforced": false}

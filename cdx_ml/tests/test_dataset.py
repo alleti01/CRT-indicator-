@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 
@@ -120,6 +121,25 @@ class PullbackTests(unittest.TestCase):
         pb = pullback_entry("LONG", 100.0, 10.0, 0.5, 2.0, path)
         self.assertTrue(pb.filled)
         self.assertEqual(pb.outcome.exit, "STOP")
+
+
+class LoadBarsTests(unittest.TestCase):
+    def test_price_change_across_an_outage_is_kept_but_a_spike_is_dropped(self) -> None:
+        import csv
+        from pathlib import Path
+        from cdx_ml.dataset import load_bars
+
+        logs = Path(tempfile.mkdtemp())
+        rows = [("2026-10-02T14:26:00+00:00", 31279), ("2026-10-02T14:27:00+00:00", 31278),
+                ("2026-10-19T20:11:00+00:00", 29700), ("2026-10-19T20:12:00+00:00", 31000),  # spike 1 minute later
+                ("2026-10-19T20:13:00+00:00", 29702)]
+        with (logs / "bars.csv").open("w", newline="") as fh:
+            w = csv.writer(fh)
+            w.writerow(["timestamp_utc", "open", "high", "low", "close", "volume"])
+            for t, c in rows:
+                w.writerow([t, c, c + 1, c - 1, c, 1])
+        closes = [b.close for b in load_bars(logs)]
+        self.assertEqual(closes, [31279, 31278, 29700, 29702])
 
 
 class SignalIdTests(unittest.TestCase):

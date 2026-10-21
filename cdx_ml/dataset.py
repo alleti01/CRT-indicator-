@@ -78,13 +78,16 @@ def load_bars(logs: Path = LOGS) -> list[Bar]:
                 t = parse(r["timestamp_utc"])
                 merged[t] = Bar(t, float(r["open"]), float(r["high"]), float(r["low"]), float(r["close"]), float(r["volume"] or 0))
     out: list[Bar] = []
-    prev_c = None
+    prev: Bar | None = None
     for t in sorted(merged):
         b = merged[t]
-        if b.low < 25000 or (prev_c is not None and abs(b.close - prev_c) / prev_c > 0.02):
-            continue  # placeholder prices and bad ticks
+        if b.low < 25000:
+            continue  # placeholder prices
+        # A >2% jump a few minutes after the last bar is a bad tick; after an outage it is just the market.
+        if prev is not None and t - prev.timestamp <= timedelta(minutes=30) and abs(b.close - prev.close) / prev.close > 0.02:
+            continue
         out.append(b)
-        prev_c = b.close
+        prev = b
     return out
 
 

@@ -59,10 +59,13 @@ def load_bars() -> list[Bar]:
     prev = None
     for t in sorted(merged):
         b = merged[t]
-        if b.low < 25000 or (prev is not None and abs(b.close - prev) / prev > 0.02):
+        if b.low < 25000:
+            continue
+        # A >2% jump a few minutes after the last bar is a bad tick; after an outage it is just the market.
+        if prev is not None and t - prev.timestamp <= timedelta(minutes=30) and abs(b.close - prev.close) / prev.close > 0.02:
             continue
         out.append(b)
-        prev = b.close
+        prev = b
     return out
 
 

@@ -90,7 +90,11 @@
     {"name": "atr1.5_all", "enabled": false, "stop_atr": 1.5, "target_r": 2.0, "risk_usd": 600, "filter": "none"},
     {"name": "atr1.5_15m", "enabled": false, "stop_atr": 1.5, "target_r": 2.0, "risk_usd": 600, "filter": "15m_agrees"},
     {"name": "atr1.5_all_400", "enabled": true, "stop_atr": 1.5, "target_r": 2.0, "risk_usd": 400, "filter": "none"},
-    {"name": "atr1.5_15m_400", "enabled": true, "stop_atr": 1.5, "target_r": 2.0, "risk_usd": 400, "filter": "15m_agrees"}
+    {"name": "atr1.5_15m_400", "enabled": true, "stop_atr": 1.5, "target_r": 2.0, "risk_usd": 400, "filter": "15m_agrees"},
+    {"name": "atr1.5_atrexp_400", "enabled": true, "stop_atr": 1.5, "target_r": 2.0, "risk_usd": 400, "filter": "atr_expanding"},
+    {"name": "atr1.5_dayext_400", "enabled": true, "stop_atr": 1.5, "target_r": 2.0, "risk_usd": 400, "filter": "near_day_extreme"},
+    {"name": "atr1.5_momo_400", "enabled": true, "stop_atr": 1.5, "target_r": 2.0, "risk_usd": 400, "filter": "momentum"},
+    {"name": "atr1.5_15m_momo_400", "enabled": true, "stop_atr": 1.5, "target_r": 2.0, "risk_usd": 400, "filter": "15m_and_momentum"}
   ],
   "htf_bias": {
     "enabled": true,

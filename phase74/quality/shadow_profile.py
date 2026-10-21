@@ -34,7 +34,12 @@ class ProfileConfig:
     stop_atr: float = 1.5
     target_r: float = 2.0
     risk_usd: float = 600.0
-    filter: str = "none"  # none | 15m_agrees
+    # none | 15m_agrees | atr_expanding | near_day_extreme | momentum | 15m_and_momentum
+    # (momentum = atr_expanding or near_day_extreme). Cutoffs fixed 2026-10-21 from the top / bottom
+    # third of the 61 real CDX signals, before any forward test.
+    filter: str = "none"
+    atr_ratio_min: float = 1.30
+    room_day_atr_max: float = 2.4
     point_value: float = 2.0  # MNQ
     min_stop_points: float = 4.0
     max_qty: int = 10
@@ -81,6 +86,28 @@ def is_alert_id(signal_id: str) -> bool:
 
 def futures_day(t: datetime) -> str:
     return (t.astimezone(ET) - timedelta(hours=18)).date().isoformat()
+
+
+def atr_ratio(bars: Sequence[Bar]) -> float:
+    """ATR(14) of 3m candles vs. the average 3m candle range over the last 100 (same as the research dataset)."""
+    threes = resample(bars, 3)
+    if len(threes) < 20:
+        return float("nan")
+    slow = sum(b.high - b.low for b in threes[-100:]) / len(threes[-100:])
+    return atr3(bars) / slow if slow else float("nan")
+
+
+def room_to_day_extreme(side: str, price: float, t: datetime, bars: Sequence[Bar], atr: float) -> float:
+    """Distance from entry to the futures day's high (long) or low (short), in ATR. Small = pressing the extreme."""
+    et = t.astimezone(ET)
+    start = et.replace(hour=18, minute=0, second=0, microsecond=0)
+    if et < start:
+        start -= timedelta(days=1)
+    day = [b for b in bars if b.timestamp >= start.astimezone(timezone.utc)] or list(bars[-1:])
+    if not day or not atr:
+        return float("nan")
+    room = (max(b.high for b in day) - price) if side == "LONG" else (price - min(b.low for b in day))
+    return room / atr
 
 
 def _align(side: str, bias: str) -> int:
@@ -144,11 +171,24 @@ class ShadowProfile:
         atr = levels.atr3
         a15 = _align(side, structure_bias(resample(hist, 15)))
         a1h = _align(side, structure_bias(resample(hist, 60)))
-        base.update(atr3=round(atr, 2), align_15m=a15, align_1h=a1h)
+        ratio = atr_ratio(hist)
+        room = room_to_day_extreme(side, price, t, hist, atr)
+        expanding = ratio == ratio and ratio >= self.cfg.atr_ratio_min
+        near = room == room and room <= self.cfg.room_day_atr_max
+        base.update(atr3=round(atr, 2), align_15m=a15, align_1h=a1h,
+                    atr_ratio=round(ratio, 3) if ratio == ratio else None,
+                    room_day_atr=round(room, 2) if room == room else None)
         if self.state.open is not None:
             return skip("POSITION_OPEN", open_signal_id=self.state.open.signal_id)
-        if self.cfg.filter == "15m_agrees" and a15 != 1:
+        f = self.cfg.filter
+        if f in ("15m_agrees", "15m_and_momentum") and a15 != 1:
             return skip("15M_NOT_AGREEING")
+        if f == "atr_expanding" and not expanding:
+            return skip("ATR_NOT_EXPANDING")
+        if f == "near_day_extreme" and not near:
+            return skip("NOT_NEAR_DAY_EXTREME")
+        if f in ("momentum", "15m_and_momentum") and not (expanding or near):
+            return skip("NO_MOMENTUM")
         day = futures_day(t)
         d = self.state.days.setdefault(day, {"pnl": 0.0, "w": 0, "l": 0})
         if d["w"] >= self.cfg.day_max_winners or d["l"] >= self.cfg.day_max_losers or d["pnl"] <= -self.cfg.day_max_loss_usd:

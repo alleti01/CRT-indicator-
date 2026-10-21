@@ -112,6 +112,37 @@ class ShadowProfileTests(unittest.TestCase):
         self.assertEqual(p.on_signal("2026-10-20T13:00:00Z", "LONG", 30000.0, T0, self.hist), "SKIP_15M_NOT_AGREEING")
         self.assertEqual(self._rows()[-1]["align_15m"], 0)
 
+    def _trend_hist(self, quiet: int = 540, burst: int = 60) -> list[Bar]:
+        """Quiet 1-point bars, then a widening rally into T0: ATR expands and price presses the day's high."""
+        out = []
+        n = quiet + burst
+        for i in range(n):
+            t = T0 - timedelta(minutes=n - 1 - i)
+            if i < quiet:
+                c = 30000 + 0.5 * math.sin(i / 7)
+                out.append(Bar(t, c, c + 0.5, c - 0.5, c, 10))
+            else:
+                k = i - quiet
+                c = 30000 + 2.0 * k
+                out.append(Bar(t, c - 2, c + 4, c - 4, c, 10))
+        return out
+
+    def test_momentum_filters_take_a_breakout_and_log_the_inputs(self) -> None:
+        hist = self._trend_hist()
+        price = hist[-1].close
+        for f in ("atr_expanding", "near_day_extreme", "momentum"):
+            p = ShadowProfile(ProfileConfig(name=f, filter=f), self.tmp)
+            self.assertEqual(p.on_signal("2026-10-20T13:00:00Z", "LONG", price, T0, hist), "OPEN", f)
+        row = [r for r in self._rows() if r["event"] == "OPEN"][-1]
+        self.assertGreaterEqual(row["atr_ratio"], 1.3)
+        self.assertLessEqual(row["room_day_atr"], 2.4)
+
+    def test_momentum_filters_skip_a_quiet_mid_range_signal(self) -> None:
+        p = self._profile(filter="atr_expanding")
+        self.assertEqual(p.on_signal("2026-10-20T13:00:00Z", "LONG", 30000.0, T0, self.hist), "SKIP_ATR_NOT_EXPANDING")
+        q = ShadowProfile(ProfileConfig(name="m", filter="momentum"), self.tmp)
+        self.assertEqual(q.on_signal("2026-10-20T13:00:00Z", "SHORT", 30008.0, T0, self.hist), "SKIP_NO_MOMENTUM")
+
     def test_open_trade_and_balance_survive_restart(self) -> None:
         p = self._profile()
         p.on_signal("2026-10-20T13:00:00Z", "LONG", 30000.0, T0, self.hist)

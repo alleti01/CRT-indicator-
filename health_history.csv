@@ -153,3 +153,4 @@ checked_at_utc,status,problems,bar_age_minutes,bot_running,market_open
 2026-10-22T20:19:38.6708388+00:00,OK,,1.6,True,True
 2026-10-22T20:49:38.6357359+00:00,OK,,1.6,True,True
 2026-10-22T21:19:38.5900732+00:00,OK,,21.6,True,False
+2026-10-22T21:49:38.6344491+00:00,OK,,51.6,True,False

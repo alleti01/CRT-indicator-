@@ -1,9 +1,9 @@
 {
-    "checked_at_utc":  "2026-10-22T12:19:39.3698334+00:00",
+    "checked_at_utc":  "2026-10-22T12:49:38.3754743+00:00",
     "market_open":  true,
     "bot_running":  true,
-    "last_bar_utc":  "2026-10-22T12:18:00.0000000+00:00",
-    "bar_age_minutes":  1.7,
+    "last_bar_utc":  "2026-10-22T12:48:00.0000000+00:00",
+    "bar_age_minutes":  1.6,
     "last_signal_utc":  "2026-10-22T10:50:59.8995110+00:00",
     "status":  "OK",
     "problems":  [

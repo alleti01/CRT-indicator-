@@ -1,0 +1,51 @@
+# Alerts on Discord when the Windows bot PC stops pushing logs to the bot-logs branch
+# (PC off, asleep, offline, frozen, or the sync task broken). Runs on GitHub's servers,
+# so it works with the Mac and the PC both off. Bot and bar problems are alerted by the
+# PC itself (scripts/sync_bot_logs.ps1); this job only watches that the PC is alive.
+#
+# Needs the repository secret DISCORD_WEBHOOK_URL.
+# Test: Actions tab -> "Bot PC heartbeat" -> Run workflow -> tick "Send a test message".
+name: Bot PC heartbeat
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Send a test message"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check the last bot-logs push
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          GH_TOKEN: ${{ github.token }}
+          TEST: ${{ inputs.test }}
+        run: |
+          set -euo pipefail
+          send() {
+            if [ -z "${WEBHOOK}" ]; then echo "DISCORD_WEBHOOK_URL secret is not set"; exit 1; fi
+            jq -n --arg c "$1" '{content: $c}' | curl -fsS -H "Content-Type: application/json" -d @- "${WEBHOOK}"
+          }
+          ts=$(gh api "repos/${GITHUB_REPOSITORY}/commits/bot-logs" --jq .commit.committer.date)
+          age=$(( ( $(date -u +%s) - $(date -u -d "${ts}" +%s) ) / 60 ))
+          et=$(TZ=America/New_York date -d "${ts}" "+%a %-I:%M %p ET")
+          echo "last bot-logs push: ${ts} (${age} minutes ago)"
+          if [ "${TEST}" = "true" ]; then
+            send "Test alert from GitHub: the bot PC last synced ${et} (${age} minutes ago)."
+            exit 0
+          fi
+          # The PC syncs every 30 minutes. Alert once it's 45+ minutes quiet, then every 2 hours
+          # (each run covers a 30-minute slice of that cycle, so one message per window).
+          if [ "${age}" -ge 45 ] && [ $(( (age - 45) % 120 )) -lt 30 ]; then
+            send "Trading bot PC hasn't synced for ${age} minutes (last ${et}). It may be off, asleep, offline, or the sync task stopped."
+          fi

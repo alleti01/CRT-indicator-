@@ -25,3 +25,4 @@
 {"received_at_utc": "2026-10-26T08:56:50.879165+00:00", "signal_id": "2026-10-26T08:57:00Z", "direction": "LONG", "decision": "TAKE", "reason": "HTF_NOT_ALL_AGAINST", "biases": {"15m": "BULLISH", "1H": "BEARISH"}, "enforced": false}
 {"received_at_utc": "2026-10-26T10:47:50.515868+00:00", "signal_id": "2026-10-26T10:48:00Z", "direction": "SHORT", "decision": "TAKE", "reason": "HTF_NOT_ALL_AGAINST", "biases": {"15m": "NEUTRAL", "1H": "BULLISH"}, "enforced": false}
 {"received_at_utc": "2026-10-26T11:50:50.550199+00:00", "signal_id": "2026-10-26T11:51:00Z", "direction": "LONG", "decision": "TAKE", "reason": "HTF_NOT_ALL_AGAINST", "biases": {"15m": "BULLISH", "1H": "BEARISH"}, "enforced": false}
+{"received_at_utc": "2026-10-26T14:08:50.493027+00:00", "signal_id": "2026-10-26T14:09:00Z", "direction": "SHORT", "decision": "TAKE", "reason": "HTF_NOT_ALL_AGAINST", "biases": {"15m": "BULLISH", "1H": "NEUTRAL"}, "enforced": false}

@@ -1,13 +1,13 @@
 {
-    "checked_at_utc":  "2026-11-01T22:49:38.0012652+00:00",
-    "market_open":  false,
+    "checked_at_utc":  "2026-11-01T23:19:38.0261896+00:00",
+    "market_open":  true,
     "bot_running":  true,
     "last_bar_utc":  "2026-10-30T20:58:00.0000000+00:00",
-    "bar_age_minutes":  2991.6,
+    "bar_age_minutes":  3021.6,
     "last_signal_utc":  "2026-10-29T01:11:45.0501460+00:00",
-    "status":  "OK",
+    "status":  "PROBLEM",
     "problems":  [
-
+                     "BARS_STALE"
                  ],
     "files":  [
                   "phase74/logs/bars.csv",

@@ -1,8 +1,7 @@
 {
     "problems":  [
-                     "BOT_NOT_RUNNING",
                      "BARS_STALE"
                  ],
-    "last_sync_utc":  "2026-11-02T23:19:38.6662518+00:00",
+    "last_sync_utc":  "2026-11-02T23:49:38.4371601+00:00",
     "last_alert_utc":  "2026-11-02T23:19:38.6662518+00:00"
 }
